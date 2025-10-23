@@ -75,14 +75,47 @@ data-voyager/                      # Monorepo root
 - Go 1.21+
 - Node.js 18+
 - pnpm 8+
+- Make (optional, but recommended)
 - PostgreSQL (optional)
 - ClickHouse (optional)
 
+### Quick Start (Using Makefile)
+
+```bash
+# Show all available commands
+make help
+
+# Install dependencies
+make install
+
+# Start development servers (hot reload)
+make dev
+
+# Build for production
+make build
+
+# Start production server
+make start
+
+# Full workflow: install + build + start
+make quickstart
+```
+
 ### Development Mode
 
-**Option 1: All-in-one (Recommended)**
+**Option 1: Using Makefile (Recommended)**
 ```bash
 # Start both frontend and backend with hot reload
+make dev
+
+# Or start separately
+make dev-frontend  # Frontend only
+make dev-backend   # Backend only
+```
+
+**Option 2: Using pnpm**
+```bash
+# Start both frontend and backend
 pnpm dev:all
 
 # Access the app at http://localhost:8080/ui
@@ -90,7 +123,7 @@ pnpm dev:all
 # Frontend dev server runs on http://localhost:3000 (proxied)
 ```
 
-**Option 2: Separate processes**
+**Option 3: Separate processes**
 ```bash
 # Terminal 1 - Frontend dev server
 pnpm dev
@@ -101,17 +134,48 @@ GO_ENV=development go run core/cmd/server/main.go serve
 # Access at http://localhost:8080/ui
 ```
 
-**Option 3: Frontend only**
-```bash
-# Frontend dev server with API proxy
-cd core/frontend
-pnpm dev
+### Production Build & Deploy
 
-# Access at http://localhost:3000/ui
-# API calls proxied to http://localhost:8080
+**Using Makefile:**
+```bash
+# Build everything
+make build
+
+# Or build separately
+make build-frontend  # Build frontend static files
+make build-backend   # Build Go binary
+
+# Start production server
+make start
+# Server runs at http://localhost:8080/ui
 ```
 
-### Backend Setup
+**Using pnpm/go:**
+```bash
+# Build frontend
+pnpm build:export
+
+# Build backend
+cd core && go build -o ../data-voyager ./cmd/server
+
+# Run production server
+./data-voyager serve
+```
+
+### Other Makefile Commands
+
+```bash
+make clean          # Clean build artifacts
+make test           # Run all tests
+make lint           # Run linters
+make stop           # Stop all running servers
+make db-reset       # Reset database
+make info           # Show project info
+```
+
+### Manual Setup (Alternative)
+
+**Backend:**
 
 ```bash
 # Install dependencies
