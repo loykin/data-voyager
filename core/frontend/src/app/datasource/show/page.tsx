@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@data-voyager/shared-ui/components/ui/card";
+import { Button } from "@data-voyager/shared-ui/components/ui/button";
 
 export default function ShowDataSourcePage() {
   const router = useRouter();

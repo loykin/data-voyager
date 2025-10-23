@@ -8,30 +8,38 @@ Data Voyager is a platform that integrates and manages various datasources (Post
 
 ## 🏗️ Architecture
 
+This is a **monorepo** using pnpm workspaces for frontend and Go workspaces for backend.
+
 ### Backend (Go)
-- **Framework**: Go with Chi router
+- **Framework**: Go with Gin router
 - **Database Support**: PostgreSQL, ClickHouse, SQLite, OpenSearch
 - **API**: RESTful API
 - **Plugin System**: Plugin architecture for each datasource
+- **Workspace**: Go workspace with core and shared modules
 
 ### Frontend (Next.js)
-- **Framework**: Next.js 16 (App Router, Turbopack)
+- **Framework**: Next.js 15 (App Router, Turbopack)
 - **Data Management**: Refine.dev
-- **UI Library**: shadcn/ui + Radix UI
+- **UI Library**: @data-voyager/shared-ui (shadcn/ui + Radix UI)
 - **Styling**: Tailwind CSS
 - **Architecture**: DDD (Domain-Driven Design)
+- **Workspace**: pnpm workspace with core/frontend and shared/frontend
+
+### Shared
+- **shared/frontend**: Common UI components (shadcn/ui) used across frontends
+- **shared**: Common Go utilities and libraries
 
 ## 📁 Project Structure
 
 ```
-data-voyager/
-├── core/                           # Core modules
+data-voyager/                      # Monorepo root
+├── core/                          # Core application
 │   ├── frontend/                  # Next.js frontend
 │   │   └── src/
 │   │       ├── features/          # DDD Feature modules
 │   │       │   └── datasource/   # Datasource feature
 │   │       ├── app/              # Next.js App Router
-│   │       └── components/       # Shared UI components
+│   │       └── components/       # App-specific components
 │   │
 │   ├── cmd/                       # CLI commands
 │   ├── internal/                  # Internal packages
@@ -45,9 +53,20 @@ data-voyager/
 │   │
 │   └── pkg/                       # Public packages
 │
+├── shared/                        # Shared modules
+│   ├── frontend/                  # Shared UI components (@data-voyager/shared-ui)
+│   │   └── src/
+│   │       ├── components/ui/    # shadcn/ui components
+│   │       └── lib/              # Utilities (cn, etc.)
+│   │
+│   ├── utils/                     # Common Go utilities
+│   ├── config/                    # Shared config
+│   └── logger/                    # Shared logger
+│
 ├── data/                          # Data directory
 ├── config.toml                    # Configuration file
-└── go.work                        # Go workspace
+├── go.work                        # Go workspace
+└── pnpm-workspace.yaml            # pnpm workspace
 ```
 
 ## 🚀 Getting Started

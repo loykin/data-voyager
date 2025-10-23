@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Transpile shared workspace packages
+  transpilePackages: ["@data-voyager/shared-ui"],
+  // Webpack configuration for shared packages
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@/lib/utils": require.resolve("../../shared/frontend/src/lib/utils.ts"),
+    };
+    return config;
+  },
   // Development proxy configuration
   async rewrites() {
     return [

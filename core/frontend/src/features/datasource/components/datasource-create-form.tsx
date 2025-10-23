@@ -11,7 +11,7 @@ import {
   CardTitle,
   CardContent,
   CardFooter,
-} from "@/components/ui/card";
+} from "@data-voyager/shared-ui/components/ui/card";
 import {
   Form,
   FormControl,
@@ -20,19 +20,19 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+} from "@data-voyager/shared-ui/components/ui/form";
+import { Input } from "@data-voyager/shared-ui/components/ui/input";
+import { Button } from "@data-voyager/shared-ui/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+} from "@data-voyager/shared-ui/components/ui/select";
+import { Switch } from "@data-voyager/shared-ui/components/ui/switch";
+import { Badge } from "@data-voyager/shared-ui/components/ui/badge";
+import { Alert, AlertDescription } from "@data-voyager/shared-ui/components/ui/alert";
 import { DataSourceType, ConnectionConfig } from "../types/datasource.types";
 import { useDatasources, useConnectionTest } from "../hooks/use-datasources";
 import { Loader2, Check, X, TestTube } from "lucide-react";

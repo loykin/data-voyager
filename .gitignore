@@ -10,6 +10,9 @@ go.work.sum
 vendor/
 bin/
 dist/
+server
+data-voyager
+explorer
 
 # Node.js
 node_modules/
@@ -70,3 +73,6 @@ logs/
 tmp/
 temp/
 .cache/
+# Reference projects (not part of source)
+Phylax-main/
+*-main/

@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
   CardContent
-} from "@/components/ui/card";
+} from "@data-voyager/shared-ui/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,15 +15,15 @@ import {
   TableHead,
   TableHeader,
   TableRow
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from "@data-voyager/shared-ui/components/ui/table";
+import { Badge } from "@data-voyager/shared-ui/components/ui/badge";
+import { Button } from "@data-voyager/shared-ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@data-voyager/shared-ui/components/ui/dropdown-menu";
 import { DataSource, DataSourceType } from "@/features";
 import { MoreHorizontal, Edit, Eye, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
