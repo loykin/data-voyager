@@ -7,7 +7,7 @@ max_body_size = 10485760
 
 [metadata_store]
 type = "sqlite"
-connection_url = "./data/explorer.db"
+connection_url = "./data/data-voyager.db"
 migrate_on_start = true
 
 [logging]

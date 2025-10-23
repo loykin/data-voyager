@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"explorer/core/internal/store"
+	"data-voyager/core/internal/store"
 	"github.com/spf13/viper"
 )
 
 // Config represents the application configuration using Viper
 type ViperConfig struct {
-	Server        ServerConfig                  `mapstructure:"server"`
-	MetadataStore store.MetadataStoreConfig     `mapstructure:"metadata_store"`
-	Logging       LoggingConfig                 `mapstructure:"logging"`
-	Security      SecurityConfig                `mapstructure:"security"`
+	Server        ServerConfig              `mapstructure:"server"`
+	MetadataStore store.MetadataStoreConfig `mapstructure:"metadata_store"`
+	Logging       LoggingConfig             `mapstructure:"logging"`
+	Security      SecurityConfig            `mapstructure:"security"`
 }
 
 // InitViper initializes Viper configuration

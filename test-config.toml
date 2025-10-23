@@ -4,7 +4,7 @@ level = 'info'
 output = 'stdout'
 
 [metadata_store]
-connection_url = './data/explorer.db'
+connection_url = './data/data-voyager.db'
 migrate_on_start = true
 type = 'sqlite'
 

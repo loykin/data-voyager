@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"explorer/core/internal/models"
+	"data-voyager/core/internal/models"
 )
 
 // Plugin represents a data source plugin
