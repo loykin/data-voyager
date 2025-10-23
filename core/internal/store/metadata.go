@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"explorer/core/internal/models"
+	"data-voyager/core/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

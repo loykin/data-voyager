@@ -24,7 +24,7 @@ Data Voyager is a platform that integrates and manages various datasources (Post
 ## 📁 Project Structure
 
 ```
-explorer/
+data-voyager/
 ├── core/                           # Core modules
 │   ├── frontend/                  # Next.js frontend
 │   │   └── src/
@@ -103,8 +103,8 @@ go mod download
 go run cmd/server/main.go serve
 
 # Or build and run
-go build -o bin/explorer cmd/server/main.go
-./bin/explorer serve
+go build -o bin/data-voyager cmd/server/main.go
+./bin/data-voyager serve
 ```
 
 ### Frontend Setup

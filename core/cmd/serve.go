@@ -10,12 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"explorer/core"
-	"explorer/core/internal/api"
-	"explorer/core/internal/config"
-	"explorer/core/internal/datasource"
-	"explorer/core/internal/service"
-	"explorer/core/internal/store"
+	"data-voyager/core"
+	"data-voyager/core/internal/api"
+	"data-voyager/core/internal/config"
+	"data-voyager/core/internal/datasource"
+	"data-voyager/core/internal/service"
+	"data-voyager/core/internal/store"
+
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -24,8 +25,8 @@ import (
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Start the Explorer server",
-	Long: `Start the Explorer web server with API endpoints and web interface.
+	Short: "Start the Data Voyager server",
+	Long: `Start the Data Voyager web server with API endpoints and web interface.
 The server provides REST API endpoints for managing data sources and
 serves the web interface for data exploration and visualization.`,
 	RunE: runServe,
@@ -44,11 +45,11 @@ func init() {
 	serveCmd.Flags().IntVarP(&port, "port", "p", 0, "server port (default: from config)")
 
 	// Bind flags to viper
-	viper.BindPFlag("server.host", serveCmd.Flags().Lookup("host"))
-	viper.BindPFlag("server.port", serveCmd.Flags().Lookup("port"))
+	_ = viper.BindPFlag("server.host", serveCmd.Flags().Lookup("host"))
+	_ = viper.BindPFlag("server.port", serveCmd.Flags().Lookup("port"))
 }
 
-func runServe(cmd *cobra.Command, args []string) error {
+func runServe(_ *cobra.Command, _ []string) error {
 	// Load configuration
 	cfg, err := config.InitViper("config", "")
 	if err != nil {
@@ -75,7 +76,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize metadata store: %w", err)
 	}
-	defer metadataStore.Close()
+	defer func() { _ = metadataStore.Close() }()
 
 	// Initialize plugin registry
 	registry := datasource.NewRegistry()
@@ -106,7 +107,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 		c.JSON(http.StatusOK, gin.H{
 			"status":         "healthy",
-			"message":        "Explorer backend is running",
+			"message":        "Data Voyager backend is running",
 			"metadata_store": "connected",
 			"plugins_loaded": len(registry.GetSupportedTypes()),
 			"version":        "0.1.0",
@@ -142,7 +143,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("Starting Explorer server on %s", addr)
+		log.Printf("Starting Data Voyager server on %s", addr)
 		log.Printf("API endpoints available at http://%s/api/v1", addr)
 		log.Printf("Web interface available at http://%s", addr)
 

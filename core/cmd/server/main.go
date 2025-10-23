@@ -1,7 +1,7 @@
 package main
 
 import (
-	"explorer/core/cmd"
+	"data-voyager/core/cmd"
 )
 
 func main() {

@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"explorer/core/internal/datasource"
-	"explorer/core/internal/models"
+	"data-voyager/core/internal/datasource"
+	"data-voyager/core/internal/models"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -80,7 +81,7 @@ func TestPostgreSQLPlugin(t *testing.T) {
 	t.Run("Connect", func(t *testing.T) {
 		conn, err := plugin.Connect(ctx, config)
 		require.NoError(t, err)
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		// Test ping
 		err = conn.Ping(ctx)
@@ -94,7 +95,7 @@ func TestPostgreSQLPlugin(t *testing.T) {
 	t.Run("Query", func(t *testing.T) {
 		conn, err := plugin.Connect(ctx, config)
 		require.NoError(t, err)
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		// Create a test table
 		_, err = conn.Query(ctx, `
@@ -136,7 +137,7 @@ func TestPostgreSQLPlugin(t *testing.T) {
 	t.Run("GetSchema", func(t *testing.T) {
 		conn, err := plugin.Connect(ctx, config)
 		require.NoError(t, err)
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		schema, err := conn.GetSchema(ctx)
 		require.NoError(t, err)
@@ -156,7 +157,7 @@ func TestPostgreSQLPlugin(t *testing.T) {
 	t.Run("GetTables", func(t *testing.T) {
 		conn, err := plugin.Connect(ctx, config)
 		require.NoError(t, err)
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		// Create a test table
 		_, err = conn.Query(ctx, `
@@ -207,7 +208,7 @@ func TestPostgreSQLPlugin(t *testing.T) {
 	t.Run("QueryWithParameters", func(t *testing.T) {
 		conn, err := plugin.Connect(ctx, config)
 		require.NoError(t, err)
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		// Create a test table
 		_, err = conn.Query(ctx, `
@@ -352,7 +353,7 @@ func BenchmarkPostgreSQLQuery(b *testing.B) {
 
 	conn, err := plugin.Connect(ctx, config)
 	require.NoError(b, err)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Create test table with data
 	_, err = conn.Query(ctx, `

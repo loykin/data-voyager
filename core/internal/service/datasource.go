@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 
-	"explorer/core/internal/datasource"
-	"explorer/core/internal/datasource/plugins/clickhouse"
-	"explorer/core/internal/datasource/plugins/postgresql"
-	"explorer/core/internal/store"
+	"data-voyager/core/internal/datasource"
+	"data-voyager/core/internal/datasource/plugins/clickhouse"
+	"data-voyager/core/internal/datasource/plugins/postgresql"
+	"data-voyager/core/internal/store"
 )
 
 // DataSourceService provides business logic for data source operations

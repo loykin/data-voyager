@@ -1,13 +1,13 @@
 {
-  "name": "explorer",
+  "name": "data-voyager",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter explorer-frontend dev",
+    "dev": "pnpm --filter data-voyager-frontend dev",
     "dev:backend": "cd core && GO_ENV=development go run cmd/server/main.go serve",
     "dev:all": "concurrently \"pnpm dev\" \"pnpm dev:backend\"",
-    "build": "pnpm --filter explorer-frontend build",
-    "build:export": "pnpm --filter explorer-frontend build:export",
-    "build:go": "cd core && go build -o ../explorer ./cmd/server",
+    "build": "pnpm --filter data-voyager-frontend build",
+    "build:export": "pnpm --filter data-voyager-frontend build:export",
+    "build:go": "cd core && go build -o ../data-voyager ./cmd/server",
     "build:all": "pnpm build:export && pnpm build:go"
   },
   "devDependencies": {

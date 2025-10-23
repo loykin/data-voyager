@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"explorer/core/internal/datasource"
-	"explorer/core/internal/models"
+	"data-voyager/core/internal/datasource"
+	"data-voyager/core/internal/models"
+
 	_ "github.com/lib/pq"
 )
 
@@ -52,7 +53,7 @@ func (p *Plugin) Connect(ctx context.Context, config models.ConnectionConfig) (d
 
 	// Test connection
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to ping PostgreSQL: %w", err)
 	}
 
@@ -83,7 +84,7 @@ func (p *Plugin) TestConnection(ctx context.Context, config models.ConnectionCon
 			TestedAt:    time.Now(),
 		}, nil
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Test with a simple query
 	if err := conn.Ping(ctx); err != nil {
@@ -118,7 +119,7 @@ func (c *Connection) Query(ctx context.Context, query string, params ...interfac
 	if err != nil {
 		return nil, fmt.Errorf("query execution failed: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	// Get column information
 	columnTypes, err := rows.ColumnTypes()
@@ -270,7 +271,7 @@ func (c *Connection) GetMetrics() datasource.ConnectionMetrics {
 		OpenConnections: stats.OpenConnections,
 		IdleConnections: stats.Idle,
 		TotalQueries:    int64(stats.MaxOpenConnections), // Placeholder
-		LastActivity:    time.Now(),                       // Placeholder
+		LastActivity:    time.Now(),                      // Placeholder
 	}
 }
 

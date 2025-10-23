@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"explorer/core/internal/datasource"
-	"explorer/core/internal/models"
-	"explorer/core/internal/store"
+	"data-voyager/core/internal/datasource"
+	"data-voyager/core/internal/models"
+	"data-voyager/core/internal/store"
 	"github.com/gin-gonic/gin"
 )
 

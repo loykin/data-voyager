@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"explorer/core/internal/config"
+	"data-voyager/core/internal/config"
 	"github.com/spf13/cobra"
 )
 

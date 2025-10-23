@@ -4,8 +4,8 @@ import "./globals.css";
 import { RefineContextProvider } from "./refine-context";
 
 export const metadata: Metadata = {
-  title: "Explorer - Data Source Management",
-  description: "Explore and manage your data sources",
+  title: "Data Voyager - Data Source Management",
+  description: "Explore and manage your data sources with Data Voyager",
 };
 
 export default function RootLayout({
