@@ -18,9 +18,9 @@ type MetadataStore struct {
 
 // MetadataStoreConfig represents configuration for metadata store
 type MetadataStoreConfig struct {
-	Type           string `toml:"type"`           // sqlite or postgresql
-	ConnectionURL  string `toml:"connection_url"` // Connection string
-	MigrateOnStart bool   `toml:"migrate_on_start"`
+	Type           string `toml:"type" mapstructure:"type"`                     // sqlite or postgresql
+	ConnectionURL  string `toml:"connection_url" mapstructure:"connection_url"` // Connection string
+	MigrateOnStart bool   `toml:"migrate_on_start" mapstructure:"migrate_on_start"`
 }
 
 // NewMetadataStore creates a new metadata store
@@ -171,9 +171,9 @@ type DataSourceFilter struct {
 
 // DataSourceStats represents statistics about datasources
 type DataSourceStats struct {
-	TotalCount    int64                            `json:"total_count"`
-	ActiveCount   int64                            `json:"active_count"`
-	CountByType   map[models.DataSourceType]int64  `json:"count_by_type"`
+	TotalCount  int64                           `json:"total_count"`
+	ActiveCount int64                           `json:"active_count"`
+	CountByType map[models.DataSourceType]int64 `json:"count_by_type"`
 }
 
 // Close closes the database connection

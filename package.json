@@ -2,13 +2,16 @@
   "name": "explorer",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter frontend dev",
-    "build": "pnpm --filter frontend build",
-    "build:export": "pnpm --filter frontend build:export",
+    "dev": "pnpm --filter explorer-frontend dev",
+    "dev:backend": "cd core && GO_ENV=development go run cmd/server/main.go serve",
+    "dev:all": "concurrently \"pnpm dev\" \"pnpm dev:backend\"",
+    "build": "pnpm --filter explorer-frontend build",
+    "build:export": "pnpm --filter explorer-frontend build:export",
     "build:go": "cd core && go build -o ../explorer ./cmd/server",
     "build:all": "pnpm build:export && pnpm build:go"
   },
   "devDependencies": {
-    "@types/node": "^20"
+    "@types/node": "^20",
+    "concurrently": "^9.2.1"
   }
 }

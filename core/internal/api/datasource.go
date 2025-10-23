@@ -113,16 +113,37 @@ func (h *DataSourceHandler) CreateDataSource(c *gin.Context) {
 		return
 	}
 
-	// Validate configuration
-	if err := plugin.ValidateConfig(req.Config); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid configuration: " + err.Error()})
-		return
-	}
-
-	// Convert config to JSON
+	// Convert config map to JSON and back to proper struct for validation
 	configJSON, err := json.Marshal(req.Config)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to serialize configuration"})
+		return
+	}
+
+	// Parse config based on type for validation
+	var config models.ConnectionConfig
+	switch req.Type {
+	case models.DataSourceTypeClickHouse:
+		config = &models.ClickHouseConfig{}
+	case models.DataSourceTypePostgreSQL:
+		config = &models.PostgreSQLConfig{}
+	case models.DataSourceTypeSQLite:
+		config = &models.SQLiteConfig{}
+	case models.DataSourceTypeOpenSearch:
+		config = &models.OpenSearchConfig{}
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported data source type"})
+		return
+	}
+
+	if err := json.Unmarshal(configJSON, config); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse configuration"})
+		return
+	}
+
+	// Validate configuration
+	if err := plugin.ValidateConfig(config); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid configuration: " + err.Error()})
 		return
 	}
 
