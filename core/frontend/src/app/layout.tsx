@@ -1,17 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { RefineContextProvider } from "./refine-context";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Explorer - Data Source Management",
@@ -25,12 +15,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <RefineContextProvider>
-          {children}
-        </RefineContextProvider>
+      <body className="antialiased">
+        <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+          <RefineContextProvider>
+            {children}
+          </RefineContextProvider>
+        </Suspense>
       </body>
     </html>
   );

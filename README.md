@@ -59,6 +59,39 @@ explorer/
 - PostgreSQL (optional)
 - ClickHouse (optional)
 
+### Development Mode
+
+**Option 1: All-in-one (Recommended)**
+```bash
+# Start both frontend and backend with hot reload
+pnpm dev:all
+
+# Access the app at http://localhost:8080/ui
+# Backend API at http://localhost:8080/api/v1
+# Frontend dev server runs on http://localhost:3000 (proxied)
+```
+
+**Option 2: Separate processes**
+```bash
+# Terminal 1 - Frontend dev server
+pnpm dev
+
+# Terminal 2 - Backend with proxy to frontend
+GO_ENV=development go run core/cmd/server/main.go serve
+
+# Access at http://localhost:8080/ui
+```
+
+**Option 3: Frontend only**
+```bash
+# Frontend dev server with API proxy
+cd core/frontend
+pnpm dev
+
+# Access at http://localhost:3000/ui
+# API calls proxied to http://localhost:8080
+```
+
 ### Backend Setup
 
 ```bash

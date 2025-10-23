@@ -1,16 +1,11 @@
 import { DataProvider } from '@refinedev/core';
-import { dataSourceApiClient } from '../api/client';
+import { api } from '@/features';
+import { DataSource } from '@/features';
 
-/**
- * Datasource Provider - Refine.dev DataProvider implementation
- * 
- * This is the central data integration point that connects your datasource API
- * with Refine's data hooks (useList, useCreate, useUpdate, useDelete, etc.)
- */
 export const datasourceProvider: DataProvider = {
-  getList: async ({ resource, pagination, filters, sorters, meta }) => {
+  getList: async ({ resource }) => {
     if (resource === 'datasources') {
-      const datasources = await dataSourceApiClient.getDataSources();
+      const datasources = await api.get<DataSource[]>('/datasources');
       return {
         data: datasources as any,
         total: datasources.length,
@@ -19,88 +14,43 @@ export const datasourceProvider: DataProvider = {
     throw new Error(`Resource ${resource} not supported`);
   },
 
-  getOne: async ({ resource, id, meta }) => {
+  getOne: async ({ resource, id }) => {
     if (resource === 'datasources') {
-      const datasource = await dataSourceApiClient.getDataSource(Number(id));
-      return {
-        data: datasource as any,
-      };
+      const datasource = await api.get<DataSource>(`/datasources/${id}`);
+      return { data: datasource as any };
     }
     throw new Error(`Resource ${resource} not supported`);
   },
 
-  create: async ({ resource, variables, meta }) => {
+  create: async ({ resource, variables }) => {
     if (resource === 'datasources') {
-      const datasource = await dataSourceApiClient.createDataSource(variables as any);
-      return {
-        data: datasource as any,
-      };
+      const datasource = await api.post<DataSource>('/datasources', variables);
+      return { data: datasource as any };
     }
     throw new Error(`Resource ${resource} not supported`);
   },
 
-  update: async ({ resource, id, variables, meta }) => {
+  update: async ({ resource, id, variables }) => {
     if (resource === 'datasources') {
-      const datasource = await dataSourceApiClient.updateDataSource(Number(id), variables as any);
-      return {
-        data: datasource as any,
-      };
+      const datasource = await api.put<DataSource>(`/datasources/${id}`, variables);
+      return { data: datasource as any };
     }
     throw new Error(`Resource ${resource} not supported`);
   },
 
-  deleteOne: async ({ resource, id, meta }) => {
+  deleteOne: async ({ resource, id }) => {
     if (resource === 'datasources') {
-      await dataSourceApiClient.deleteDataSource(Number(id));
-      return {
-        data: {} as any,
-      };
+      await api.delete(`/datasources/${id}`);
+      return { data: {} as any };
     }
     throw new Error(`Resource ${resource} not supported`);
   },
 
-  getApiUrl: () => {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
-  },
+  getApiUrl: () => '/api/v1',
 
-  /**
-   * Custom methods for datasource-specific operations
-   * Use Refine's useCustom hook to access these endpoints
-   */
-  custom: async ({ url, method, filters, sorters, payload, query, headers, meta }) => {
-    // Connection testing
-    if (url === '/datasources/test' && method === 'post') {
-      const result = await dataSourceApiClient.testConnection(payload as any);
-      return {
-        data: result as any,
-      };
-    }
-
-    // Schema fetching
-    if (url?.includes('/schema') && method === 'get') {
-      const idMatch = url.match(/\/datasources\/(\d+)\/schema/);
-      if (idMatch) {
-        const id = Number(idMatch[1]);
-        const schema = await dataSourceApiClient.getSchema(id);
-        return {
-          data: schema as any,
-        };
-      }
-    }
-
-    // Query execution
-    if (url?.includes('/query') && method === 'post') {
-      const idMatch = url.match(/\/datasources\/(\d+)\/query/);
-      if (idMatch && payload) {
-        const id = Number(idMatch[1]);
-        const queryPayload = payload as unknown as { query: string; params?: any[] };
-        const result = await dataSourceApiClient.executeQuery(id, queryPayload.query, queryPayload.params);
-        return {
-          data: result as any,
-        };
-      }
-    }
-
-    throw new Error(`Custom method not supported: ${method} ${url}`);
+  custom: async ({ url, method = 'get', payload }) => {
+    const apiMethod = (method as string).toLowerCase() as 'get' | 'post' | 'put' | 'delete';
+    const result = await api[apiMethod](url!, payload);
+    return { data: result as any };
   },
 };

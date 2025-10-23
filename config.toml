@@ -1,6 +1,6 @@
 [server]
 host = "localhost"
-port = 8082
+port = 8080
 read_timeout = 30
 write_timeout = 30
 max_body_size = 10485760

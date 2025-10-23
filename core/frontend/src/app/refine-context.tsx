@@ -1,8 +1,9 @@
 "use client";
 
 import { Refine } from "@refinedev/core";
-import routerProvider from "@refinedev/nextjs-router";
+import routerProvider from "@refinedev/nextjs-router/app";
 import { datasourceProvider } from "@/features/datasource";
+import { Database } from "lucide-react";
 
 interface RefineContextProviderProps {
   children: React.ReactNode;
@@ -18,19 +19,21 @@ export const RefineContextProvider: React.FC<RefineContextProviderProps> = ({
       resources={[
         {
           name: "datasources",
-          list: "/explorer",
-          create: "/explorer/create",
-          edit: "/explorer/edit/:id",
-          show: "/explorer/show/:id",
+          list: "/datasource",
+          create: "/datasource/create",
+          edit: "/datasource/edit",
+          show: "/datasource/show",
           meta: {
+            label: "Datasources",
+            icon: <Database className="h-4 w-4" />,
             canDelete: true,
           },
         },
       ]}
       options={{
-        syncWithLocation: true,
+        syncWithLocation: false,
         warnWhenUnsavedChanges: true,
-        projectId: "explorer-project",
+        disableTelemetry: true,
       }}
     >
       {children}
