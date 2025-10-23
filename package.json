@@ -1,0 +1,14 @@
+{
+  "name": "explorer",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "build": "pnpm --filter frontend build",
+    "build:export": "pnpm --filter frontend build:export",
+    "build:go": "cd core && go build -o ../explorer ./cmd/server",
+    "build:all": "pnpm build:export && pnpm build:go"
+  },
+  "devDependencies": {
+    "@types/node": "^20"
+  }
+}

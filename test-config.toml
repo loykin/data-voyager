@@ -1,0 +1,25 @@
+[logging]
+format = 'text'
+level = 'info'
+output = 'stdout'
+
+[metadata_store]
+connection_url = './data/explorer.db'
+migrate_on_start = true
+type = 'sqlite'
+
+[security]
+allowed_headers = ['Origin', 'Content-Type', 'Accept', 'Authorization']
+allowed_methods = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+allowed_origins = ['*']
+enable_auth = false
+enable_cors = true
+rate_limit_rps = 100
+session_timeout = 3600
+
+[server]
+host = 'localhost'
+max_body_size = 10485760
+port = 8080
+read_timeout = 30
+write_timeout = 30
