@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useDatasources } from "../hooks/use-datasources";
+import { useDatasources } from "@/features";
 import {
   Card,
   CardHeader,
@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataSource, DataSourceType } from "../types/datasource.types";
+import { DataSource, DataSourceType } from "@/features";
 import { MoreHorizontal, Edit, Eye, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
 
@@ -71,7 +71,7 @@ export function DataSourceListShadcn() {
             Manage your database connections and data sources
           </p>
         </div>
-        <Link href="/explorer/create">
+        <Link href="/datasource/create">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Add Data Source
@@ -132,13 +132,17 @@ export function DataSourceListShadcn() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
+                        <DropdownMenuItem asChild>
+                          <Link href={`/datasource/show?id=${datasource.id}`} className="flex items-center">
+                            <Eye className="mr-2 h-4 w-4" />
+                            View
+                          </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
+                        <DropdownMenuItem asChild>
+                          <Link href={`/datasource/edit?id=${datasource.id}`} className="flex items-center">
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600">
                           <Trash2 className="mr-2 h-4 w-4" />
