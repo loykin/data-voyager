@@ -2,12 +2,12 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useOne, useUpdate } from "@refinedev/core";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@data-voyager/shared-ui/components/ui/card";
+import { Button } from "@data-voyager/shared-ui/components/ui/button";
+import { Input } from "@data-voyager/shared-ui/components/ui/input";
+import { Label } from "@data-voyager/shared-ui/components/ui/label";
+import { Textarea } from "@data-voyager/shared-ui/components/ui/textarea";
+import { Switch } from "@data-voyager/shared-ui/components/ui/switch";
 import { useState, useEffect } from "react";
 import type { DataSource } from "@/features/datasource/types/datasource.types";
 

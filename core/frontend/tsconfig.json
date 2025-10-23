@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@data-voyager/shared-ui": [
+        "../../shared/frontend/src/index.ts"
+      ],
+      "@data-voyager/shared-ui/*": [
+        "../../shared/frontend/src/*"
       ]
     }
   },

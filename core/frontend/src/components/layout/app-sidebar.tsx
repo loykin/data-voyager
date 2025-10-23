@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMenu } from "@refinedev/core";
-import { cn } from "@/lib/utils";
+import { cn } from "@data-voyager/shared-ui/lib/utils";
 import {
   Sidebar,
   SidebarHeader,
   SidebarContent,
   SidebarFooter,
-} from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+} from "@data-voyager/shared-ui/components/ui/sidebar";
+import { Button } from "@data-voyager/shared-ui/components/ui/button";
 import { Database, Plus } from "lucide-react";
 
 export function AppSidebar() {
