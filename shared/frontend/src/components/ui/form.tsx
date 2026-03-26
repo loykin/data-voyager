@@ -11,7 +11,7 @@ import {
   type FieldValues,
 } from "react-hook-form"
 
-import { cn } from '@/lib/utils'
+import { cn } from '../../lib/utils'
 import { Slot, type SlotProps } from "../../lib/slot"
 import { Label } from "./label"
 
