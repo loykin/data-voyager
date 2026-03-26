@@ -1,25 +1,12 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
-
-const sharedRoot = path.resolve(__dirname, '../../shared/frontend/src')
-
-// Resolve @/ alias within shared/frontend files to shared's own src/
-const sharedAliasPlugin: Plugin = {
-  name: 'shared-alias',
-  resolveId(id, importer) {
-    if (id.startsWith('@/') && importer?.includes('/shared/frontend/src/')) {
-      return path.resolve(sharedRoot, id.slice(2))
-    }
-  },
-}
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    sharedAliasPlugin,
   ],
   base: '/ui/',
   build: {
