@@ -14,19 +14,16 @@ export function DatasourceShowPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <Card>
+    <Card>
         <CardHeader>
           <CardTitle>Data Source Details {id ? `#${id}` : ''}</CardTitle>
         </CardHeader>
@@ -62,6 +59,5 @@ export function DatasourceShowPage() {
           <Button onClick={() => navigate('/datasource')}>Back to List</Button>
         </CardContent>
       </Card>
-    </div>
   )
 }
