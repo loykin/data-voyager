@@ -15,6 +15,9 @@ const DatasourceEditPage = React.lazy(() =>
 const DatasourceShowPage = React.lazy(() =>
   import('@/pages/datasource').then((m) => ({ default: m.DatasourceShowPage }))
 )
+const DataGridDemoPage = React.lazy(() =>
+  import('@/pages/demo').then((m) => ({ default: m.DataGridDemoPage }))
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +52,7 @@ export function App() {
               <Route path="/datasource/create" element={<DatasourceCreatePage />} />
               <Route path="/datasource/edit" element={<DatasourceEditPage />} />
               <Route path="/datasource/show" element={<DatasourceShowPage />} />
+              <Route path="/demo" element={<DataGridDemoPage />} />
             </Route>
           </Routes>
         </React.Suspense>

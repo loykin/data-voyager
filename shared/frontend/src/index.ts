@@ -20,6 +20,9 @@ export * from "./components/ui/tabs";
 export * from "./components/ui/textarea";
 export * from "./components/ui/tooltip";
 
+// DataGrid
+export * from "./components/ui-extension/data-grid";
+
 // Hooks
 export * from "./hooks/use-mobile";
 
