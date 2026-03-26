@@ -1,16 +1,25 @@
 import { Link, useLocation } from 'react-router-dom'
-import { cn } from '@data-voyager/shared-ui/lib/utils'
 import {
   Sidebar,
-  SidebarHeader,
   SidebarContent,
-  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
 } from '@data-voyager/shared-ui/components/ui/sidebar'
-import { Button } from '@data-voyager/shared-ui/components/ui/button'
-import { Database, Plus } from 'lucide-react'
+import { Database } from 'lucide-react'
 
-const navItems = [
-  { key: 'datasources', label: 'Datasources', route: '/datasource', icon: <Database className="h-4 w-4" /> },
+const navGroups = [
+  {
+    label: 'Data',
+    items: [
+      { title: 'Datasources', url: '/datasource', icon: Database },
+    ],
+  },
 ]
 
 export function AppSidebar() {
@@ -19,41 +28,36 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <Database className="h-6 w-6" />
-          <span className="text-lg font-semibold">Data Voyager</span>
+        <div className="flex items-center gap-2 px-2 py-1">
+          <Database className="h-5 w-5" />
+          <span className="text-base font-semibold">Data Voyager</span>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        <nav className="space-y-1 px-2">
-          {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.route)
-            return (
-              <Link
-                key={item.key}
-                to={item.route}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
-        </nav>
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      render={<Link to={item.url} />}
+                      isActive={pathname.startsWith(item.url)}
+                    >
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
-      <SidebarFooter>
-        <Button variant="outline" className="w-full" nativeButton={false} render={<Link to="/datasource/create" />}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Datasource
-        </Button>
-      </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

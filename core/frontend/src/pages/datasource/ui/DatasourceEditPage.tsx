@@ -42,32 +42,27 @@ export function DatasourceEditPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
     )
   }
 
   if (!datasource) {
     return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-destructive mb-4">Datasource not found</p>
-            <Button onClick={() => navigate('/datasource')}>Back to List</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="py-8 text-center">
+          <p className="text-destructive mb-4">Datasource not found</p>
+          <Button onClick={() => navigate('/datasource')}>Back to List</Button>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <Card>
+    <Card>
         <CardHeader>
           <CardTitle>Edit Data Source — {datasource.name}</CardTitle>
         </CardHeader>
@@ -119,6 +114,5 @@ export function DatasourceEditPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
   )
 }
