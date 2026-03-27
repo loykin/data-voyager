@@ -1,12 +1,24 @@
 import React, { useMemo } from 'react'
-import { flexRender, type Row, type Table, type Column } from '@tanstack/react-table'
+import {
+  flexRender,
+  type Row,
+  type Table,
+  type Column,
+  type HeaderGroup,
+} from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, X } from 'lucide-react'
 import type { ColumnSizingState } from '@tanstack/react-table'
-import type { ColumnSizingMode } from './types'
+import type { Virtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../../lib/utils'
+import { TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui/table'
+import { ScrollTable } from './ScrollTable'
 
-interface DataGridTableViewProps<T extends object> {
+// ─────────────────────────────────────────────────────────────────────────────
+// Props
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface DataGridTableViewProps<T extends object> {
   table: Table<T>
   rows: Row<T>[]
   containerRef: React.RefObject<HTMLDivElement | null>
@@ -15,38 +27,354 @@ interface DataGridTableViewProps<T extends object> {
   onRowClick?: (row: T) => void
   rowCursor?: boolean
   enableColumnResizing?: boolean
-  /** Show per-column filter inputs below the header */
   enableColumnFilters?: boolean
-  columnSizingMode?: ColumnSizingMode
-  /** Current sizing state — to detect which flex cols have been user-resized */
   sizing?: ColumnSizingState
   tableHeight?: string | number | 'auto'
-  /** Enable TanStack Virtual for large datasets */
   virtual?: boolean
   estimateRowHeight?: number
   overscan?: number
-  /** Sentinel element ref for infinite scroll */
   loadMoreRef?: React.RefObject<HTMLDivElement | null>
   isFetchingNextPage?: boolean
+  /**
+   * When true the scroll container fills 100% of its parent height.
+   * Parent must have an explicit height (flex-col layout).
+   */
+  fillHeight?: boolean
 }
 
-const SKELETON_ROW_COUNT = 6
+// ─────────────────────────────────────────────────────────────────────────────
+// Utility
+// ─────────────────────────────────────────────────────────────────────────────
 
-function SkeletonRows({ colCount }: { colCount: number }) {
+function colStyle<T extends object>(col: Column<T>): React.CSSProperties {
+  return { width: col.getSize(), flexShrink: 0 }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DataGridHeaderRow
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DataGridHeaderRowProps<T extends object> {
+  headerGroup: HeaderGroup<T>
+  enableColumnResizing: boolean
+  virtual: boolean
+}
+
+function DataGridHeaderRow<T extends object>({
+  headerGroup,
+  enableColumnResizing,
+  virtual,
+}: DataGridHeaderRowProps<T>) {
   return (
-    <>
-      {Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
-        <tr key={i} className="border-b">
-          {Array.from({ length: colCount }).map((_, j) => (
-            <td key={j} className="px-4 py-3">
-              <div className="h-4 animate-pulse rounded bg-muted" />
-            </td>
-          ))}
-        </tr>
+    <TableRow
+      className="hover:bg-transparent"
+      style={{ display: 'flex', width: '100%' }}
+    >
+      {headerGroup.headers.map((header) => (
+        <TableHead
+          key={header.id}
+          colSpan={header.colSpan}
+          className={cn(
+            'relative px-3 py-2 text-xs font-medium h-auto',
+            'text-muted-foreground whitespace-normal',
+            'select-none group',
+            header.column.getCanSort() && 'cursor-pointer',
+          )}
+          style={
+            virtual
+              ? { display: 'flex', alignItems: 'center', width: header.getSize() }
+              : { ...colStyle(header.column), display: 'flex', alignItems: 'center', overflow: 'hidden' }
+          }
+          onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+        >
+          <span className="flex items-center gap-1 min-w-0 overflow-hidden">
+            <span className="truncate">
+              {header.isPlaceholder
+                ? null
+                : flexRender(header.column.columnDef.header, header.getContext())}
+            </span>
+            {header.column.getCanSort() && (
+              <span className="ml-1 shrink-0">
+                {header.column.getIsSorted() === 'asc' ? (
+                  <ArrowUp className="h-3.5 w-3.5" />
+                ) : header.column.getIsSorted() === 'desc' ? (
+                  <ArrowDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ArrowUpDown className="h-3.5 w-3.5 opacity-40 group-hover:opacity-100" />
+                )}
+              </span>
+            )}
+          </span>
+
+          {enableColumnResizing && header.column.getCanResize() && (
+            <div
+              onMouseDown={header.getResizeHandler()}
+              onTouchStart={header.getResizeHandler()}
+              className={cn(
+                'absolute right-0 top-0 h-full w-1.5 cursor-col-resize',
+                'select-none touch-none opacity-0 group-hover:opacity-100',
+                'bg-border hover:bg-primary',
+                header.column.getIsResizing() && 'opacity-100 bg-primary',
+              )}
+            />
+          )}
+        </TableHead>
       ))}
-    </>
+    </TableRow>
   )
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DataGridFilterRow
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DataGridFilterRowProps<T extends object> {
+  visibleLeafColumns: Column<T>[]
+  selectOptions: Record<string, string[]>
+  virtual: boolean
+}
+
+function DataGridFilterRow<T extends object>({
+  visibleLeafColumns,
+  selectOptions,
+  virtual,
+}: DataGridFilterRowProps<T>) {
+  return (
+    <TableRow
+      className="border-b bg-muted/50 hover:bg-muted/50"
+      style={{ display: 'flex', width: '100%' }}
+    >
+      {visibleLeafColumns.map((col) => {
+        const ft = col.columnDef.meta?.filterType
+        const filterValue = (col.getFilterValue() ?? '') as string
+        const thStyle: React.CSSProperties = virtual
+          ? { display: 'flex', alignItems: 'center', width: col.getSize() }
+          : { ...colStyle(col), display: 'flex', alignItems: 'center' }
+
+        if (ft === false) {
+          return <TableHead key={col.id} className="px-2 py-1 h-auto" style={thStyle} />
+        }
+
+        return (
+          <TableHead key={col.id} className="px-2 py-1 h-auto font-normal" style={thStyle}>
+            {ft === 'select' ? (
+              <select
+                value={filterValue}
+                onChange={(e) => col.setFilterValue(e.target.value || undefined)}
+                className={cn(
+                  'h-7 w-full rounded border border-input bg-background px-2 text-xs',
+                  'focus:outline-none focus:ring-1 focus:ring-ring appearance-none',
+                )}
+              >
+                <option value="">All</option>
+                {(selectOptions[col.id] ?? []).map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            ) : ft === 'number' ? (
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={(col.getFilterValue() as [string, string] | undefined)?.[0] ?? ''}
+                  onChange={(e) =>
+                    col.setFilterValue((old: [string, string] = ['', '']) => [e.target.value, old[1]])
+                  }
+                  className="h-7 w-full rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={(col.getFilterValue() as [string, string] | undefined)?.[1] ?? ''}
+                  onChange={(e) =>
+                    col.setFilterValue((old: [string, string] = ['', '']) => [old[0], e.target.value])
+                  }
+                  className="h-7 w-full rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Filter…"
+                  value={filterValue}
+                  onChange={(e) => col.setFilterValue(e.target.value || undefined)}
+                  className="h-7 w-full rounded border border-input bg-background px-2 pr-6 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                {filterValue && (
+                  <button
+                    onClick={() => col.setFilterValue(undefined)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )}
+          </TableHead>
+        )
+      })}
+    </TableRow>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DataGridBodyRow
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DataGridBodyRowProps<T extends object> {
+  row: Row<T>
+  onRowClick?: (row: T) => void
+  rowCursor?: boolean
+  style?: React.CSSProperties
+  dataIndex?: number
+  measureRef?: (node: Element | null) => void
+}
+
+function DataGridBodyRow<T extends object>({
+  row,
+  onRowClick,
+  rowCursor,
+  style,
+  dataIndex,
+  measureRef,
+}: DataGridBodyRowProps<T>) {
+  return (
+    <TableRow
+      data-index={dataIndex}
+      ref={measureRef}
+      onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+      className={cn(
+        'flex w-full',
+        onRowClick || rowCursor ? 'cursor-pointer' : 'hover:bg-muted/30',
+      )}
+      style={style}
+    >
+      {row.getVisibleCells().map((cell) => (
+        <TableCell
+          key={cell.id}
+          className={cn(
+            'px-3 py-2 overflow-hidden',
+            cell.column.columnDef.meta?.align === 'right' && 'text-right',
+            cell.column.columnDef.meta?.align === 'center' && 'text-center',
+          )}
+          style={colStyle(cell.column)}
+        >
+          <span className="block truncate">
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </span>
+        </TableCell>
+      ))}
+    </TableRow>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DataGridVirtualBody
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DataGridVirtualBodyProps<T extends object> {
+  rows: Row<T>[]
+  rowVirtualizer: Virtualizer<HTMLDivElement, Element>
+  onRowClick?: (row: T) => void
+  rowCursor?: boolean
+}
+
+function DataGridVirtualBody<T extends object>({
+  rows,
+  rowVirtualizer,
+  onRowClick,
+  rowCursor,
+}: DataGridVirtualBodyProps<T>) {
+  const virtualItems = rowVirtualizer.getVirtualItems()
+  const totalSize = rowVirtualizer.getTotalSize()
+
+  return (
+    <TableBody style={{ display: 'grid', height: totalSize, position: 'relative' }}>
+      {virtualItems.map((virtualRow) => {
+        const row = rows[virtualRow.index]!
+        return (
+          <DataGridBodyRow
+            key={row.id}
+            row={row}
+            onRowClick={onRowClick}
+            rowCursor={rowCursor}
+            dataIndex={virtualRow.index}
+            measureRef={rowVirtualizer.measureElement}
+            style={{ position: 'absolute', width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+          />
+        )
+      })}
+    </TableBody>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DataGridFlexBody
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DataGridFlexBodyProps<T extends object> {
+  rows: Row<T>[]
+  visibleLeafColumns: Column<T>[]
+  isLoading?: boolean
+  emptyMessage: string
+  onRowClick?: (row: T) => void
+  rowCursor?: boolean
+}
+
+function DataGridFlexBody<T extends object>({
+  rows,
+  visibleLeafColumns,
+  isLoading,
+  emptyMessage,
+  onRowClick,
+  rowCursor,
+}: DataGridFlexBodyProps<T>) {
+  if (isLoading) {
+    return (
+      <TableBody style={{ display: 'block' }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <TableRow key={i} className="flex w-full">
+            {visibleLeafColumns.map((col) => (
+              <TableCell key={col.id} className="px-3 py-2" style={colStyle(col)}>
+                <div className="h-4 animate-pulse rounded bg-muted" />
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    )
+  }
+
+  if (rows.length === 0) {
+    return (
+      <TableBody style={{ display: 'block' }}>
+        <TableRow className="flex w-full hover:bg-transparent">
+          <TableCell className="flex-1 py-12 text-center text-muted-foreground">
+            {emptyMessage}
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    )
+  }
+
+  return (
+    <TableBody style={{ display: 'block' }}>
+      {rows.map((row) => (
+        <DataGridBodyRow
+          key={row.id}
+          row={row}
+          onRowClick={onRowClick}
+          rowCursor={rowCursor}
+        />
+      ))}
+    </TableBody>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DataGridTableView (main)
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function DataGridTableView<T extends object>({
   table,
@@ -58,43 +386,22 @@ export function DataGridTableView<T extends object>({
   rowCursor,
   enableColumnResizing = true,
   enableColumnFilters = false,
-  columnSizingMode = 'fixed',
-  sizing = {},
   tableHeight,
   virtual = false,
   estimateRowHeight = 44,
   overscan = 10,
   loadMoreRef,
   isFetchingNextPage,
+  fillHeight = false,
 }: DataGridTableViewProps<T>) {
   const headerGroups = table.getHeaderGroups()
   const visibleLeafColumns = table.getVisibleLeafColumns()
-  const visibleColCount = visibleLeafColumns.length
 
-  // flex mode without virtualizer = CSS flex (no JS sizing needed)
-  const isCssFlex = !virtual && columnSizingMode === 'flex'
-
-  /**
-   * Per-column style: CSS flex for unresized flex-mode columns,
-   * explicit pixel width for everything else.
-   */
-  function cellStyle(col: Column<T>): React.CSSProperties {
-    if (virtual) return { width: col.getSize() }
-    const meta = col.columnDef.meta
-    if (isCssFlex && meta?.flex != null && !sizing[col.id]) {
-      // Pure CSS proportional distribution \u2014 no JS required
-      return { flex: `${meta.flex} 0 0`, minWidth: meta.minWidth ?? 60 }
-    }
-    return { width: col.getSize(), flexShrink: 0 }
-  }
-
-  // Unique values for 'select' filter type per column
   const selectOptions = useMemo(() => {
     if (!enableColumnFilters) return {}
     const map: Record<string, string[]> = {}
     for (const col of visibleLeafColumns) {
-      const ft = col.columnDef.meta?.filterType
-      if (ft !== 'select') continue
+      if (col.columnDef.meta?.filterType !== 'select') continue
       const vals = new Set<string>()
       table.getCoreRowModel().rows.forEach((row) => {
         const v = row.getValue(col.id)
@@ -105,7 +412,6 @@ export function DataGridTableView<T extends object>({
     return map
   }, [enableColumnFilters, visibleLeafColumns, table])
 
-  // Virtual row support via @tanstack/react-virtual
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => containerRef.current,
@@ -117,358 +423,71 @@ export function DataGridTableView<T extends object>({
   const containerStyle: React.CSSProperties = {
     overflow: 'auto',
     position: 'relative',
+    minWidth: 0,
+    scrollbarGutter: 'stable',
+    // 새 stacking context → sticky 헤더 z-index가 테이블 영역 안에만 적용됨
+    isolation: 'isolate',
     ...(virtual
-      ? {
-          height:
-            typeof tableHeight === 'number'
-              ? tableHeight
-              : tableHeight && tableHeight !== 'auto'
-              ? tableHeight
-              : 500,
-        }
+      ? { height: typeof tableHeight === 'number' ? tableHeight : tableHeight && tableHeight !== 'auto' ? tableHeight : 500 }
+      : fillHeight
+      ? { flex: 1, minHeight: 0 }
       : tableHeight && tableHeight !== 'auto'
-      ? {
-          maxHeight:
-            typeof tableHeight === 'number' ? tableHeight : tableHeight,
-        }
+      ? { maxHeight: tableHeight }
       : {}),
   }
 
-  // ── Virtual body ──────────────────────────────────────────────────────────
-  const renderVirtualBody = () => {
-    const virtualItems = rowVirtualizer.getVirtualItems()
-    const totalSize = rowVirtualizer.getTotalSize()
-
-    return (
-      <tbody
-        style={{
-          display: 'grid',
-          height: totalSize,
-          position: 'relative',
-        }}
-      >
-        {virtualItems.map((virtualRow) => {
-          const row = rows[virtualRow.index]!
-          return (
-            <tr
-              key={row.id}
-              data-index={virtualRow.index}
-              ref={rowVirtualizer.measureElement}
-              onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-              className={cn(
-                'flex absolute w-full border-b transition-colors',
-                onRowClick || rowCursor
-                  ? 'cursor-pointer hover:bg-muted/50'
-                  : 'hover:bg-muted/30'
-              )}
-              style={{ transform: `translateY(${virtualRow.start}px)` }}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className={cn(
-                    'flex items-center px-3 py-2 text-sm overflow-hidden',
-                    cell.column.columnDef.meta?.align === 'right' && 'justify-end',
-                    cell.column.columnDef.meta?.align === 'center' && 'justify-center'
-                  )}
-                  style={{ width: cell.column.getSize() }}
-                >
-                  <span className="truncate">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </span>
-                </td>
-              ))}
-            </tr>
-          )
-        })}
-      </tbody>
-    )
-  }
-
-  // ── Regular body ──────────────────────────────────────────────────────────
-  const renderBody = () => (
-    <tbody>
-      {isLoading ? (
-        <SkeletonRows colCount={visibleColCount} />
-      ) : rows.length === 0 ? (
-        <tr>
-          <td
-            colSpan={visibleColCount}
-            className="py-12 text-center text-sm text-muted-foreground"
-          >
-            {emptyMessage}
-          </td>
-        </tr>
-      ) : (
-        rows.map((row) => (
-          <tr
-            key={row.id}
-            onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-            className={cn(
-              'border-b transition-colors',
-              onRowClick || rowCursor
-                ? 'cursor-pointer hover:bg-muted/50'
-                : 'hover:bg-muted/30'
-            )}
-          >
-            {row.getVisibleCells().map((cell) => (
-              <td
-                key={cell.id}
-                className={cn(
-                  'px-3 py-2 text-sm overflow-hidden',
-                  cell.column.columnDef.meta?.align === 'right' && 'text-right',
-                  cell.column.columnDef.meta?.align === 'center' && 'text-center'
-                )}
-                style={{ width: cell.column.getSize() }}
-              >
-                <span className="block truncate">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </span>
-              </td>
-            ))}
-          </tr>
-        ))
-      )}
-    </tbody>
-  )
-
-  // ── Flex body (CSS flex mode) ─────────────────────────────────────────────
-  const renderFlexBody = () => (
-    <tbody style={{ display: 'block' }}>
-      {isLoading ? (
-        Array.from({ length: 6 }).map((_, i) => (
-          <tr key={i} className="flex w-full border-b">
-            {visibleLeafColumns.map((col) => (
-              <td key={col.id} className="px-3 py-2" style={cellStyle(col)}>
-                <div className="h-4 animate-pulse rounded bg-muted" />
-              </td>
-            ))}
-          </tr>
-        ))
-      ) : rows.length === 0 ? (
-        <tr className="flex w-full">
-          <td className="flex-1 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</td>
-        </tr>
-      ) : (
-        rows.map((row) => (
-          <tr
-            key={row.id}
-            onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-            className={cn(
-              'flex w-full border-b transition-colors',
-              onRowClick || rowCursor
-                ? 'cursor-pointer hover:bg-muted/50'
-                : 'hover:bg-muted/30'
-            )}
-          >
-            {row.getVisibleCells().map((cell) => (
-              <td
-                key={cell.id}
-                className={cn(
-                  'px-3 py-2 text-sm overflow-hidden',
-                  cell.column.columnDef.meta?.align === 'right' && 'text-right',
-                  cell.column.columnDef.meta?.align === 'center' && 'text-center'
-                )}
-                style={cellStyle(cell.column)}
-              >
-                <span className="block truncate">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </span>
-              </td>
-            ))}
-          </tr>
-        ))
-      )}
-    </tbody>
-  )
-
   return (
     <div ref={containerRef} style={containerStyle}>
-      <table
+      <ScrollTable
         style={
           virtual
             ? { display: 'grid', width: table.getTotalSize() }
-            : isCssFlex
-            ? { display: 'block', width: '100%' }
-            : { tableLayout: 'fixed', width: table.getTotalSize() }
+            : { display: 'block', width: table.getTotalSize(), minWidth: '100%' }
         }
-        className="w-full text-sm"
       >
-        {/* ── Header (+ optional filter row, same sticky thead) ───── */}
-        <thead
-          className="sticky top-0 z-10 bg-background"
-          style={(virtual || isCssFlex) ? { display: 'block' } : undefined}
+        <TableHeader
+          className="sticky top-0 z-10 bg-background [&_tr]:border-b"
+          style={{ display: 'block', transform: 'translateZ(0)', willChange: 'transform' }}
         >
-          {/* Sort / label row */}
           {headerGroups.map((headerGroup) => (
-            <tr
+            <DataGridHeaderRow
               key={headerGroup.id}
-              className="border-b"
-              style={(virtual || isCssFlex) ? { display: 'flex', width: '100%' } : undefined}
-            >
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  colSpan={header.colSpan}
-                  className={cn(
-                    'relative px-3 py-2 text-left text-xs font-medium',
-                    'text-muted-foreground',
-                    'select-none group',
-                    header.column.getCanSort() && 'cursor-pointer'
-                  )}
-                  style={{
-                    ...(virtual
-                      ? { display: 'flex', alignItems: 'center', width: header.getSize() }
-                      : isCssFlex
-                      ? { ...cellStyle(header.column), display: 'flex', alignItems: 'center', overflow: 'hidden' }
-                      : { width: header.getSize() }),
-                  }}
-                  onClick={
-                    header.column.getCanSort()
-                      ? header.column.getToggleSortingHandler()
-                      : undefined
-                  }
-                >
-                  <span className="flex items-center gap-1 min-w-0 overflow-hidden">
-                    <span className="truncate">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                    </span>
-                    {header.column.getCanSort() && (
-                      <span className="ml-1 shrink-0">
-                        {header.column.getIsSorted() === 'asc' ? (
-                          <ArrowUp className="h-3.5 w-3.5" />
-                        ) : header.column.getIsSorted() === 'desc' ? (
-                          <ArrowDown className="h-3.5 w-3.5" />
-                        ) : (
-                          <ArrowUpDown className="h-3.5 w-3.5 opacity-40 group-hover:opacity-100" />
-                        )}
-                      </span>
-                    )}
-                  </span>
-
-                  {/* Column resize handle */}
-                  {enableColumnResizing && header.column.getCanResize() && (
-                    <div
-                      onMouseDown={header.getResizeHandler()}
-                      onTouchStart={header.getResizeHandler()}
-                      className={cn(
-                        'absolute right-0 top-0 h-full w-1.5 cursor-col-resize',
-                        'select-none touch-none opacity-0 group-hover:opacity-100',
-                        'bg-border hover:bg-primary',
-                        header.column.getIsResizing() && 'opacity-100 bg-primary'
-                      )}
-                    />
-                  )}
-                </th>
-              ))}
-            </tr>
+              headerGroup={headerGroup}
+              enableColumnResizing={enableColumnResizing}
+              virtual={virtual}
+            />
           ))}
-
-          {/* Filter row — same thead, no gap */}
           {enableColumnFilters && (
-            <tr
-              className="border-b bg-muted/50"
-              style={(virtual || isCssFlex) ? { display: 'flex', width: '100%' } : undefined}
-            >
-              {visibleLeafColumns.map((col) => {
-                const ft = col.columnDef.meta?.filterType
-                const filterValue = (col.getFilterValue() ?? '') as string
-                const clearFilter = () => col.setFilterValue(undefined)
-
-                const thStyle: React.CSSProperties = virtual
-                  ? { display: 'flex', alignItems: 'center', width: col.getSize() }
-                  : isCssFlex
-                  ? { ...cellStyle(col), display: 'flex', alignItems: 'center' }
-                  : { width: col.getSize() }
-
-                if (ft === false) {
-                  return <th key={col.id} className="px-2 py-1" style={thStyle} />
-                }
-
-                return (
-                  <th
-                    key={col.id}
-                    className="px-2 py-1 font-normal"
-                    style={thStyle}
-                  >
-                    {ft === 'select' ? (
-                      <div className="relative">
-                        <select
-                          value={filterValue}
-                          onChange={(e) => col.setFilterValue(e.target.value || undefined)}
-                          className={cn(
-                            'h-7 w-full rounded border border-input bg-background px-2 text-xs',
-                            'focus:outline-none focus:ring-1 focus:ring-ring appearance-none',
-                          )}
-                        >
-                          <option value="">All</option>
-                          {(selectOptions[col.id] ?? []).map((v) => (
-                            <option key={v} value={v}>{v}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : ft === 'number' ? (
-                      <div className="flex gap-1">
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          value={(col.getFilterValue() as [string, string] | undefined)?.[0] ?? ''}
-                          onChange={(e) =>
-                            col.setFilterValue((old: [string, string] = ['', '']) => [e.target.value, old[1]])
-                          }
-                          className="h-7 w-full rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          value={(col.getFilterValue() as [string, string] | undefined)?.[1] ?? ''}
-                          onChange={(e) =>
-                            col.setFilterValue((old: [string, string] = ['', '']) => [old[0], e.target.value])
-                          }
-                          className="h-7 w-full rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                      </div>
-                    ) : (
-                      // default: 'text'
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Filter…"
-                          value={filterValue}
-                          onChange={(e) => col.setFilterValue(e.target.value || undefined)}
-                          className="h-7 w-full rounded border border-input bg-background px-2 pr-6 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                        />
-                        {filterValue && (
-                          <button
-                            onClick={clearFilter}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </th>
-                )
-              })}
-            </tr>
+            <DataGridFilterRow
+              visibleLeafColumns={visibleLeafColumns}
+              selectOptions={selectOptions}
+              virtual={virtual}
+            />
           )}
-        </thead>
+        </TableHeader>
 
-        {virtual ? renderVirtualBody() : isCssFlex ? renderFlexBody() : renderBody()}
-      </table>
+        {virtual ? (
+          <DataGridVirtualBody
+            rows={rows}
+            rowVirtualizer={rowVirtualizer}
+            onRowClick={onRowClick}
+            rowCursor={rowCursor}
+          />
+        ) : (
+          <DataGridFlexBody
+            rows={rows}
+            visibleLeafColumns={visibleLeafColumns}
+            isLoading={isLoading}
+            emptyMessage={emptyMessage}
+            onRowClick={onRowClick}
+            rowCursor={rowCursor}
+          />
+        )}
+      </ScrollTable>
 
-      {/* Infinity scroll sentinel */}
       {loadMoreRef && (
         <div ref={loadMoreRef} className="py-2 flex justify-center">
-          {isFetchingNextPage && (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          )}
+          {isFetchingNextPage && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
         </div>
       )}
     </div>

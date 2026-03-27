@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import type { ColumnSizingState } from '@tanstack/react-table'
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import type { DataGridProps } from './types'
 import { useDataGridCore } from './hooks/useDataGridCore'
 import { useColumnSizing } from './hooks/useColumnSizing'
 import { DataGridTableView } from './DataGridTableView'
+import { DataGridPaginationBar } from './DataGridPaginationBar'
 import { cn } from '../../../lib/utils'
 
 export function DataGrid<T extends object>({
@@ -45,7 +46,7 @@ export function DataGrid<T extends object>({
   const [searchValue, setSearchValue] = useState('')
   const [sizing, setSizing] = useState<ColumnSizingState>({})
 
-  const { table, pagination, handleGlobalFilterChange } = useDataGridCore({
+  const { table, handleGlobalFilterChange } = useDataGridCore({
       data,
       columns,
       enableSorting,
@@ -71,16 +72,18 @@ export function DataGrid<T extends object>({
       setSizing,
     })
 
-  const { isSized } = useColumnSizing({ table, columns, data, containerRef: wrapperRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
+  const { isSized } = useColumnSizing({ columns, data, containerRef: wrapperRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
 
   const rows = table.getRowModel().rows
-  const { pageIndex, pageSize } = pagination
-  const pageCount = table.getPageCount()
 
   const handleSearch = (value: string) => {
     setSearchValue(value)
     handleGlobalFilterChange(value)
   }
+
+  // When tableHeight is set the border div becomes the fixed-height container:
+  // header sticks to top, body scrolls, pagination pins to bottom.
+  const hasFixedHeight = tableHeight != null && tableHeight !== 'auto'
 
   if (error) {
     return (
@@ -91,7 +94,7 @@ export function DataGrid<T extends object>({
   }
 
   return (
-    <div ref={wrapperRef} className="flex flex-col gap-3">
+    <div ref={wrapperRef} className="flex flex-col gap-3 min-w-0">
       {/* ── Toolbar ──────────────────────────────────────────────────── */}
       {(searchableColumns?.length || leftFilters || rightFilters) && (
         <div className="flex items-center justify-between gap-2">
@@ -118,8 +121,15 @@ export function DataGrid<T extends object>({
         </div>
       )}
 
-      {/* ── Table ────────────────────────────────────────────────────── */}
-      <div className={cn('rounded-md border overflow-hidden', !isSized && 'invisible')}>
+      {/* ── Table + (pinned pagination when fixed height) ────────────── */}
+      <div
+        className={cn(
+          'rounded-md border overflow-hidden min-w-0',
+          hasFixedHeight && 'flex flex-col',
+          !isSized && 'invisible'
+        )}
+        style={hasFixedHeight ? { height: tableHeight } : undefined}
+      >
         <DataGridTableView
           table={table}
           rows={rows}
@@ -130,69 +140,27 @@ export function DataGrid<T extends object>({
           rowCursor={rowCursor}
           enableColumnResizing={enableColumnResizing}
           enableColumnFilters={enableColumnFilters}
-          columnSizingMode={columnSizingMode}
           sizing={sizing}
-          tableHeight={tableHeight}
+          tableHeight={hasFixedHeight ? undefined : tableHeight}
+          fillHeight={hasFixedHeight}
         />
+        {hasFixedHeight && enablePagination && (
+          <DataGridPaginationBar
+            table={table}
+            pageSizes={pageSizes}
+            totalCount={totalCount}
+            pinned
+          />
+        )}
       </div>
 
-      {/* ── Pagination ───────────────────────────────────────────────── */}
-      {enablePagination && (
-        <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span>Rows per page</span>
-            <select
-              value={pageSize}
-              onChange={(e) => table.setPageSize(Number(e.target.value))}
-              className={cn(
-                'h-8 rounded border border-input bg-background px-2 text-sm',
-                'focus:outline-none focus:ring-2 focus:ring-ring'
-              )}
-            >
-              {pageSizes.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <span>
-              {totalCount !== undefined
-                ? `${pageIndex * pageSize + 1}–${Math.min((pageIndex + 1) * pageSize, totalCount)} of ${totalCount}`
-                : `Page ${pageIndex + 1} of ${Math.max(pageCount, 1)}`}
-            </span>
-            <button
-              onClick={() => table.firstPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="p-1 rounded hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="p-1 rounded hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="p-1 rounded hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => table.lastPage()}
-              disabled={!table.getCanNextPage()}
-              className="p-1 rounded hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+      {/* Pagination below border when no fixed height */}
+      {!hasFixedHeight && enablePagination && (
+        <DataGridPaginationBar
+          table={table}
+          pageSizes={pageSizes}
+          totalCount={totalCount}
+        />
       )}
     </div>
   )
