@@ -7,7 +7,7 @@ import {
   type HeaderGroup,
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, SlidersHorizontal, X } from 'lucide-react'
 import type { ColumnSizingState } from '@tanstack/react-table'
 import type { Virtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../../lib/utils'
@@ -15,6 +15,7 @@ import { TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui
 import { Input } from '../../ui/input'
 import { Button } from '../../ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { ScrollTable } from './ScrollTable'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,6 +130,74 @@ function DataGridHeaderRow<T extends object>({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// NumberFilterPopover
+// ─────────────────────────────────────────────────────────────────────────────
+
+function NumberFilterPopover<T extends object>({ col }: { col: Column<T> }) {
+  const numFilter = col.getFilterValue() as [string, string] | undefined
+  const min = numFilter?.[0] ?? ''
+  const max = numFilter?.[1] ?? ''
+  const hasFilter = min !== '' || max !== ''
+
+  const label = hasFilter
+    ? [min && `≥${min}`, max && `≤${max}`].filter(Boolean).join(' ')
+    : 'Filter…'
+
+  return (
+    <Popover>
+      <PopoverTrigger className="w-full">
+        <Button
+          variant={hasFilter ? 'outline' : 'ghost'}
+          size="sm"
+          className="h-7 w-full justify-start text-xs font-normal"
+        >
+          <SlidersHorizontal className="h-3 w-3 shrink-0" />
+          <span className="truncate">{label}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent side="bottom" align="start" className="w-48">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Min</span>
+            <Input
+              type="number"
+              placeholder="Min"
+              value={min}
+              onChange={(e) =>
+                col.setFilterValue((old: [string, string] = ['', '']) => [e.target.value, old[1]])
+              }
+              className="h-7 text-xs"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Max</span>
+            <Input
+              type="number"
+              placeholder="Max"
+              value={max}
+              onChange={(e) =>
+                col.setFilterValue((old: [string, string] = ['', '']) => [old[0], e.target.value])
+              }
+              className="h-7 text-xs"
+            />
+          </div>
+          {hasFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => col.setFilterValue(undefined)}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DataGridFilterRow
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -185,26 +254,7 @@ function DataGridFilterRow<T extends object>({
                 </SelectContent>
               </Select>
             ) : ft === 'number' ? (
-              <div className="flex gap-1">
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={(col.getFilterValue() as [string, string] | undefined)?.[0] ?? ''}
-                  onChange={(e) =>
-                    col.setFilterValue((old: [string, string] = ['', '']) => [e.target.value, old[1]])
-                  }
-                  className="h-7 text-xs"
-                />
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={(col.getFilterValue() as [string, string] | undefined)?.[1] ?? ''}
-                  onChange={(e) =>
-                    col.setFilterValue((old: [string, string] = ['', '']) => [old[0], e.target.value])
-                  }
-                  className="h-7 text-xs"
-                />
-              </div>
+              <NumberFilterPopover col={col} />
             ) : (
               <div className="relative">
                 <Input
