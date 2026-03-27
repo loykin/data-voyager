@@ -69,7 +69,7 @@ export function DataGridInfinity<T extends object>({
     setSizing,
   })
 
-  const { isSized } = useColumnSizing({ columns, data, containerRef: wrapperRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
+  const { isSized } = useColumnSizing({ columns, data, containerRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
 
   const { loadMoreRef } = useInfiniteScroll({
     hasNextPage,
@@ -97,9 +97,9 @@ export function DataGridInfinity<T extends object>({
   }
 
   return (
-    <div ref={wrapperRef} className="flex flex-col gap-3 min-w-0">
+    <div ref={wrapperRef} className="flex flex-col gap-3 w-full min-w-0 overflow-hidden">
       {(searchableColumns?.length || leftFilters || rightFilters) && (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2">
             {searchableColumns?.length && (
               <div className="relative">
@@ -121,8 +121,7 @@ export function DataGridInfinity<T extends object>({
 
       <div
         className={cn(
-          'rounded-md border overflow-hidden min-w-0',
-          hasFixedHeight && 'flex flex-col',
+          'rounded-md border overflow-hidden min-w-0 flex-1 flex flex-col',
           !isSized && 'invisible'
         )}
         style={hasFixedHeight ? { height: tableHeight } : undefined}

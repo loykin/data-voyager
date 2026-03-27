@@ -72,7 +72,7 @@ export function DataGridVirtual<T extends object>({
     setSizing,
   })
 
-  const { isSized } = useColumnSizing({ columns, data, containerRef: wrapperRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
+  const { isSized } = useColumnSizing({ columns, data, containerRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
 
   // All filtered+sorted rows (no pagination)
   const rows = table.getRowModel().rows
@@ -91,9 +91,9 @@ export function DataGridVirtual<T extends object>({
   }
 
   return (
-    <div ref={wrapperRef} className="flex flex-col gap-3 min-w-0">
+    <div ref={wrapperRef} className="flex flex-col gap-3 w-full min-w-0 overflow-hidden">
       {(searchableColumns?.length || leftFilters || rightFilters) && (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2">
             {searchableColumns?.length && (
               <div className="relative">
@@ -113,7 +113,7 @@ export function DataGridVirtual<T extends object>({
         </div>
       )}
 
-      <div className={cn('rounded-md border overflow-hidden min-w-0', !isSized && 'invisible')}>
+      <div className={cn('rounded-md border overflow-hidden min-w-0 flex-1 flex flex-col', !isSized && 'invisible')}>
         <DataGridTableView
           table={table}
           rows={rows}

@@ -2,6 +2,7 @@ import type React from 'react'
 import type {
   ColumnDef,
   ColumnFiltersState,
+  ColumnPinningState,
   ColumnSizingState,
   Row,
   SortingState,
@@ -20,6 +21,8 @@ declare module '@tanstack/react-table' {
     minWidth?: number
     maxWidth?: number
     align?: 'left' | 'center' | 'right'
+    /** Pin this column to the left or right — fixed at column definition level */
+    pin?: 'left' | 'right'
     /**
      * Column-level filter type (renders filter row under the header).
      * - 'text'   : free-text contains match (default when enableColumnFilters=true)
@@ -73,6 +76,8 @@ export interface DataGridBaseProps<T extends object> {
   enableColumnResizing?: boolean
   enableColumnVisibility?: boolean
   visibilityState?: VisibilityState
+  /** Initial column pinning — { left: ['id', ...], right: ['id', ...] } */
+  initialPinning?: ColumnPinningState
   columnSizingMode?: ColumnSizingMode
 
   // Selection
