@@ -97,13 +97,80 @@ const columns: DataGridColumnDef<Employee>[] = [
   },
 ]
 
+// ── Pinned column definitions ──────────────────────────────────────────────
+// Fixed widths (no flex) so columns overflow the container → horizontal scroll
+// reveals pinned column behaviour
+
+const pinnedColumns: DataGridColumnDef<Employee>[] = [
+  {
+    accessorKey: 'id',
+    header: 'ID',
+    size: 80,
+    meta: { pin: 'left' },
+  },
+  {
+    accessorKey: 'name',
+    header: 'Name',
+    size: 200,
+    meta: { pin: 'left' },
+  },
+  {
+    accessorKey: 'department',
+    header: 'Department',
+    size: 200,
+  },
+  {
+    accessorKey: 'role',
+    header: 'Role',
+    size: 200,
+  },
+  {
+    accessorKey: 'salary',
+    header: 'Salary',
+    size: 150,
+    meta: { align: 'right' },
+    cell: ({ getValue }) => `$${(getValue() as number).toLocaleString()}`,
+  },
+  {
+    accessorKey: 'startDate',
+    header: 'Start Date',
+    size: 150,
+  },
+  {
+    accessorKey: 'score',
+    header: 'Score',
+    size: 120,
+    meta: { align: 'right' },
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    size: 150,
+    meta: { pin: 'right' },
+    cell: ({ getValue }) => {
+      const s = getValue() as Employee['status']
+      const color =
+        s === 'Active'
+          ? 'bg-green-100 text-green-800'
+          : s === 'On Leave'
+          ? 'bg-yellow-100 text-yellow-800'
+          : 'bg-red-100 text-red-800'
+      return (
+        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
+          {s}
+        </span>
+      )
+    },
+  },
+]
+
 // ── Infinite scroll helpers ────────────────────────────────────────────────
 
 const PAGE = 50
 
 // ── Demo page ─────────────────────────────────────────────────────────────
 
-type Tab = 'pagination' | 'infinity' | 'virtual' | 'fixed'
+type Tab = 'pagination' | 'infinity' | 'virtual' | 'fixed' | 'pinning'
 
 export function DataGridDemoPage() {
   const [tab, setTab] = useState<Tab>('pagination')
@@ -129,6 +196,7 @@ export function DataGridDemoPage() {
     { id: 'infinity', label: 'Infinite Scroll' },
     { id: 'virtual', label: 'Virtual (500 rows)' },
     { id: 'fixed', label: 'Fixed Height' },
+    { id: 'pinning', label: 'Column Pinning' },
   ]
 
   return (
@@ -208,6 +276,26 @@ export function DataGridDemoPage() {
             enableSorting
             columnSizingMode="auto"
             tableHeight={520}
+            emptyMessage="No employees found"
+          />
+        </section>
+      )}
+
+      {/* ── Column Pinning tab ── */}
+      {tab === 'pinning' && (
+        <section className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">
+            <strong>ID</strong>, <strong>Name</strong> — pinned left via <code>meta.pin: &apos;left&apos;</code> ·{' '}
+            <strong>Status</strong> — pinned right via <code>meta.pin: &apos;right&apos;</code> ·{' '}
+            가로 스크롤 시 고정 컬럼이 제자리에 남습니다
+          </p>
+          <DataGrid
+            data={ALL_DATA}
+            columns={pinnedColumns}
+            columnSizingMode="fixed"
+            enableSorting
+            tableHeight={500}
+            pageSizes={[20, 50, 100]}
             emptyMessage="No employees found"
           />
         </section>

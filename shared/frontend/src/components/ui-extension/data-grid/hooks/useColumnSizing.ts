@@ -47,6 +47,7 @@ export function useColumnSizing<T extends object>({
 
     const containerWidth = container.clientWidth
     if (containerWidth === 0) return
+    const prevContainerWidth = lastContainerWidth.current
     lastContainerWidth.current = containerWidth
 
     const m = modeRef.current
@@ -109,7 +110,7 @@ export function useColumnSizing<T extends object>({
           userResized.current.has(getColId(col))
         )
 
-        const containerWidthChanged = Math.abs(containerWidth - lastContainerWidth.current) > 1
+        const containerWidthChanged = Math.abs(containerWidth - prevContainerWidth) > 1
 
         if (anyUserResized) {
           // Once the user has manually resized any column, free flex columns are
@@ -181,9 +182,14 @@ export function useColumnSizing<T extends object>({
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => {
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      const width = entry.contentRect.width
+      if (width === 0 || Math.abs(width - lastContainerWidth.current) < 1) return
+
       if (roTimerRef.current) clearTimeout(roTimerRef.current)
-      roTimerRef.current = setTimeout(recalculate, 200)
+      roTimerRef.current = setTimeout(recalculate, 150)
     })
     ro.observe(el)
     return () => {

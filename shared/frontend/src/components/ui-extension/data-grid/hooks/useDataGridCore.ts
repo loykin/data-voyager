@@ -6,6 +6,7 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   type ColumnFiltersState,
+  type ColumnPinningState,
   type ColumnSizingState,
   type FilterFn,
   type PaginationState,
@@ -46,6 +47,7 @@ interface UseDataGridCoreOptions<T extends object>
     | 'enableColumnResizing'
     | 'enableColumnFilters'
     | 'visibilityState'
+    | 'initialPinning'
     | 'tableKey'
     | 'persistState'
     | 'onTableReady'
@@ -74,6 +76,7 @@ export function useDataGridCore<T extends object>({
   enableColumnResizing = true,
   enableColumnFilters = false,
   visibilityState,
+  initialPinning,
   tableKey,
   persistState = false,
   enablePagination = true,
@@ -89,6 +92,21 @@ export function useDataGridCore<T extends object>({
   const persisted = tableKey ? tables[tableKey] : undefined
 
   const [sorting, setSorting] = useState<SortingState>(initialSorting ?? [])
+  // Derive pinning from column meta.pin, merged with explicit initialPinning prop
+  const [columnPinning] = useState<ColumnPinningState>(() => {
+    const fromMeta: ColumnPinningState = { left: [], right: [] }
+    for (const col of columns) {
+      const pin = col.meta?.pin
+      const id = (col as { accessorKey?: string }).accessorKey ?? (col as { id?: string }).id
+      if (!pin || !id) continue
+      if (pin === 'left') fromMeta.left!.push(id)
+      else fromMeta.right!.push(id)
+    }
+    return {
+      left: [...(fromMeta.left ?? []), ...(initialPinning?.left ?? [])],
+      right: [...(fromMeta.right ?? []), ...(initialPinning?.right ?? [])],
+    }
+  })
   const [internalFilters, setInternalFilters] = useState<ColumnFiltersState>([])
   const [internalGlobal, setInternalGlobal] = useState('')
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
@@ -149,6 +167,7 @@ export function useDataGridCore<T extends object>({
       globalFilter: effectiveGlobalFilter,
       columnVisibility,
       columnSizing: sizing,
+      columnPinning,
       ...(enablePagination ? { pagination } : {}),
     },
     manualSorting,

@@ -51,7 +51,34 @@ export interface DataGridTableViewProps<T extends object> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function colStyle<T extends object>(col: Column<T>): React.CSSProperties {
-  return { width: col.getSize(), flexShrink: 0 }
+  const pinned = col.getIsPinned()
+  return {
+    width: col.getSize(),
+    flexShrink: 0,
+    ...(pinned === 'left' && {
+      position: 'sticky',
+      left: col.getStart('left'),
+      zIndex: 1,
+    }),
+    ...(pinned === 'right' && {
+      position: 'sticky',
+      right: col.getAfter('right'),
+      zIndex: 1,
+    }),
+  }
+}
+
+function isPinnedEdge<T extends object>(col: Column<T>, table: Table<T>): 'left-edge' | 'right-edge' | false {
+  const pinned = col.getIsPinned()
+  if (pinned === 'left') {
+    const leftCols = table.getLeftLeafColumns()
+    return leftCols[leftCols.length - 1]?.id === col.id ? 'left-edge' : false
+  }
+  if (pinned === 'right') {
+    const rightCols = table.getRightLeafColumns()
+    return rightCols[0]?.id === col.id ? 'right-edge' : false
+  }
+  return false
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,12 +87,14 @@ function colStyle<T extends object>(col: Column<T>): React.CSSProperties {
 
 interface DataGridHeaderRowProps<T extends object> {
   headerGroup: HeaderGroup<T>
+  table: Table<T>
   enableColumnResizing: boolean
   virtual: boolean
 }
 
 function DataGridHeaderRow<T extends object>({
   headerGroup,
+  table,
   enableColumnResizing,
   virtual,
 }: DataGridHeaderRowProps<T>) {
@@ -74,15 +103,19 @@ function DataGridHeaderRow<T extends object>({
       className="hover:bg-transparent"
       style={{ display: 'flex', width: '100%' }}
     >
-      {headerGroup.headers.map((header) => (
+      {headerGroup.headers.map((header) => {
+        const edge = isPinnedEdge(header.column, table)
+        return (
         <TableHead
           key={header.id}
           colSpan={header.colSpan}
           className={cn(
-            'relative px-3 py-2 text-xs font-medium h-auto',
+            'relative px-3 py-2 text-xs font-medium h-auto bg-background',
             'text-muted-foreground whitespace-normal',
             'select-none group',
             header.column.getCanSort() && 'cursor-pointer',
+            edge === 'left-edge' && 'shadow-[1px_0_0_0_hsl(var(--border))]',
+            edge === 'right-edge' && 'shadow-[-1px_0_0_0_hsl(var(--border))]',
           )}
           style={
             virtual
@@ -111,20 +144,28 @@ function DataGridHeaderRow<T extends object>({
           </span>
 
           {enableColumnResizing && header.column.getCanResize() && (
+            // Outer: full-height transparent hit area
+            // Inner: thin line with vertical inset for refined look
             <div
               onMouseDown={(e) => { e.stopPropagation(); header.getResizeHandler()(e) }}
               onTouchStart={(e) => { e.stopPropagation(); header.getResizeHandler()(e) }}
               onClick={(e) => e.stopPropagation()}
-              className={cn(
-                'absolute right-0 top-0 h-full w-1.5 cursor-col-resize',
-                'select-none touch-none opacity-0 group-hover:opacity-100',
-                'bg-border hover:bg-primary',
-                header.column.getIsResizing() && 'opacity-100 bg-primary',
-              )}
-            />
+              className="absolute right-0 top-0 h-full w-3 cursor-col-resize select-none touch-none"
+            >
+              <div className={cn(
+                'absolute right-1.5 top-2 bottom-2 w-px rounded-full transition-colors',
+                'opacity-0 group-hover:opacity-100',
+                header.column.getIsResizing()
+                  ? 'opacity-100 bg-primary'
+                  : 'bg-border hover:bg-primary',
+              )} />
+            </div>
           )}
         </TableHead>
-      ))}
+        )
+      })}
+      {/* Spacer: absorbs remaining width so columns don't shift on resize */}
+      {!virtual && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} className="bg-background" />}
     </TableRow>
   )
 }
@@ -279,6 +320,8 @@ function DataGridFilterRow<T extends object>({
           </TableHead>
         )
       })}
+      {/* Spacer */}
+      {!virtual && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} />}
     </TableRow>
   )
 }
@@ -289,20 +332,24 @@ function DataGridFilterRow<T extends object>({
 
 interface DataGridBodyRowProps<T extends object> {
   row: Row<T>
+  table: Table<T>
   onRowClick?: (row: T) => void
   rowCursor?: boolean
   style?: React.CSSProperties
   dataIndex?: number
   measureRef?: (node: Element | null) => void
+  showSpacer?: boolean
 }
 
 function DataGridBodyRow<T extends object>({
   row,
+  table,
   onRowClick,
   rowCursor,
   style,
   dataIndex,
   measureRef,
+  showSpacer = false,
 }: DataGridBodyRowProps<T>) {
   return (
     <TableRow
@@ -315,21 +362,28 @@ function DataGridBodyRow<T extends object>({
       )}
       style={style}
     >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell
-          key={cell.id}
-          className={cn(
-            'px-3 py-2 overflow-hidden',
-            cell.column.columnDef.meta?.align === 'right' && 'text-right',
-            cell.column.columnDef.meta?.align === 'center' && 'text-center',
-          )}
-          style={colStyle(cell.column)}
-        >
-          <span className="block truncate">
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </span>
-        </TableCell>
-      ))}
+      {row.getVisibleCells().map((cell) => {
+        const edge = isPinnedEdge(cell.column, table)
+        return (
+          <TableCell
+            key={cell.id}
+            className={cn(
+              'px-3 py-2 overflow-hidden bg-background',
+              cell.column.columnDef.meta?.align === 'right' && 'text-right',
+              cell.column.columnDef.meta?.align === 'center' && 'text-center',
+              edge === 'left-edge' && 'shadow-[1px_0_0_0_hsl(var(--border))]',
+              edge === 'right-edge' && 'shadow-[-1px_0_0_0_hsl(var(--border))]',
+            )}
+            style={colStyle(cell.column)}
+          >
+            <span className="block truncate">
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </span>
+          </TableCell>
+        )
+      })}
+      {/* Spacer: absorbs remaining width so columns don't shift on resize */}
+      {showSpacer && <TableCell style={{ flex: 1, minWidth: 0, padding: 0 }} className="bg-background" />}
     </TableRow>
   )
 }
@@ -340,6 +394,7 @@ function DataGridBodyRow<T extends object>({
 
 interface DataGridVirtualBodyProps<T extends object> {
   rows: Row<T>[]
+  table: Table<T>
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>
   onRowClick?: (row: T) => void
   rowCursor?: boolean
@@ -347,6 +402,7 @@ interface DataGridVirtualBodyProps<T extends object> {
 
 function DataGridVirtualBody<T extends object>({
   rows,
+  table,
   rowVirtualizer,
   onRowClick,
   rowCursor,
@@ -362,6 +418,7 @@ function DataGridVirtualBody<T extends object>({
           <DataGridBodyRow
             key={row.id}
             row={row}
+            table={table}
             onRowClick={onRowClick}
             rowCursor={rowCursor}
             dataIndex={virtualRow.index}
@@ -380,6 +437,7 @@ function DataGridVirtualBody<T extends object>({
 
 interface DataGridFlexBodyProps<T extends object> {
   rows: Row<T>[]
+  table: Table<T>
   visibleLeafColumns: Column<T>[]
   isLoading?: boolean
   emptyMessage: string
@@ -389,6 +447,7 @@ interface DataGridFlexBodyProps<T extends object> {
 
 function DataGridFlexBody<T extends object>({
   rows,
+  table,
   visibleLeafColumns,
   isLoading,
   emptyMessage,
@@ -405,6 +464,7 @@ function DataGridFlexBody<T extends object>({
                 <div className="h-4 animate-pulse rounded bg-muted" />
               </TableCell>
             ))}
+            <TableCell style={{ flex: 1, minWidth: 0, padding: 0 }} />
           </TableRow>
         ))}
       </TableBody>
@@ -429,8 +489,10 @@ function DataGridFlexBody<T extends object>({
         <DataGridBodyRow
           key={row.id}
           row={row}
+          table={table}
           onRowClick={onRowClick}
           rowCursor={rowCursor}
+          showSpacer
         />
       ))}
     </TableBody>
@@ -488,14 +550,16 @@ export function DataGridTableView<T extends object>({
   const containerStyle: React.CSSProperties = {
     overflow: 'auto',
     position: 'relative',
+    width: '100%',
     minWidth: 0,
+    flex: 1,
     scrollbarGutter: 'stable',
     // 새 stacking context → sticky 헤더 z-index가 테이블 영역 안에만 적용됨
     isolation: 'isolate',
     ...(virtual
       ? { height: typeof tableHeight === 'number' ? tableHeight : tableHeight && tableHeight !== 'auto' ? tableHeight : 500 }
       : fillHeight
-      ? { flex: 1, minHeight: 0 }
+      ? { minHeight: 0 }
       : tableHeight && tableHeight !== 'auto'
       ? { maxHeight: tableHeight }
       : {}),
@@ -518,6 +582,7 @@ export function DataGridTableView<T extends object>({
             <DataGridHeaderRow
               key={headerGroup.id}
               headerGroup={headerGroup}
+              table={table}
               enableColumnResizing={enableColumnResizing}
               virtual={virtual}
             />
@@ -534,6 +599,7 @@ export function DataGridTableView<T extends object>({
         {virtual ? (
           <DataGridVirtualBody
             rows={rows}
+            table={table}
             rowVirtualizer={rowVirtualizer}
             onRowClick={onRowClick}
             rowCursor={rowCursor}
@@ -541,6 +607,7 @@ export function DataGridTableView<T extends object>({
         ) : (
           <DataGridFlexBody
             rows={rows}
+            table={table}
             visibleLeafColumns={visibleLeafColumns}
             isLoading={isLoading}
             emptyMessage={emptyMessage}
