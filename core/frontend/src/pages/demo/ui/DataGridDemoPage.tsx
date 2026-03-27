@@ -103,7 +103,7 @@ const PAGE = 50
 
 // ── Demo page ─────────────────────────────────────────────────────────────
 
-type Tab = 'pagination' | 'infinity' | 'virtual'
+type Tab = 'pagination' | 'infinity' | 'virtual' | 'fixed'
 
 export function DataGridDemoPage() {
   const [tab, setTab] = useState<Tab>('pagination')
@@ -128,6 +128,7 @@ export function DataGridDemoPage() {
     { id: 'pagination', label: 'Pagination' },
     { id: 'infinity', label: 'Infinite Scroll' },
     { id: 'virtual', label: 'Virtual (500 rows)' },
+    { id: 'fixed', label: 'Fixed Height' },
   ]
 
   return (
@@ -207,6 +208,24 @@ export function DataGridDemoPage() {
             enableSorting
             columnSizingMode="auto"
             tableHeight={520}
+            emptyMessage="No employees found"
+          />
+        </section>
+      )}
+
+      {/* ── Fixed Height tab ── */}
+      {tab === 'fixed' && (
+        <section className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">
+            tableHeight=500 · sticky header · scrollable body · pagination pinned to bottom
+          </p>
+          <DataGrid
+            data={ALL_DATA}
+            columns={columns}
+            enableColumnFilters
+            enableSorting
+            tableHeight={500}
+            pageSizes={[20, 50, 100]}
             emptyMessage="No employees found"
           />
         </section>

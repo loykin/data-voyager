@@ -1,14 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type React from 'react'
-import type { Table, ColumnSizingState } from '@tanstack/react-table'
-import type { DataGridColumnDef, ColumnSizingMode } from '../types'
-import {
-  computeAutoWidth,
-  computeFlexWidths,
-} from '../utils/columnSizingUtils'
+import type React from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { ColumnSizingState } from '@tanstack/react-table';
+import type { ColumnSizingMode, DataGridColumnDef } from '../types';
+import { computeAutoWidth } from '../utils/columnSizingUtils';
 
 interface UseColumnSizingOptions<T extends object> {
-  table: Table<T>
   columns: DataGridColumnDef<T>[]
   data: T[]
   containerRef: React.RefObject<HTMLDivElement | null>
@@ -19,7 +15,6 @@ interface UseColumnSizingOptions<T extends object> {
 }
 
 export function useColumnSizing<T extends object>({
-  table,
   columns,
   data,
   containerRef,
@@ -29,13 +24,12 @@ export function useColumnSizing<T extends object>({
 }: UseColumnSizingOptions<T>) {
   const userResized = useRef(new Set<string>())
   const lastComputed = useRef<ColumnSizingState>({})
+  const lastContainerWidth = useRef<number>(0)
   const hasSized = useRef(false)
   /** true after first successful recalculate — used to hide the table until ready */
   const [isSized, setIsSized] = useState(false)
 
   // Stable refs so recalculate() doesn't need to re-subscribe ResizeObserver
-  const tableRef = useRef(table)
-  tableRef.current = table
   const columnsRef = useRef(columns)
   columnsRef.current = columns
   const dataRef = useRef(data)
@@ -53,22 +47,13 @@ export function useColumnSizing<T extends object>({
 
     const containerWidth = container.clientWidth
     if (containerWidth === 0) return
+    lastContainerWidth.current = containerWidth
 
     const m = modeRef.current
-
-    // ── flex mode: CSS handles distribution — no JS sizing needed ─────────
-    if (m === 'flex') {
-      if (!hasSized.current) {
-        hasSized.current = true
-        setIsSized(true)
-      }
-      return
-    }
 
     const cols = columnsRef.current
     const rows = dataRef.current
     const currentSizing = sizingRef.current
-    const tbl = tableRef.current
 
     // ── Detect user drag-overrides ─────────────────────────────────────────
     for (const [colId, currentSize] of Object.entries(currentSizing)) {
@@ -78,46 +63,23 @@ export function useColumnSizing<T extends object>({
       }
     }
 
-    // Once ANY column has been manually resized, freeze all non-dragged flex
-    // columns at their current pixel widths instead of redistributing.
-    const hasAnyUserResized = userResized.current.size > 0
-
     const newSizing: ColumnSizingState = {}
-    let fixedWidth = 0
 
-    const flexQueue: Array<{
-      id: string
-      flex: number
-      minWidth?: number
-      maxWidth?: number
-    }> = []
-
+    // ── Non-flex columns ───────────────────────────────────────────────────
     for (const col of cols) {
       const colId = (col.id ?? (col as { accessorKey?: string }).accessorKey) as string
       if (!colId) continue
 
-      if (userResized.current.has(colId)) {
-        fixedWidth += tbl.getColumn(colId)?.getSize() ?? 150
-        continue
-      }
-
       const meta = col.meta
 
-      if (meta?.flex != null && m !== 'fixed') {
-        if (hasAnyUserResized) {
-          // Lock at last-computed (or current) size — do not redistribute
-          const frozen = lastComputed.current[colId] ?? sizingRef.current[colId] ?? tbl.getColumn(colId)?.getSize() ?? 150
-          fixedWidth += frozen
-          // No need to write to newSizing — sizing state already has this value
-        } else {
-          flexQueue.push({
-            id: colId,
-            flex: meta.flex,
-            minWidth: meta.minWidth,
-            maxWidth: meta.maxWidth,
-          })
-        }
-      } else if (m === 'auto' || meta?.autoSize) {
+      // Flex columns → handled separately below
+      if (meta?.flex != null) continue
+
+      // User-resized non-flex columns → keep current size unchanged
+      if (userResized.current.has(colId)) continue
+
+      // Canvas-measure for auto/autoSize columns
+      if (m === 'auto' || meta?.autoSize) {
         const headerText = typeof col.header === 'string' ? col.header : colId
 
         const getValue = (row: T): unknown => {
@@ -128,30 +90,82 @@ export function useColumnSizing<T extends object>({
           return ''
         }
 
-        const w = computeAutoWidth(headerText, rows, getValue, {
+        newSizing[colId] = computeAutoWidth(headerText, rows, getValue, {
           minWidth: meta?.minWidth,
           maxWidth: meta?.maxWidth,
         })
-        newSizing[colId] = w
-        fixedWidth += w
-      } else {
-        fixedWidth += tbl.getColumn(colId)?.getSize() ?? 150
       }
+      // else fixed mode without flex: leave at TanStack default width
     }
 
-    if (flexQueue.length > 0) {
-      const flexSizing = computeFlexWidths(containerWidth, flexQueue, fixedWidth)
-      Object.assign(newSizing, flexSizing)
+    // ── Flex columns: distribute proportionally by flex ratio ──────────────
+    {
+      const flexCols = cols.filter((col) => col.meta?.flex != null)
+      if (flexCols.length > 0) {
+        const getColId = (col: DataGridColumnDef<T>) =>
+          (col.id ?? (col as { accessorKey?: string }).accessorKey) as string
+
+        const anyUserResized = flexCols.some((col) =>
+          userResized.current.has(getColId(col))
+        )
+
+        const containerWidthChanged = Math.abs(containerWidth - lastContainerWidth.current) > 1
+
+        if (anyUserResized) {
+          // Once the user has manually resized any column, free flex columns are
+          // frozen at their last computed sizes — only the dragged column changes.
+          // Don't add free flex columns to newSizing; their existing values in
+          // currentSizing are preserved via the (prev) => ({ ...prev, ...newSizing }) merge.
+        } else if (!containerWidthChanged && hasSized.current) {
+          // Container width unchanged — skip flex redistribution to prevent
+          // spurious column size changes on tab switches or data-load events.
+        } else {
+          // No user resizes yet — distribute proportionally to fill the container.
+          const totalFlex = flexCols.reduce((sum, col) => sum + col.meta!.flex!, 0)
+
+          // Width consumed by non-flex columns
+          const fixedWidth = cols
+            .filter((col) => col.meta?.flex == null)
+            .reduce((sum, col) => {
+              const colId = getColId(col)
+              return sum + (newSizing[colId] ?? currentSizing[colId] ?? 150)
+            }, 0)
+
+          const availableWidth = Math.max(0, containerWidth - fixedWidth)
+
+          let distributed = 0
+          const freeCols = flexCols.filter((col) => !userResized.current.has(getColId(col)))
+          for (let i = 0; i < freeCols.length; i++) {
+            const col = freeCols[i]!
+            const colId = getColId(col)
+            if (!colId) continue
+            const flex = col.meta!.flex!
+            const minW = col.meta?.minWidth ?? 60
+            const isLast = i === freeCols.length - 1
+            // Use floor for all but last; give remainder to last to avoid 1px overflow
+            const w = isLast
+              ? Math.max(minW, availableWidth - distributed)
+              : Math.max(minW, Math.floor((flex / totalFlex) * availableWidth))
+            newSizing[colId] = w
+            distributed += w
+          }
+        }
+      }
     }
 
     if (Object.keys(newSizing).length > 0) {
-      Object.assign(lastComputed.current, newSizing)
-      onSizeChangeRef.current((prev) => ({ ...prev, ...newSizing }))
-      // Mark as sized — batched with setSizing so both apply in the same render
-      if (!hasSized.current) {
-        hasSized.current = true
-        setIsSized(true)
+      // Only write to state if values actually changed (avoid spurious re-renders)
+      const hasChanges = Object.entries(newSizing).some(([id, w]) => currentSizing[id] !== w)
+      if (hasChanges) {
+        Object.assign(lastComputed.current, newSizing)
+        onSizeChangeRef.current((prev) => ({ ...prev, ...newSizing }))
       }
+    }
+
+    // Mark as sized after first calculation
+    if (!hasSized.current) {
+      hasSized.current = true
+      setIsSized(true)
     }
   }, [containerRef]) // stable — everything else via refs
 
@@ -190,6 +204,7 @@ export function useColumnSizing<T extends object>({
   const resetSizing = useCallback(() => {
     userResized.current.clear()
     lastComputed.current = {}
+    lastContainerWidth.current = 0
     hasSized.current = false
     setIsSized(false)
     onSizeChangeRef.current({})
