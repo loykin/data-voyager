@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { ColumnSizingState } from '@tanstack/react-table'
 import { Search } from 'lucide-react'
+import { Input } from '../../ui/input'
 import type { DataGridVirtualProps } from './types'
 import { useDataGridCore } from './hooks/useDataGridCore'
 import { useColumnSizing } from './hooks/useColumnSizing'
@@ -96,17 +97,13 @@ export function DataGridVirtual<T extends object>({
           <div className="flex items-center gap-2">
             {searchableColumns?.length && (
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
                   type="text"
                   placeholder="Search…"
                   value={searchValue}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className={cn(
-                    'h-9 w-60 rounded-md border border-input bg-background',
-                    'pl-8 pr-3 text-sm placeholder:text-muted-foreground',
-                    'focus:outline-none focus:ring-2 focus:ring-ring'
-                  )}
+                  className="w-60 pl-8"
                 />
               </div>
             )}

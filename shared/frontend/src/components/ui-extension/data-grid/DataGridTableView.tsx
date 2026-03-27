@@ -12,6 +12,9 @@ import type { ColumnSizingState } from '@tanstack/react-table'
 import type { Virtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../../lib/utils'
 import { TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui/table'
+import { Input } from '../../ui/input'
+import { Button } from '../../ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { ScrollTable } from './ScrollTable'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,8 +111,9 @@ function DataGridHeaderRow<T extends object>({
 
           {enableColumnResizing && header.column.getCanResize() && (
             <div
-              onMouseDown={header.getResizeHandler()}
-              onTouchStart={header.getResizeHandler()}
+              onMouseDown={(e) => { e.stopPropagation(); header.getResizeHandler()(e) }}
+              onTouchStart={(e) => { e.stopPropagation(); header.getResizeHandler()(e) }}
+              onClick={(e) => e.stopPropagation()}
               className={cn(
                 'absolute right-0 top-0 h-full w-1.5 cursor-col-resize',
                 'select-none touch-none opacity-0 group-hover:opacity-100',
@@ -151,6 +155,12 @@ function DataGridFilterRow<T extends object>({
           ? { display: 'flex', alignItems: 'center', width: col.getSize() }
           : { ...colStyle(col), display: 'flex', alignItems: 'center' }
 
+        // Base UI Select requires `items` on root so SelectValue can display
+        // the selected label even when the popup is closed.
+        const selectItems = ft === 'select'
+          ? [{ label: 'All', value: null }, ...(selectOptions[col.id] ?? []).map((v) => ({ label: v, value: v }))]
+          : []
+
         if (ft === false) {
           return <TableHead key={col.id} className="px-2 py-1 h-auto" style={thStyle} />
         }
@@ -158,56 +168,61 @@ function DataGridFilterRow<T extends object>({
         return (
           <TableHead key={col.id} className="px-2 py-1 h-auto font-normal" style={thStyle}>
             {ft === 'select' ? (
-              <select
-                value={filterValue}
-                onChange={(e) => col.setFilterValue(e.target.value || undefined)}
-                className={cn(
-                  'h-7 w-full rounded border border-input bg-background px-2 text-xs',
-                  'focus:outline-none focus:ring-1 focus:ring-ring appearance-none',
-                )}
+              <Select
+                items={selectItems}
+                value={filterValue || null}
+                onValueChange={(val) => col.setFilterValue(val ?? undefined)}
               >
-                <option value="">All</option>
-                {(selectOptions[col.id] ?? []).map((v) => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+                <SelectTrigger size="sm" className="h-7 w-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectItems.map((item) => (
+                    <SelectItem key={item.value ?? '__all__'} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : ft === 'number' ? (
               <div className="flex gap-1">
-                <input
+                <Input
                   type="number"
                   placeholder="Min"
                   value={(col.getFilterValue() as [string, string] | undefined)?.[0] ?? ''}
                   onChange={(e) =>
                     col.setFilterValue((old: [string, string] = ['', '']) => [e.target.value, old[1]])
                   }
-                  className="h-7 w-full rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-7 text-xs"
                 />
-                <input
+                <Input
                   type="number"
                   placeholder="Max"
                   value={(col.getFilterValue() as [string, string] | undefined)?.[1] ?? ''}
                   onChange={(e) =>
                     col.setFilterValue((old: [string, string] = ['', '']) => [old[0], e.target.value])
                   }
-                  className="h-7 w-full rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-7 text-xs"
                 />
               </div>
             ) : (
               <div className="relative">
-                <input
+                <Input
                   type="text"
                   placeholder="Filter…"
                   value={filterValue}
                   onChange={(e) => col.setFilterValue(e.target.value || undefined)}
-                  className="h-7 w-full rounded border border-input bg-background px-2 pr-6 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="h-7 text-xs pr-6"
                 />
                 {filterValue && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => col.setFilterValue(undefined)}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2"
                   >
-                    <X className="h-3 w-3" />
-                  </button>
+                    <X />
+                  </Button>
                 )}
               </div>
             )}
