@@ -8,16 +8,18 @@ import { DashboardTab }   from './tabs/dashboard'
 import { SelectionTab }   from './tabs/selection'
 import { BorderedTab }    from './tabs/bordered'
 import { LargeListTab }   from './tabs/large-list'
+import { LiveUpdateTab }  from './tabs/live-update'
 
 const tabs = [
-  { id: 'pagination',  label: 'Pagination',       content: <PaginationTab /> },
-  { id: 'infinity',    label: 'Infinite Scroll',   content: <InfinityTab /> },
-  { id: 'fixed',       label: 'Fixed Height',      content: <FixedHeightTab /> },
-  { id: 'large-list',  label: 'Large List',        content: <LargeListTab /> },
-  { id: 'pinning',     label: 'Column Pinning',    content: <PinningTab /> },
-  { id: 'dashboard',   label: 'Dashboard',         content: <DashboardTab /> },
-  { id: 'selection',   label: 'Row Selection',     content: <SelectionTab /> },
-  { id: 'bordered',    label: 'Bordered',          content: <BorderedTab /> },
+  { id: 'pagination',   label: 'Pagination',       content: <PaginationTab /> },
+  { id: 'infinity',     label: 'Infinite Scroll',  content: <InfinityTab /> },
+  { id: 'fixed',        label: 'Fixed Height',     content: <FixedHeightTab /> },
+  { id: 'large-list',   label: 'Large List',       content: <LargeListTab /> },
+  { id: 'live-update',  label: 'Live Update',      content: <LiveUpdateTab /> },
+  { id: 'pinning',      label: 'Column Pinning',   content: <PinningTab /> },
+  { id: 'dashboard',    label: 'Dashboard',        content: <DashboardTab /> },
+  { id: 'selection',    label: 'Row Selection',    content: <SelectionTab /> },
+  { id: 'bordered',     label: 'Bordered',         content: <BorderedTab /> },
 ]
 
 export function DataGridDemoPage() {
