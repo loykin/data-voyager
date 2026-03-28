@@ -21,10 +21,10 @@ export * from "./components/ui/textarea";
 export * from "./components/ui/tooltip";
 
 // DataGrid
-export * from "./components/ui-extension/data-grid";
+export * from "./components/widgets/data-grid";
 
 // TimeSeriesChart
-export * from "./components/ui-extension/time-series";
+export * from "./components/widgets/charts/time-series";
 
 // Templates
 export * from "./components/templates/TabbedPageTemplate";

@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import type uPlot from 'uplot'
 import { Loader2 } from 'lucide-react'
-import { cn } from '../../../lib/utils'
+import { cn } from '../../../../lib/utils'
 import { ChartCanvas } from './components/ChartCanvas'
 import { ChartLegend } from './components/ChartLegend'
 import { useLegendState } from './hooks/useLegendState'

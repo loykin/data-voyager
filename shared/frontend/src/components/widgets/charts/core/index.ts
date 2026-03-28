@@ -1,0 +1,5 @@
+export { useChart } from './hooks/useChart'
+export { selectionPlugin } from './plugins/selectionPlugin'
+export { hexToRgba, resolveCssVar } from './utils/colors'
+export { makeAxisBorderPlugin } from './utils/axisBorderPlugin'
+export type { LineStyle, AxisConfig, SelectionMode, SelectionResult } from './types'
