@@ -530,10 +530,13 @@ export function DataGridTableView<T extends object>({
   const virtual = hasFixedHeight && rows.length >= VIRTUAL_THRESHOLD
 
   // ── After each render, trigger column auto-measurement ─────────────────
-  // useEffect (not useLayoutEffect) so DOM measurement runs after paint.
-  // Scroll events paint first; measurement is not in the critical path.
+  // Skip while a column is being resized: forced layout reads (scrollWidth)
+  // during pointer drag cause jank. Measurement resumes on the next render
+  // after the drag ends.
   useEffect(() => {
-    onMeasureColumns?.()
+    if (!table.getState().columnSizingInfo.isResizingColumn) {
+      onMeasureColumns?.()
+    }
   })
 
   const selectOptions = useMemo(() => {
