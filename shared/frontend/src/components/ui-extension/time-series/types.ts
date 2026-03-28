@@ -19,14 +19,24 @@ export type SelectionMode = 'x' | 'y' | 'xy' | 'none'
 export interface SeriesConfig {
   /** Display name shown in the legend */
   label: string
-  /** Line / fill color (CSS color string) */
+  /** Line / fill color (hex or CSS color string) */
   color: string
   /** Value unit shown in legend cells, e.g. "ms", "%" */
   unit?: string
   /** Line stroke width in px (default 1.5) */
   width?: number
-  /** Fill area under the line */
-  fill?: boolean
+  /** Chart type for this series (default: 'line') */
+  type?: 'line' | 'area' | 'bars' | 'points'
+  /** Fill opacity 0–1. Defaults: area=0.15, bars=1 */
+  fillOpacity?: number
+  /** Vertical gradient fill — fades from fillOpacity at top to 0 at bottom (area only) */
+  fillGradient?: boolean
+  /** Show data point dots on line / area series. Default: false */
+  pointShow?: boolean
+  /** Dot radius in px (default 4, points type default 6) */
+  pointSize?: number
+  /** Bar width as a fraction of x-axis spacing 0–1 (default 0.6) */
+  barWidth?: number
   /** Dash pattern, e.g. [4, 2] for dashed lines */
   dash?: number[]
 }
@@ -107,6 +117,10 @@ export interface TimeSeriesChartProps {
    * Fine-grained: `{ line: false }` hides only the border, `{ ticks: false }` hides only ticks.
    */
   axisStyle?: AxisConfig | false
+
+  // ── Bar stack ────────────────────────────────────────────────────────────
+  /** Stack bar series cumulatively. Only applies when series have type='bars' */
+  barStack?: boolean
 
   // ── Selection / zoom ─────────────────────────────────────────────────────
   /** Drag direction(s) that trigger a range selection (default 'x') */
