@@ -15,6 +15,7 @@ export function PinningTab() {
         columns={columns}
         columnSizingMode="fixed"
         enableSorting
+        bordered
         tableHeight={500}
         pageSizes={[20, 50, 100]}
         emptyMessage="No employees found"

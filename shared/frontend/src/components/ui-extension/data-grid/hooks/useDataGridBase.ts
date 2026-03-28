@@ -39,6 +39,7 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     onPageChange,
     onTableReady,
     onColumnSizingChange,
+    bordered,
   } = options
 
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -91,5 +92,5 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     handleGlobalFilterChange(value)
   }
 
-  return { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch }
+  return { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch, bordered }
 }

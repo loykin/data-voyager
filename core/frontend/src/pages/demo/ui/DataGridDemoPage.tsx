@@ -7,6 +7,7 @@ import { FixedHeightTab } from './tabs/fixed-height'
 import { PinningTab }     from './tabs/pinning'
 import { DashboardTab }   from './tabs/dashboard'
 import { SelectionTab }   from './tabs/selection'
+import { BorderedTab }    from './tabs/bordered'
 
 const tabs = [
   { id: 'pagination', label: 'Pagination',         content: <PaginationTab /> },
@@ -16,6 +17,7 @@ const tabs = [
   { id: 'pinning',    label: 'Column Pinning',     content: <PinningTab /> },
   { id: 'dashboard',  label: 'Dashboard',          content: <DashboardTab /> },
   { id: 'selection',  label: 'Row Selection',      content: <SelectionTab /> },
+  { id: 'bordered',   label: 'Bordered',           content: <BorderedTab /> },
 ]
 
 export function DataGridDemoPage() {

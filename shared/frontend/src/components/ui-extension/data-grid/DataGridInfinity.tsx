@@ -6,70 +6,29 @@ import { DataGridToolbar } from './DataGridToolbar'
 import { DataGridTableView } from './DataGridTableView'
 import { cn } from '../../../lib/utils'
 
-export function DataGridInfinity<T extends object>({
-  data = [],
-  columns,
-  isLoading,
-  error,
-  enableSorting = true,
-  initialSorting,
-  onSortingChange,
-  manualSorting,
-  columnFilters,
-  globalFilter,
-  onGlobalFilterChange,
-  searchableColumns,
-  leftFilters,
-  rightFilters,
-  enableColumnResizing = true,
-  enableColumnVisibility = false,
-  enableColumnFilters = false,
-  visibilityState,
-  initialPinning,
-  columnSizingMode = 'auto',
-  checkboxConfig,
-  onRowClick,
-  rowCursor,
-  tableKey,
-  persistState,
-  tableHeight,
-  emptyMessage,
-  onTableReady,
-  onColumnSizingChange,
-  hasNextPage,
-  isFetchingNextPage,
-  fetchNextPage,
-  rootMargin = '100px',
-}: DataGridInfinityProps<T>) {
+export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<T>) {
+  const {
+    isLoading,
+    error,
+    searchableColumns,
+    leftFilters,
+    rightFilters,
+    enableColumnVisibility = false,
+    enableColumnResizing = true,
+    enableColumnFilters = false,
+    onRowClick,
+    rowCursor,
+    tableHeight,
+    emptyMessage,
+    bordered,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    rootMargin = '100px',
+  } = props
+
   const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch } =
-    useDataGridBase({
-      data,
-      columns,
-      enableSorting,
-      initialSorting,
-      onSortingChange,
-      manualSorting,
-      columnFilters,
-      globalFilter,
-      onGlobalFilterChange,
-      searchableColumns,
-      enableColumnResizing,
-      enableColumnVisibility,
-      enableColumnFilters,
-      visibilityState,
-      initialPinning,
-      columnSizingMode,
-      checkboxConfig,
-      onRowClick,
-      rowCursor,
-      tableKey,
-      persistState,
-      enablePagination: false,
-      tableHeight,
-      emptyMessage,
-      onTableReady,
-      onColumnSizingChange,
-    })
+    useDataGridBase({ ...props, enablePagination: false })
 
   const { loadMoreRef } = useInfiniteScroll({
     hasNextPage,
@@ -120,6 +79,7 @@ export function DataGridInfinity<T extends object>({
           enableColumnFilters={enableColumnFilters}
           tableHeight={hasFixedHeight ? undefined : tableHeight}
           fillHeight={hasFixedHeight}
+          bordered={bordered}
           loadMoreRef={loadMoreRef}
           isFetchingNextPage={isFetchingNextPage}
         />
