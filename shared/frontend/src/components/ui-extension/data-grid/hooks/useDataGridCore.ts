@@ -108,7 +108,7 @@ export function useDataGridCore<T extends object>({
     }
   })
   const [internalFilters, setInternalFilters] = useState<ColumnFiltersState>([])
-  const [internalGlobal, setInternalGlobal] = useState('')
+  const [internalGlobal, setInternalGlobal] = useState(persisted?.searchTerm ?? '')
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     visibilityState ?? {}
   )
@@ -244,8 +244,9 @@ export function useDataGridCore<T extends object>({
         setInternalGlobal(value)
         onGlobalFilterChange?.(value)
       }
+      if (tableKey && persistState) update(tableKey, { searchTerm: value })
     },
-    [table, externalGlobalFilter, onGlobalFilterChange]
+    [table, externalGlobalFilter, onGlobalFilterChange, tableKey, persistState, update]
   )
 
   useEffect(() => {

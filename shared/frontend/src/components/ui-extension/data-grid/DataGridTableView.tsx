@@ -540,12 +540,15 @@ export function DataGridTableView<T extends object>({
   onMeasureColumns,
 }: DataGridTableViewProps<T>) {
   // ── Action menu state — ONE menu at table level, anchored to the clicked trigger ─
+  // Snapshot rect at click time (VirtualElement) so the anchor remains valid even
+  // after the virtualizer unmounts the trigger row's DOM node.
   const [actionMenuOpen, setActionMenuOpen] = useState(false)
   const [activeRow, setActiveRow] = useState<T | null>(null)
-  const anchorRef = useRef<HTMLElement | null>(null)
+  const anchorRef = useRef<{ getBoundingClientRect: () => DOMRect } | null>(null)
 
   const handleActionTrigger = useCallback((row: T, el: HTMLElement) => {
-    anchorRef.current = el
+    const rect = el.getBoundingClientRect()
+    anchorRef.current = { getBoundingClientRect: () => rect }
     setActiveRow(row)
     setActionMenuOpen(true)
   }, [])
