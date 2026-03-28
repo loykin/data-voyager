@@ -39,6 +39,8 @@ export interface SeriesConfig {
   barWidth?: number
   /** Dash pattern, e.g. [4, 2] for dashed lines */
   dash?: number[]
+  /** Which y-axis to bind this series to (default: 'left') */
+  yAxis?: 'left' | 'right'
 }
 
 /** Line appearance: width, color, dash pattern */
@@ -86,6 +88,7 @@ export interface TimeSeriesChartProps {
   legendFormat?: LegendFormat
 
   // ── Y-axis ───────────────────────────────────────────────────────────────
+  /** Left y-axis unit label */
   yUnit?: string
   /**
    * How to display the y-axis unit:
@@ -95,6 +98,10 @@ export interface TimeSeriesChartProps {
   yUnitDisplay?: 'label' | 'tick'
   yMin?:  number
   yMax?:  number
+  /** Right y-axis unit label. When any series has yAxis='right', a second axis is shown. */
+  yUnit2?: string
+  y2Min?:  number
+  y2Max?:  number
 
   // ── X-axis time display ───────────────────────────────────────────────────
   /**

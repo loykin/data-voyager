@@ -21,6 +21,9 @@ interface ChartCanvasProps {
   axisStyle?: AxisConfig | false
   timeRange?: [number, number]
   barStack?:  boolean
+  yUnit2?: string
+  y2Min?:  number
+  y2Max?:  number
   onSelect?:     (result: SelectionResult) => void
   onReady?:      (chart: uPlot) => void
   onCursorMove?: (chart: uPlot, idx: number | null) => void
@@ -112,6 +115,9 @@ export function ChartCanvas({
   axisStyle,
   timeRange,
   barStack = false,
+  yUnit2,
+  y2Min,
+  y2Max,
   onSelect,
   onReady,
   onCursorMove,
@@ -154,6 +160,7 @@ export function ChartCanvas({
 
         return {
           label:  s.label,
+          scale:  s.yAxis === 'right' ? 'y2' : 'y',
           stroke: isPoints ? undefined : s.color,
           width:  (isPoints || isBars) ? 0 : (s.width ?? 1.5),
           fill,
@@ -172,9 +179,12 @@ export function ChartCanvas({
       }),
     ]
 
+    const hasRightAxis = series.some(s => s.yAxis === 'right')
+
     const scales: uPlot.Scales = {
-      x: timeRange ? { min: timeRange[0], max: timeRange[1] } : {},
-      y: { min: yMin, max: yMax },
+      x:  timeRange ? { min: timeRange[0], max: timeRange[1] } : {},
+      y:  { min: yMin,  max: yMax  },
+      ...(hasRightAxis ? { y2: { min: y2Min, max: y2Max } } : {}),
     }
 
     // ── Grid lines — fully independent ───────────────────────────────────────
@@ -213,6 +223,17 @@ export function ChartCanvas({
             ? v.toLocaleString(undefined, { maximumFractionDigits: 0 })
             : Number.isInteger(v) ? String(v) : v.toPrecision(3)
           return `${n}\u202f${yUnit}`
+        })
+      : undefined
+
+    const y2InTickMode = yUnitDisplay === 'tick' && !!yUnit2
+    const y2AxisValues: uPlot.Axis['values'] = y2InTickMode
+      ? (_u, vals) => vals.map((v) => {
+          if (v == null) return ''
+          const n = Math.abs(v) >= 1000
+            ? v.toLocaleString(undefined, { maximumFractionDigits: 0 })
+            : Number.isInteger(v) ? String(v) : v.toPrecision(3)
+          return `${n}\u202f${yUnit2}`
         })
       : undefined
 
@@ -256,6 +277,8 @@ export function ChartCanvas({
       {
         // labelSize:16 — just wide enough for a rotated unit character,
         // keeping it visually close to the tick values.
+        scale:     'y',
+        side:      3,  // left
         size:      yInTickMode ? 50 : 54,
         labelSize: 16,
         label:     yInTickMode ? undefined : yUnit,
@@ -264,6 +287,17 @@ export function ChartCanvas({
         ticks:     resolvedTicks,
         grid:      resolvedGrid,
       },
+      ...(hasRightAxis ? [{
+        scale:     'y2',
+        side:      1,  // right
+        size:      y2InTickMode ? 50 : 54,
+        labelSize: 16,
+        label:     y2InTickMode ? undefined : yUnit2,
+        values:    y2AxisValues,
+        stroke:    mutedFgColor,
+        ticks:     resolvedTicks,
+        grid:      { show: false } as uPlot.Axis.Grid,  // avoid double grid lines
+      }] : []),
     ]
 
     // Axis border has its own independent defaults — no fallback to gridStyle.
@@ -296,7 +330,7 @@ export function ChartCanvas({
           : []),
       ],
     }
-  }, [series, height, selectionMode, yUnit, yUnitDisplay, xShowDate, locale, yMin, yMax, gridStyle, axisStyle, timeRange, barStack, onSelect, onCursorMove])
+  }, [series, height, selectionMode, yUnit, yUnitDisplay, xShowDate, locale, yMin, yMax, yUnit2, y2Min, y2Max, gridStyle, axisStyle, timeRange, barStack, onSelect, onCursorMove])
 
   // Bar stacking: transform data to cumulative sums, then reverse order
   const resolvedData = useMemo<uPlot.AlignedData>(() => {

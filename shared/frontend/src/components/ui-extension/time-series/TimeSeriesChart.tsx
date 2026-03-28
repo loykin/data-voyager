@@ -17,6 +17,9 @@ export function TimeSeriesChart({
   yUnitDisplay,
   yMin,
   yMax,
+  yUnit2,
+  y2Min,
+  y2Max,
   xShowDate,
   locale,
   gridStyle,
@@ -106,6 +109,9 @@ export function TimeSeriesChart({
           yUnitDisplay={yUnitDisplay}
           yMin={yMin}
           yMax={yMax}
+          yUnit2={yUnit2}
+          y2Min={y2Min}
+          y2Max={y2Max}
           xShowDate={xShowDate}
           locale={locale}
           gridStyle={gridStyle}
