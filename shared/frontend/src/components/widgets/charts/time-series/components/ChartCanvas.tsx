@@ -1,8 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
-import { useUPlot } from '../hooks/useUPlot'
-import { selectionPlugin } from '../plugins/selectionPlugin'
+import { useChart } from '../../core'
+import { selectionPlugin } from '../../core'
+import { hexToRgba, resolveCssVar } from '../../core'
+import { makeAxisBorderPlugin } from '../../core'
 import type { AxisConfig, LineStyle, SeriesConfig, SelectionMode, SelectionResult } from '../types'
 
 interface ChartCanvasProps {
@@ -29,75 +31,6 @@ interface ChartCanvasProps {
   onCursorMove?: (chart: uPlot, idx: number | null) => void
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-  const clean = hex.replace('#', '')
-  const r = parseInt(clean.slice(0, 2), 16)
-  const g = parseInt(clean.slice(2, 4), 16)
-  const b = parseInt(clean.slice(4, 6), 16)
-  if (isNaN(r) || isNaN(g) || isNaN(b)) return hex
-  return `rgba(${r},${g},${b},${alpha})`
-}
-
-/**
- * Canvas ctx.strokeStyle / fillStyle cannot resolve CSS custom properties.
- * Read the computed value from the document root and return it as-is
- * (the value is already a complete color string such as `oklch(0.556 0 0)`).
- */
-function resolveCssVar(variable: string, fallback: string): string {
-  if (typeof window === 'undefined') return fallback
-  const val = getComputedStyle(document.documentElement)
-    .getPropertyValue(variable)
-    .trim()
-  return val || fallback
-}
-
-/**
- * Plugin that draws the axis border lines (left + bottom frame) in the
- * `draw` hook — fires AFTER all axes/series — so they are never buried
- * under grid lines or fill areas.
- *
- * Completely independent from gridStyle: each has its own defaults.
- */
-function makeAxisBorderPlugin(
-  style:         LineStyle | false | undefined,
-  defaultStroke: string,
-  defaultWidth:  number,
-): uPlot.Plugin {
-  if (style === false) return { hooks: {} }
-
-  const stroke = style?.stroke ?? defaultStroke
-  const width  = style?.width  ?? defaultWidth
-  const dash   = style?.dash
-
-  return {
-    hooks: {
-      draw: [(u: uPlot) => {
-        const { ctx, bbox } = u
-        const dpr    = devicePixelRatio
-        const lw     = Math.round(width * dpr * 2) / 2   // snap to 0.5-px grid
-        const offset = (lw % 2) / 2
-
-        ctx.save()
-        ctx.strokeStyle = stroke
-        ctx.lineWidth   = lw
-        ctx.setLineDash(dash ? dash.map(d => d * dpr) : [])
-        ctx.lineCap = 'square'
-        ctx.translate(offset, offset)
-
-        ctx.beginPath()
-        // left vertical line (y-axis border)
-        ctx.moveTo(bbox.left, bbox.top)
-        ctx.lineTo(bbox.left, bbox.top + bbox.height)
-        // bottom horizontal line (x-axis border)
-        ctx.moveTo(bbox.left,              bbox.top + bbox.height)
-        ctx.lineTo(bbox.left + bbox.width, bbox.top + bbox.height)
-        ctx.stroke()
-
-        ctx.restore()
-      }],
-    },
-  }
-}
 
 export function ChartCanvas({
   containerRef,
@@ -304,7 +237,7 @@ export function ChartCanvas({
     // Grid and axis border are completely separate concerns.
 
     return {
-      width:     300,  // overridden by ResizeObserver in useUPlot
+      width:     300,  // overridden by ResizeObserver in useChart
       height,
       drawOrder: ['series', 'axes'] as uPlot.DrawOrderKey[],
       legend:    { show: false },
@@ -354,7 +287,7 @@ export function ChartCanvas({
     return [data[0], ...cumulative.reverse()] as uPlot.AlignedData
   }, [data, barStack, series])
 
-  useUPlot({ containerRef, getOptions, data: resolvedData, onReady })
+  useChart({ containerRef, getOptions, data: resolvedData, onReady })
 
   return null
 }

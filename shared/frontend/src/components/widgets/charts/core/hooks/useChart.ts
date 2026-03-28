@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import uPlot from 'uplot'
 
-interface UseUPlotOptions {
+interface UseChartOptions {
   containerRef: React.RefObject<HTMLDivElement | null>
   getOptions:   () => uPlot.Options
   data:         uPlot.AlignedData
@@ -17,7 +17,7 @@ interface UseUPlotOptions {
  * - Re-creates the chart when options change (size, series config, plugins).
  * - Destroys the chart on unmount.
  */
-export function useUPlot({ containerRef, getOptions, data, onReady }: UseUPlotOptions) {
+export function useChart({ containerRef, getOptions, data, onReady }: UseChartOptions) {
   const uRef        = useRef<uPlot | null>(null)
   const dataRef     = useRef(data)
   const onReadyRef  = useRef(onReady)

@@ -1,10 +1,14 @@
 import type React from 'react'
 import type uPlot from 'uplot'
+import type { LineStyle, AxisConfig, SelectionMode, SelectionResult } from '../core'
 
 // uPlot's aligned data format:
 // [timestamps, series1, series2, ...]  — all arrays must be the same length.
 // Timestamps are unix seconds (number).
 export type AlignedData = uPlot.AlignedData
+
+// Re-export shared chart primitives from core so consumers can import from one place
+export type { LineStyle, AxisConfig, SelectionMode, SelectionResult }
 
 export type LegendPosition = 'top' | 'bottom' | 'left' | 'right' | 'none'
 
@@ -14,7 +18,6 @@ export type LegendPosition = 'top' | 'bottom' | 'left' | 'right' | 'none'
  */
 export type LegendFormat  = 'list' | 'table'
 
-export type SelectionMode = 'x' | 'y' | 'xy' | 'none'
 
 export interface SeriesConfig {
   /** Display name shown in the legend */
@@ -43,34 +46,6 @@ export interface SeriesConfig {
   yAxis?: 'left' | 'right'
 }
 
-/** Line appearance: width, color, dash pattern */
-export interface LineStyle {
-  /** Line width in CSS px. 0.5 = hairline on Retina (default 0.5) */
-  width?:  number
-  /** CSS color string. Defaults to the theme's border color */
-  stroke?: string
-  /** Dash pattern, e.g. [4, 2] for dashed, [2, 2] for dotted. Solid if omitted */
-  dash?:   number[]
-}
-
-/**
- * Axis line configuration — controls the border line and its tick marks together.
- * Ticks are a sub-option of the axis, not a separate concern.
- *
- * Pass `false` at the top level to hide both line and ticks entirely.
- */
-export interface AxisConfig {
-  /** Style of the axis border line itself (left vertical + bottom horizontal). */
-  line?: LineStyle | false
-  /** Style of the tick marks on the axis. `false` = hide ticks. */
-  ticks?: LineStyle | false
-}
-
-/** What the generic selection plugin emits — raw data-space values */
-export interface SelectionResult {
-  xRange?: [number, number]
-  yRange?: [number, number]
-}
 
 export interface TimeSeriesChartProps {
   // ── Data ─────────────────────────────────────────────────────────────────
