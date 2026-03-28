@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@data-voyager/shared-ui/components/ui/sidebar'
-import { Database, LayoutGrid } from 'lucide-react'
+import { Database, LayoutGrid, LineChart } from 'lucide-react'
 
 const navGroups = [
   {
@@ -23,7 +23,8 @@ const navGroups = [
   {
     label: 'Dev',
     items: [
-      { title: 'DataGrid Demo', url: '/demo', icon: LayoutGrid },
+      { title: 'DataGrid Demo', url: '/demo',       icon: LayoutGrid },
+      { title: 'Chart Demo',    url: '/demo/chart', icon: LineChart  },
     ],
   },
 ]
