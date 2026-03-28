@@ -1,14 +1,9 @@
-import { useMemo, useRef, useState } from 'react'
-import type { ColumnSizingState } from '@tanstack/react-table'
-import { Loader2, Search } from 'lucide-react'
-import { Input } from '../../ui/input'
+import { Loader2 } from 'lucide-react'
 import type { DataGridInfinityProps } from './types'
-import { useDataGridCore } from './hooks/useDataGridCore'
-import { useColumnSizing } from './hooks/useColumnSizing'
+import { useDataGridBase } from './hooks/useDataGridBase'
 import { useInfiniteScroll } from './hooks/useInfiniteScroll'
+import { DataGridToolbar } from './DataGridToolbar'
 import { DataGridTableView } from './DataGridTableView'
-import { ColumnVisibilityDropdown } from './ColumnVisibilityDropdown'
-import { createCheckboxColumn } from './checkbox-column'
 import { cn } from '../../../lib/utils'
 
 export function DataGridInfinity<T extends object>({
@@ -46,41 +41,35 @@ export function DataGridInfinity<T extends object>({
   fetchNextPage,
   rootMargin = '100px',
 }: DataGridInfinityProps<T>) {
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [searchValue, setSearchValue] = useState(globalFilter ?? '')
-  const [sizing, setSizing] = useState<ColumnSizingState>({})
-
-  const columnsWithCheckbox = useMemo(() => {
-    if (!checkboxConfig) return columns
-    return [createCheckboxColumn(checkboxConfig), ...columns]
-  }, [columns, checkboxConfig])
-
-  const { table, handleGlobalFilterChange } = useDataGridCore({
-    data,
-    columns: columnsWithCheckbox,
-    enableSorting,
-    initialSorting,
-    onSortingChange,
-    manualSorting,
-    columnFilters,
-    globalFilter,
-    onGlobalFilterChange,
-    searchableColumns,
-    enableColumnResizing,
-    enableColumnFilters,
-    visibilityState,
-    initialPinning,
-    tableKey,
-    persistState,
-    enablePagination: false,
-    onTableReady,
-    onColumnSizingChange,
-    sizing,
-    setSizing,
-  })
-
-  const { isSized } = useColumnSizing({ columns, data, containerRef: wrapperRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
+  const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch } =
+    useDataGridBase({
+      data,
+      columns,
+      enableSorting,
+      initialSorting,
+      onSortingChange,
+      manualSorting,
+      columnFilters,
+      globalFilter,
+      onGlobalFilterChange,
+      searchableColumns,
+      enableColumnResizing,
+      enableColumnVisibility,
+      enableColumnFilters,
+      visibilityState,
+      initialPinning,
+      columnSizingMode,
+      checkboxConfig,
+      onRowClick,
+      rowCursor,
+      tableKey,
+      persistState,
+      enablePagination: false,
+      tableHeight,
+      emptyMessage,
+      onTableReady,
+      onColumnSizingChange,
+    })
 
   const { loadMoreRef } = useInfiniteScroll({
     hasNextPage,
@@ -89,13 +78,6 @@ export function DataGridInfinity<T extends object>({
     rootMargin,
     enabled: !isLoading,
   })
-
-  const rows = table.getRowModel().rows
-
-  const handleSearch = (value: string) => {
-    setSearchValue(value)
-    handleGlobalFilterChange(value)
-  }
 
   const hasFixedHeight = tableHeight != null && tableHeight !== 'auto'
 
@@ -109,29 +91,15 @@ export function DataGridInfinity<T extends object>({
 
   return (
     <div ref={wrapperRef} className="flex flex-col gap-3 w-full min-w-0 overflow-hidden">
-      {(searchableColumns?.length || leftFilters || rightFilters || enableColumnVisibility) && (
-        <div className="flex items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-2">
-            {searchableColumns?.length && (
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  type="text"
-                  placeholder="Search…"
-                  value={searchValue}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="w-60 pl-8"
-                />
-              </div>
-            )}
-            {leftFilters?.(table)}
-          </div>
-          <div className="flex items-center gap-2">
-            {rightFilters?.(table)}
-            {enableColumnVisibility && <ColumnVisibilityDropdown table={table} />}
-          </div>
-        </div>
-      )}
+      <DataGridToolbar
+        table={table}
+        searchValue={searchValue}
+        onSearch={handleSearch}
+        searchableColumns={searchableColumns}
+        leftFilters={leftFilters}
+        rightFilters={rightFilters}
+        enableColumnVisibility={enableColumnVisibility}
+      />
 
       <div
         className={cn(
