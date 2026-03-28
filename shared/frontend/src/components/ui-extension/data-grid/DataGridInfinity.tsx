@@ -1,4 +1,3 @@
-import { Loader2 } from 'lucide-react'
 import type { DataGridInfinityProps } from './types'
 import { useDataGridBase } from './hooks/useDataGridBase'
 import { useInfiniteScroll } from './hooks/useInfiniteScroll'
@@ -40,8 +39,6 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
     enabled: !isLoading,
   })
 
-  const hasFixedHeight = tableHeight != null && tableHeight !== 'auto'
-
   if (error) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-destructive">
@@ -64,10 +61,9 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
 
       <div
         className={cn(
-          'rounded-md border overflow-hidden min-w-0 flex-1 flex flex-col',
+          'rounded-md border overflow-hidden min-w-0',
           !isSized && 'invisible'
         )}
-        style={hasFixedHeight ? { height: tableHeight } : undefined}
       >
         <DataGridTableView
           table={table}
@@ -79,8 +75,7 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
           rowCursor={rowCursor}
           enableColumnResizing={enableColumnResizing}
           enableColumnFilters={enableColumnFilters}
-          tableHeight={hasFixedHeight ? undefined : tableHeight}
-          fillHeight={hasFixedHeight}
+          tableHeight={tableHeight}
           bordered={bordered}
           estimateRowHeight={estimateRowHeight}
           overscan={overscan}
@@ -90,11 +85,6 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
         />
       </div>
 
-      {isFetchingNextPage && (
-        <div className="flex justify-center py-2">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
     </div>
   )
 }

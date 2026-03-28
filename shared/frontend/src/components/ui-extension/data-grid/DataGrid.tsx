@@ -30,8 +30,6 @@ export function DataGrid<T extends object>(props: DataGridProps<T>) {
   const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch, measure } =
     useDataGridBase(props)
 
-  const hasFixedHeight = tableHeight != null && tableHeight !== 'auto'
-
   if (error) {
     return (
       <div className="flex items-center justify-center py-12 text-sm text-destructive">
@@ -54,10 +52,9 @@ export function DataGrid<T extends object>(props: DataGridProps<T>) {
 
       <div
         className={cn(
-          'rounded-md border overflow-hidden min-w-0 flex-1 flex flex-col',
+          'rounded-md border overflow-hidden min-w-0',
           !isSized && 'invisible'
         )}
-        style={hasFixedHeight ? { height: tableHeight } : undefined}
       >
         <DataGridTableView
           table={table}
@@ -69,24 +66,15 @@ export function DataGrid<T extends object>(props: DataGridProps<T>) {
           rowCursor={rowCursor}
           enableColumnResizing={enableColumnResizing}
           enableColumnFilters={enableColumnFilters}
-          tableHeight={hasFixedHeight ? undefined : tableHeight}
-          fillHeight={hasFixedHeight}
+          tableHeight={tableHeight}
           bordered={bordered}
           estimateRowHeight={estimateRowHeight}
           overscan={overscan}
           onMeasureColumns={measure}
         />
-        {hasFixedHeight && enablePagination && (
-          <DataGridPaginationBar
-            table={table}
-            pageSizes={pageSizes}
-            totalCount={totalCount}
-            pinned
-          />
-        )}
       </div>
 
-      {!hasFixedHeight && enablePagination && (
+      {enablePagination && (
         <DataGridPaginationBar
           table={table}
           pageSizes={pageSizes}

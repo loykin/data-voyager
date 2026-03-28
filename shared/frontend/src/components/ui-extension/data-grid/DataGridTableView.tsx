@@ -31,11 +31,6 @@ export interface DataGridTableViewProps<T extends object> extends TableViewConfi
   loadMoreRef?: React.RefObject<HTMLDivElement | null>
   isFetchingNextPage?: boolean
   /**
-   * When true the scroll container fills 100% of its parent height.
-   * Parent must have an explicit height (flex-col layout).
-   */
-  fillHeight?: boolean
-  /**
    * Called after each render so the parent can update column auto-sizing
    * based on newly rendered (possibly virtual) rows.
    */
@@ -541,7 +536,6 @@ export function DataGridTableView<T extends object>({
   overscan = 10,
   loadMoreRef,
   isFetchingNextPage,
-  fillHeight = false,
   bordered = false,
   onMeasureColumns,
 }: DataGridTableViewProps<T>) {
@@ -607,13 +601,10 @@ export function DataGridTableView<T extends object>({
     position: 'relative',
     width: '100%',
     minWidth: 0,
-    flex: 1,
     scrollbarGutter: 'stable',
     isolation: 'isolate',
     ...(virtual
-      ? { height: typeof tableHeight === 'number' ? tableHeight : tableHeight && tableHeight !== 'auto' ? tableHeight : 500 }
-      : fillHeight
-      ? { minHeight: 0 }
+      ? { height: tableHeight as string | number }
       : tableHeight && tableHeight !== 'auto'
       ? { maxHeight: tableHeight }
       : {}),
