@@ -20,16 +20,16 @@ export function DataGrid<T extends object>(props: DataGridProps<T>) {
     tableHeight,
     emptyMessage,
     bordered,
+    estimateRowHeight,
+    overscan,
     enablePagination = true,
     pageSizes = [10, 20, 50, 100],
     totalCount,
   } = props
 
-  const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch } =
+  const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch, measure } =
     useDataGridBase(props)
 
-  // When tableHeight is set the border div becomes the fixed-height container:
-  // header sticks to top, body scrolls, pagination pins to bottom.
   const hasFixedHeight = tableHeight != null && tableHeight !== 'auto'
 
   if (error) {
@@ -42,7 +42,6 @@ export function DataGrid<T extends object>(props: DataGridProps<T>) {
 
   return (
     <div ref={wrapperRef} className="flex flex-col gap-3 w-full min-w-0 overflow-hidden">
-      {/* ── Toolbar ──────────────────────────────────────────────────── */}
       <DataGridToolbar
         table={table}
         searchValue={searchValue}
@@ -53,7 +52,6 @@ export function DataGrid<T extends object>(props: DataGridProps<T>) {
         enableColumnVisibility={enableColumnVisibility}
       />
 
-      {/* ── Table + (pinned pagination when fixed height) ────────────── */}
       <div
         className={cn(
           'rounded-md border overflow-hidden min-w-0 flex-1 flex flex-col',
@@ -74,6 +72,9 @@ export function DataGrid<T extends object>(props: DataGridProps<T>) {
           tableHeight={hasFixedHeight ? undefined : tableHeight}
           fillHeight={hasFixedHeight}
           bordered={bordered}
+          estimateRowHeight={estimateRowHeight}
+          overscan={overscan}
+          onMeasureColumns={measure}
         />
         {hasFixedHeight && enablePagination && (
           <DataGridPaginationBar
@@ -85,7 +86,6 @@ export function DataGrid<T extends object>(props: DataGridProps<T>) {
         )}
       </div>
 
-      {/* Pagination below border when no fixed height */}
       {!hasFixedHeight && enablePagination && (
         <DataGridPaginationBar
           table={table}

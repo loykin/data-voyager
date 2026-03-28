@@ -51,9 +51,8 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     return [createCheckboxColumn(checkboxConfig), ...columns]
   }, [columns, checkboxConfig])
 
-  const { sizing, isSized, setSizing } = useColumnSizing({
+  const { sizing, isSized, setSizing, measure } = useColumnSizing({
     columns,
-    data,
     containerRef,
     mode: columnSizingMode,
   })
@@ -92,5 +91,5 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     handleGlobalFilterChange(value)
   }
 
-  return { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch, bordered }
+  return { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch, bordered, measure }
 }
