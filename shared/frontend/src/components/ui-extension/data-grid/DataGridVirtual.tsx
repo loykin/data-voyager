@@ -72,7 +72,7 @@ export function DataGridVirtual<T extends object>({
     setSizing,
   })
 
-  const { isSized } = useColumnSizing({ columns, data, containerRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
+  const { isSized } = useColumnSizing({ columns, data, containerRef: wrapperRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
 
   // All filtered+sorted rows (no pagination)
   const rows = table.getRowModel().rows

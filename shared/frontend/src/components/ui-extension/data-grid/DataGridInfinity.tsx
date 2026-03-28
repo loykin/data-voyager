@@ -69,7 +69,7 @@ export function DataGridInfinity<T extends object>({
     setSizing,
   })
 
-  const { isSized } = useColumnSizing({ columns, data, containerRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
+  const { isSized } = useColumnSizing({ columns, data, containerRef: wrapperRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
 
   const { loadMoreRef } = useInfiniteScroll({
     hasNextPage,
