@@ -8,7 +8,6 @@ import {
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, SlidersHorizontal, X } from 'lucide-react'
-import type { ColumnSizingState } from '@tanstack/react-table'
 import type { Virtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../../lib/utils'
 import { TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui/table'
@@ -32,7 +31,6 @@ export interface DataGridTableViewProps<T extends object> {
   rowCursor?: boolean
   enableColumnResizing?: boolean
   enableColumnFilters?: boolean
-  sizing?: ColumnSizingState
   tableHeight?: string | number | 'auto'
   virtual?: boolean
   estimateRowHeight?: number
@@ -186,8 +184,9 @@ function NumberFilterPopover<T extends object>({ col }: { col: Column<T> }) {
 
   return (
     <Popover>
-      <PopoverTrigger className="w-full">
+      <PopoverTrigger render={(props) => (
         <Button
+          {...props}
           variant={hasFilter ? 'outline' : 'ghost'}
           size="sm"
           className="h-7 w-full justify-start text-xs font-normal"
@@ -195,7 +194,7 @@ function NumberFilterPopover<T extends object>({ col }: { col: Column<T> }) {
           <SlidersHorizontal className="h-3 w-3 shrink-0" />
           <span className="truncate">{label}</span>
         </Button>
-      </PopoverTrigger>
+      )} />
       <PopoverContent side="bottom" align="start" className="w-48">
         <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-1">

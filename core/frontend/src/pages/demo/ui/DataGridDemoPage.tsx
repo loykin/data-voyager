@@ -170,10 +170,11 @@ const PAGE = 50
 
 // ── Demo page ─────────────────────────────────────────────────────────────
 
-type Tab = 'pagination' | 'infinity' | 'virtual' | 'fixed' | 'pinning' | 'dashboard'
+type Tab = 'pagination' | 'infinity' | 'virtual' | 'fixed' | 'pinning' | 'dashboard' | 'selection'
 
 export function DataGridDemoPage() {
   const [tab, setTab] = useState<Tab>('pagination')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Infinite scroll state
   const [infinityData, setInfinityData] = useState(() => ALL_DATA.slice(0, PAGE))
@@ -198,6 +199,7 @@ export function DataGridDemoPage() {
     { id: 'fixed', label: 'Fixed Height' },
     { id: 'pinning', label: 'Column Pinning' },
     { id: 'dashboard', label: 'Dashboard' },
+    { id: 'selection', label: 'Row Selection' },
   ]
 
   return (
@@ -231,12 +233,13 @@ export function DataGridDemoPage() {
       {tab === 'pagination' && (
         <section className="flex flex-col gap-2">
           <p className="text-xs text-muted-foreground">
-            50 rows · enableColumnFilters · text / select / number range filters
+            50 rows · enableColumnFilters · enableColumnVisibility · text / select / number range filters
           </p>
           <DataGrid
             data={SMALL_DATA}
             columns={columns}
             enableColumnFilters
+            enableColumnVisibility
             enableSorting
             pageSizes={[10, 20, 50]}
             emptyMessage="No employees found"
@@ -361,6 +364,55 @@ export function DataGridDemoPage() {
               emptyMessage="No employees found"
             />
           </div>
+        </section>
+      )}
+
+      {/* ── Row Selection tab ── */}
+      {tab === 'selection' && (
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              checkboxConfig · 선택된 행: {selectedIds.size}개
+            </p>
+            {selectedIds.size > 0 && (
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                선택 해제
+              </button>
+            )}
+          </div>
+          <DataGrid
+            data={SMALL_DATA}
+            columns={columns}
+            enableSorting
+            enableColumnVisibility
+            pageSizes={[10, 20, 50]}
+            emptyMessage="No employees found"
+            checkboxConfig={{
+              getRowId: (row) => String(row.id),
+              selectedIds,
+              onSelectAll: (rows, checked) => {
+                setSelectedIds((prev) => {
+                  const next = new Set(prev)
+                  rows.forEach((r) => {
+                    if (checked) next.add(String(r.original.id))
+                    else next.delete(String(r.original.id))
+                  })
+                  return next
+                })
+              },
+              onSelectOne: (id, checked) => {
+                setSelectedIds((prev) => {
+                  const next = new Set(prev)
+                  if (checked) next.add(id)
+                  else next.delete(id)
+                  return next
+                })
+              },
+            }}
+          />
         </section>
       )}
 
