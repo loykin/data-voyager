@@ -9,9 +9,11 @@ interface UseColumnSizingOptions<T extends object> {
   data: T[]
   containerRef: React.RefObject<HTMLDivElement | null>
   mode: ColumnSizingMode
-  /** Current sizing state — used to detect user manual overrides */
+}
+
+interface SizingState {
   sizing: ColumnSizingState
-  onSizeChange: React.Dispatch<React.SetStateAction<ColumnSizingState>>
+  isSized: boolean
 }
 
 export function useColumnSizing<T extends object>({
@@ -19,15 +21,24 @@ export function useColumnSizing<T extends object>({
   data,
   containerRef,
   mode,
-  sizing,
-  onSizeChange,
 }: UseColumnSizingOptions<T>) {
   const userResized = useRef(new Set<string>())
   const lastComputed = useRef<ColumnSizingState>({})
   const lastContainerWidth = useRef<number>(0)
   const hasSized = useRef(false)
-  /** true after first successful recalculate — used to hide the table until ready */
-  const [isSized, setIsSized] = useState(false)
+  const [state, setState] = useState<SizingState>({ sizing: {}, isSized: false })
+
+  // Expose a setSizing that matches Dispatch<SetStateAction<ColumnSizingState>>
+  // so TanStack's onColumnSizingChange can call it directly.
+  const setSizing: React.Dispatch<React.SetStateAction<ColumnSizingState>> = useCallback(
+    (updater) => {
+      setState((prev) => ({
+        ...prev,
+        sizing: typeof updater === 'function' ? updater(prev.sizing) : updater,
+      }))
+    },
+    []
+  )
 
   // Stable refs so recalculate() doesn't need to re-subscribe ResizeObserver
   const columnsRef = useRef(columns)
@@ -36,10 +47,8 @@ export function useColumnSizing<T extends object>({
   dataRef.current = data
   const modeRef = useRef(mode)
   modeRef.current = mode
-  const sizingRef = useRef(sizing)
-  sizingRef.current = sizing
-  const onSizeChangeRef = useRef(onSizeChange)
-  onSizeChangeRef.current = onSizeChange
+  const sizingRef = useRef(state.sizing)
+  sizingRef.current = state.sizing
 
   const recalculate = useCallback(() => {
     const container = containerRef.current
@@ -152,19 +161,20 @@ export function useColumnSizing<T extends object>({
       }
     }
 
-    if (Object.keys(newSizing).length > 0) {
-      // Only write to state if values actually changed (avoid spurious re-renders)
-      const hasChanges = Object.entries(newSizing).some(([id, w]) => currentSizing[id] !== w)
-      if (hasChanges) {
-        Object.assign(lastComputed.current, newSizing)
-        onSizeChangeRef.current((prev) => ({ ...prev, ...newSizing }))
-      }
-    }
+    const sizingChanged =
+      Object.keys(newSizing).length > 0 &&
+      Object.entries(newSizing).some(([id, w]) => currentSizing[id] !== w)
 
-    // Mark as sized after first calculation
-    if (!hasSized.current) {
-      hasSized.current = true
-      setIsSized(true)
+    const firstTime = !hasSized.current
+
+    if (sizingChanged || firstTime) {
+      if (sizingChanged) Object.assign(lastComputed.current, newSizing)
+      if (firstTime) hasSized.current = true
+      // Single setState call — sizing + isSized update in one render
+      setState((prev) => ({
+        sizing: sizingChanged ? { ...prev.sizing, ...newSizing } : prev.sizing,
+        isSized: true,
+      }))
     }
   }, [containerRef]) // stable — everything else via refs
 
@@ -210,10 +220,9 @@ export function useColumnSizing<T extends object>({
     lastComputed.current = {}
     lastContainerWidth.current = 0
     hasSized.current = false
-    setIsSized(false)
-    onSizeChangeRef.current({})
+    setState({ sizing: {}, isSized: false })
     recalculate()
   }, [recalculate])
 
-  return { isSized, resetSizing }
+  return { sizing: state.sizing, isSized: state.isSized, setSizing, resetSizing }
 }

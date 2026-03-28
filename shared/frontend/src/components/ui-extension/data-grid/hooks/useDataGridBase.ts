@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from 'react'
-import type { ColumnSizingState } from '@tanstack/react-table'
 import type { DataGridBaseProps, DataGridColumnDef } from '../types'
 import { createCheckboxColumn } from '../checkbox-column'
 import { useDataGridCore } from './useDataGridCore'
@@ -45,12 +44,18 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [searchValue, setSearchValue] = useState(globalFilter ?? '')
-  const [sizing, setSizing] = useState<ColumnSizingState>({})
 
   const columnsWithCheckbox = useMemo(() => {
     if (!checkboxConfig) return columns
     return [createCheckboxColumn(checkboxConfig), ...columns]
   }, [columns, checkboxConfig])
+
+  const { sizing, isSized, setSizing } = useColumnSizing({
+    columns,
+    data,
+    containerRef,
+    mode: columnSizingMode,
+  })
 
   const { table, handleGlobalFilterChange } = useDataGridCore({
     data,
@@ -77,15 +82,6 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     onColumnSizingChange,
     sizing,
     setSizing,
-  })
-
-  const { isSized } = useColumnSizing({
-    columns,
-    data,
-    containerRef,
-    mode: columnSizingMode,
-    sizing,
-    onSizeChange: setSizing,
   })
 
   const rows = table.getRowModel().rows
