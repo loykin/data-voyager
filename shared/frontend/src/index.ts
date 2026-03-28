@@ -23,6 +23,9 @@ export * from "./components/ui/tooltip";
 // DataGrid
 export * from "./components/ui-extension/data-grid";
 
+// Templates
+export * from "./components/templates/TabbedPageTemplate";
+
 // Hooks
 export * from "./hooks/use-mobile";
 
