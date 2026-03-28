@@ -8,6 +8,7 @@ import {
   type LegendPosition,
   type LineStyle,
   type SelectionMode,
+  type SeriesConfig,
 } from '@data-voyager/shared-ui'
 
 // ── Demo data ────────────────────────────────────────────────────────────────
@@ -36,11 +37,13 @@ function generateData(): AlignedData {
 
 const DEMO_DATA = generateData()
 
-const SERIES = [
-  { label: 'CPU',    color: '#3b82f6', unit: '%',    fill: true },
-  { label: 'Memory', color: '#10b981', unit: '%'               },
-  { label: 'RPS',    color: '#f59e0b', unit: 'req/s'           },
+const BASE_SERIES = [
+  { label: 'CPU',    color: '#3b82f6', unit: '%'    },
+  { label: 'Memory', color: '#10b981', unit: '%'    },
+  { label: 'RPS',    color: '#f59e0b', unit: 'req/s' },
 ]
+
+type ChartType = NonNullable<SeriesConfig['type']>
 
 // ── Shared presets ────────────────────────────────────────────────────────────
 
@@ -52,8 +55,11 @@ const DASH_PRESETS: Record<DashPreset, number[] | undefined> = {
   dotted: [1, 3],
 }
 
+const CHART_TYPES:  ChartType[]  = ['line', 'area', 'bars', 'points']
 const LINE_WIDTHS   = [0.5, 1, 2] as const
 const DASH_KEYS     = ['solid', 'dashed', 'dotted'] as const
+const FILL_OPACITIES = [0.1, 0.15, 0.3, 0.5, 1] as const
+const BAR_WIDTHS    = [0.4, 0.6, 0.8, 1.0] as const
 const LEGEND_POSITIONS: LegendPosition[] = ['bottom', 'top', 'left', 'right', 'none']
 const LEGEND_FORMATS:   LegendFormat[]   = ['list', 'table']
 const SELECTION_MODES:  SelectionMode[]  = ['x', 'y', 'xy', 'none']
@@ -135,6 +141,14 @@ export function ChartDemoPage() {
   const [showAxisTicks,  setShowAxisTicks]  = useState(true)
   const [axisTickWidth,  setAxisTickWidth]  = useState(0.5)
 
+  // Series / chart type
+  const [chartType,    setChartType]    = useState<ChartType>('area')
+  const [fillOpacity,  setFillOpacity]  = useState(0.15)
+  const [fillGradient, setFillGradient] = useState(false)
+  const [pointShow,    setPointShow]    = useState(false)
+  const [barWidth,     setBarWidth]     = useState(0.6)
+  const [barStack,     setBarStack]     = useState(false)
+
   // X-axis
   const [xShowDate, setXShowDate] = useState(true)
   const [locale,    setLocale]    = useState<string | undefined>(undefined)
@@ -145,6 +159,19 @@ export function ChartDemoPage() {
   const [yUnitDisplay,  setYUnitDisplay]  = useState<'label' | 'tick'>('label')
 
   const [lastSelection, setLastSelection] = useState('')
+
+  // Build active series
+  const isArea   = chartType === 'area'
+  const isBars   = chartType === 'bars'
+  const isLine   = chartType === 'line'
+  const activeSeries: SeriesConfig[] = BASE_SERIES.map(s => ({
+    ...s,
+    type:         chartType,
+    fillOpacity:  (isArea || isBars) ? fillOpacity : undefined,
+    fillGradient: isArea ? fillGradient : undefined,
+    pointShow:    (isLine || isArea) ? pointShow : undefined,
+    barWidth:     isBars ? barWidth : undefined,
+  }))
 
   // Build props
   const gridStyle: LineStyle | false = showGrid
@@ -187,6 +214,48 @@ export function ChartDemoPage() {
             ))}
             <Btn active={useCustomLegend} onClick={() => setUseCustomLegend((v) => !v)}>custom</Btn>
           </Row>
+        </div>
+
+        {/* ── Series ── */}
+        <Section title="Series" />
+        <div className="flex flex-wrap gap-x-8 gap-y-2 pl-1">
+          <Row label="Type">
+            {CHART_TYPES.map((t) => (
+              <Btn key={t} active={chartType === t} onClick={() => setChartType(t)}>{t}</Btn>
+            ))}
+          </Row>
+          {(isArea || isBars) && (
+            <Row label="Fill opacity">
+              {FILL_OPACITIES.map((o) => (
+                <Btn key={o} active={fillOpacity === o} onClick={() => setFillOpacity(o)}>{o}</Btn>
+              ))}
+            </Row>
+          )}
+          {isArea && (
+            <Row label="Gradient">
+              <Btn active={fillGradient}  onClick={() => setFillGradient(true)}>on</Btn>
+              <Btn active={!fillGradient} onClick={() => setFillGradient(false)}>off</Btn>
+            </Row>
+          )}
+          {(isLine || isArea) && (
+            <Row label="Points">
+              <Btn active={pointShow}  onClick={() => setPointShow(true)}>on</Btn>
+              <Btn active={!pointShow} onClick={() => setPointShow(false)}>off</Btn>
+            </Row>
+          )}
+          {isBars && (
+            <>
+              <Row label="Bar width">
+                {BAR_WIDTHS.map((w) => (
+                  <Btn key={w} active={barWidth === w} onClick={() => setBarWidth(w)}>{w}</Btn>
+                ))}
+              </Row>
+              <Row label="Stack">
+                <Btn active={barStack}  onClick={() => setBarStack(true)}>on</Btn>
+                <Btn active={!barStack} onClick={() => setBarStack(false)}>off</Btn>
+              </Row>
+            </>
+          )}
         </div>
 
         {/* ── Grid ── */}
@@ -279,7 +348,8 @@ export function ChartDemoPage() {
       <div className="rounded-md border p-4">
         <TimeSeriesChart
           data={DEMO_DATA}
-          series={SERIES}
+          series={activeSeries}
+          barStack={barStack}
           height={height}
           legendPosition={legendPosition}
           legendFormat={legendFormat}

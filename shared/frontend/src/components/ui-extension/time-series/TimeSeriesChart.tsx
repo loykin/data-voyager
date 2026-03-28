@@ -21,6 +21,7 @@ export function TimeSeriesChart({
   locale,
   gridStyle,
   axisStyle,
+  barStack,
   renderLegend,
   selectionMode  = 'x',
   onSelect,
@@ -109,6 +110,7 @@ export function TimeSeriesChart({
           locale={locale}
           gridStyle={gridStyle}
           axisStyle={axisStyle}
+          barStack={barStack}
           timeRange={timeRange}
           onSelect={handleSelect}
           onReady={handleReady}
