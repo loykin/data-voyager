@@ -73,7 +73,7 @@ export function DataGrid<T extends object>({
       setSizing,
     })
 
-  const { isSized } = useColumnSizing({ columns, data, containerRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
+  const { isSized } = useColumnSizing({ columns, data, containerRef: wrapperRef, mode: columnSizingMode, sizing, onSizeChange: setSizing })
 
   const rows = table.getRowModel().rows
 

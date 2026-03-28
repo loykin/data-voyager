@@ -170,7 +170,7 @@ const PAGE = 50
 
 // ── Demo page ─────────────────────────────────────────────────────────────
 
-type Tab = 'pagination' | 'infinity' | 'virtual' | 'fixed' | 'pinning'
+type Tab = 'pagination' | 'infinity' | 'virtual' | 'fixed' | 'pinning' | 'dashboard'
 
 export function DataGridDemoPage() {
   const [tab, setTab] = useState<Tab>('pagination')
@@ -197,6 +197,7 @@ export function DataGridDemoPage() {
     { id: 'virtual', label: 'Virtual (500 rows)' },
     { id: 'fixed', label: 'Fixed Height' },
     { id: 'pinning', label: 'Column Pinning' },
+    { id: 'dashboard', label: 'Dashboard' },
   ]
 
   return (
@@ -298,6 +299,68 @@ export function DataGridDemoPage() {
             pageSizes={[20, 50, 100]}
             emptyMessage="No employees found"
           />
+        </section>
+      )}
+
+      {/* ── Dashboard tab ── */}
+      {tab === 'dashboard' && (
+        <section className="flex flex-col gap-4">
+          {/* Top row: 2 tables side by side */}
+          <div className="grid grid-cols-2 gap-4 min-w-0">
+            <div className="flex flex-col gap-1 min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">Team Overview</p>
+              <DataGrid
+                data={SMALL_DATA.slice(0, 20)}
+                columns={[
+                  { accessorKey: 'id', header: 'ID', meta: { flex: 0.5 } },
+                  { accessorKey: 'name', header: 'Name', meta: { flex: 2 } },
+                  { accessorKey: 'department', header: 'Dept', meta: { flex: 1.5 } },
+                  { accessorKey: 'status', header: 'Status', meta: { flex: 1 },
+                    cell: ({ getValue }) => {
+                      const s = getValue() as Employee['status']
+                      const color = s === 'Active' ? 'bg-green-100 text-green-800' : s === 'On Leave' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                      return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>{s}</span>
+                    },
+                  },
+                ] satisfies DataGridColumnDef<Employee>[]}
+                enableSorting
+                pageSizes={[5, 10]}
+                paginationConfig={{ pageSize: 5, initialPageIndex: 0 }}
+                emptyMessage="No data"
+              />
+            </div>
+            <div className="flex flex-col gap-1 min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">Salary & Score</p>
+              <DataGrid
+                data={SMALL_DATA.slice(0, 20)}
+                columns={[
+                  { accessorKey: 'name', header: 'Name', meta: { flex: 2 } },
+                  { accessorKey: 'role', header: 'Role', meta: { flex: 1.5 } },
+                  { accessorKey: 'salary', header: 'Salary', meta: { flex: 1, align: 'right' },
+                    cell: ({ getValue }) => `$${(getValue() as number).toLocaleString()}`,
+                  },
+                  { accessorKey: 'score', header: 'Score', meta: { flex: 0.8, align: 'right' } },
+                ] satisfies DataGridColumnDef<Employee>[]}
+                enableSorting
+                pageSizes={[5, 10]}
+                paginationConfig={{ pageSize: 5, initialPageIndex: 0 }}
+                emptyMessage="No data"
+              />
+            </div>
+          </div>
+
+          {/* Bottom: full-width table */}
+          <div className="flex flex-col gap-1 min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">All Employees</p>
+            <DataGrid
+              data={ALL_DATA}
+              columns={columns}
+              enableColumnFilters
+              enableSorting
+              pageSizes={[10, 20, 50]}
+              emptyMessage="No employees found"
+            />
+          </div>
         </section>
       )}
 

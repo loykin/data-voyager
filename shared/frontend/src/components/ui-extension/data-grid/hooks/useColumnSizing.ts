@@ -112,11 +112,9 @@ export function useColumnSizing<T extends object>({
 
         const containerWidthChanged = Math.abs(containerWidth - prevContainerWidth) > 1
 
-        if (anyUserResized) {
-          // Once the user has manually resized any column, free flex columns are
-          // frozen at their last computed sizes — only the dragged column changes.
-          // Don't add free flex columns to newSizing; their existing values in
-          // currentSizing are preserved via the (prev) => ({ ...prev, ...newSizing }) merge.
+        if (anyUserResized && !containerWidthChanged) {
+          // User has manually resized a column and container width hasn't changed:
+          // freeze all flex columns at their last computed sizes.
         } else if (!containerWidthChanged && hasSized.current) {
           // Container width unchanged — skip flex redistribution to prevent
           // spurious column size changes on tab switches or data-load events.
