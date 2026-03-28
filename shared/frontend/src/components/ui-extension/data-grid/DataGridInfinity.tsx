@@ -21,13 +21,15 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
     tableHeight,
     emptyMessage,
     bordered,
+    estimateRowHeight,
+    overscan,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
     rootMargin = '100px',
   } = props
 
-  const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch } =
+  const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch, measure } =
     useDataGridBase({ ...props, enablePagination: false })
 
   const { loadMoreRef } = useInfiniteScroll({
@@ -80,6 +82,9 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
           tableHeight={hasFixedHeight ? undefined : tableHeight}
           fillHeight={hasFixedHeight}
           bordered={bordered}
+          estimateRowHeight={estimateRowHeight}
+          overscan={overscan}
+          onMeasureColumns={measure}
           loadMoreRef={loadMoreRef}
           isFetchingNextPage={isFetchingNextPage}
         />

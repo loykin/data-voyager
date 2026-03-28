@@ -24,6 +24,12 @@ declare module '@tanstack/react-table' {
     /** Pin this column to the left or right — fixed at column definition level */
     pin?: 'left' | 'right'
     /**
+     * Allow cell content to wrap to multiple lines.
+     * Row height adjusts automatically via the virtualizer's measureElement.
+     * When false (default) content is truncated with an ellipsis.
+     */
+    wrap?: boolean
+    /**
      * Column-level filter type (renders filter row under the header).
      * - 'text'   : free-text contains match (default when enableColumnFilters=true)
      * - 'select' : dropdown of unique values from current data
@@ -66,6 +72,14 @@ export interface TableViewConfig<T extends object> {
   tableHeight?: string | number | 'auto'
   /** Show vertical dividers between columns */
   bordered?: boolean
+  /**
+   * Estimated row height in px for the virtualizer (default: 37).
+   * The virtualizer auto-enables when tableHeight is set and rows >= 100.
+   * Use measureElement to handle variable-height rows (multiline, badges).
+   */
+  estimateRowHeight?: number
+  /** Rows to render outside the visible area (virtualizer overscan, default: 10) */
+  overscan?: number
 }
 
 export interface DataGridBaseProps<T extends object> extends TableViewConfig<T> {
@@ -124,11 +138,4 @@ export interface DataGridInfinityProps<T extends object> extends DataGridBasePro
   fetchNextPage?: () => void
   /** IntersectionObserver rootMargin to trigger next page load */
   rootMargin?: string
-}
-
-export interface DataGridVirtualProps<T extends object> extends DataGridBaseProps<T> {
-  /** Estimated row height in px for virtualizer (default: 44) */
-  estimateRowHeight?: number
-  /** Rows to render outside visible area (default: 10) */
-  overscan?: number
 }

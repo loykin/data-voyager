@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useLayoutEffect, useMemo } from 'react'
 import {
   flexRender,
   type Row,
@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { ScrollTable } from './ScrollTable'
 import type { TableViewConfig } from './types'
+import { VIRTUAL_THRESHOLD } from './hooks/useColumnSizing'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
@@ -26,9 +27,6 @@ export interface DataGridTableViewProps<T extends object> extends TableViewConfi
   table: Table<T>
   rows: Row<T>[]
   containerRef: React.RefObject<HTMLDivElement | null>
-  virtual?: boolean
-  estimateRowHeight?: number
-  overscan?: number
   loadMoreRef?: React.RefObject<HTMLDivElement | null>
   isFetchingNextPage?: boolean
   /**
@@ -36,6 +34,11 @@ export interface DataGridTableViewProps<T extends object> extends TableViewConfi
    * Parent must have an explicit height (flex-col layout).
    */
   fillHeight?: boolean
+  /**
+   * Called after each render so the parent can update column auto-sizing
+   * based on newly rendered (possibly virtual) rows.
+   */
+  onMeasureColumns?: () => void
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -102,6 +105,8 @@ function DataGridHeaderRow<T extends object>({
         <TableHead
           key={header.id}
           colSpan={header.colSpan}
+          // data-col-id: used by useColumnSizing DOM measurement
+          data-col-id={header.column.id}
           className={cn(
             'relative px-3 py-2 text-xs font-medium h-auto bg-background',
             'text-muted-foreground whitespace-normal',
@@ -138,8 +143,6 @@ function DataGridHeaderRow<T extends object>({
           </span>
 
           {enableColumnResizing && header.column.getCanResize() && (
-            // Outer: full-height transparent hit area
-            // Inner: thin line with vertical inset for refined look
             <div
               onMouseDown={(e) => { e.stopPropagation(); header.getResizeHandler()(e) }}
               onTouchStart={(e) => { e.stopPropagation(); header.getResizeHandler()(e) }}
@@ -158,7 +161,6 @@ function DataGridHeaderRow<T extends object>({
         </TableHead>
         )
       })}
-      {/* Spacer: absorbs remaining width so columns don't shift on resize */}
       {!virtual && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} className="bg-background" />}
     </TableRow>
   )
@@ -262,8 +264,6 @@ function DataGridFilterRow<T extends object>({
           ? { display: 'flex', alignItems: 'center', width: col.getSize() }
           : { ...colStyle(col), display: 'flex', alignItems: 'center' }
 
-        // Base UI Select requires `items` on root so SelectValue can display
-        // the selected label even when the popup is closed.
         const selectItems = ft === 'select'
           ? [{ label: 'All', value: null }, ...(selectOptions[col.id] ?? []).map((v) => ({ label: v, value: v }))]
           : []
@@ -317,7 +317,6 @@ function DataGridFilterRow<T extends object>({
           </TableHead>
         )
       })}
-      {/* Spacer */}
       {!virtual && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} />}
     </TableRow>
   )
@@ -364,6 +363,8 @@ function DataGridBodyRow<T extends object>({
         return (
           <TableCell
             key={cell.id}
+            // data-col-id: used by useColumnSizing DOM measurement
+            data-col-id={cell.column.id}
             className={cn(
               'px-3 py-2 overflow-hidden bg-background',
               cell.column.columnDef.meta?.align === 'right' && 'text-right',
@@ -374,13 +375,12 @@ function DataGridBodyRow<T extends object>({
             )}
             style={colStyle(cell.column)}
           >
-            <span className="block truncate">
+            <span className={cn('block', cell.column.columnDef.meta?.wrap ? 'whitespace-normal' : 'truncate')}>
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
             </span>
           </TableCell>
         )
       })}
-      {/* Spacer: absorbs remaining width so columns don't shift on resize */}
       {showSpacer && <TableCell style={{ flex: 1, minWidth: 0, padding: 0 }} className="bg-background" />}
     </TableRow>
   )
@@ -512,16 +512,29 @@ export function DataGridTableView<T extends object>({
   enableColumnResizing = true,
   enableColumnFilters = false,
   tableHeight,
-  virtual = false,
-  estimateRowHeight = 44,
+  estimateRowHeight = 37,
   overscan = 10,
   loadMoreRef,
   isFetchingNextPage,
   fillHeight = false,
   bordered = false,
+  onMeasureColumns,
 }: DataGridTableViewProps<T>) {
   const headerGroups = table.getHeaderGroups()
   const visibleLeafColumns = table.getVisibleLeafColumns()
+
+  const hasFixedHeight = tableHeight != null && tableHeight !== 'auto'
+
+  // Virtualizer auto-enables when the table has a fixed height and rows exceed
+  // the threshold. This is an internal optimization — callers don't control it.
+  const virtual = hasFixedHeight && rows.length >= VIRTUAL_THRESHOLD
+
+  // ── After each render, trigger column auto-measurement ─────────────────
+  // This lets useColumnSizing measure newly rendered (possibly virtual) rows
+  // without blocking the initial paint.
+  useLayoutEffect(() => {
+    onMeasureColumns?.()
+  })
 
   const selectOptions = useMemo(() => {
     if (!enableColumnFilters) return {}
@@ -553,7 +566,6 @@ export function DataGridTableView<T extends object>({
     minWidth: 0,
     flex: 1,
     scrollbarGutter: 'stable',
-    // 새 stacking context → sticky 헤더 z-index가 테이블 영역 안에만 적용됨
     isolation: 'isolate',
     ...(virtual
       ? { height: typeof tableHeight === 'number' ? tableHeight : tableHeight && tableHeight !== 'auto' ? tableHeight : 500 }
