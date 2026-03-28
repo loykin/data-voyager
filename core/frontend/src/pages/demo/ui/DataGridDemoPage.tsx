@@ -291,7 +291,7 @@ export function DataGridDemoPage() {
           <p className="text-xs text-muted-foreground">
             <strong>ID</strong>, <strong>Name</strong> — pinned left via <code>meta.pin: &apos;left&apos;</code> ·{' '}
             <strong>Status</strong> — pinned right via <code>meta.pin: &apos;right&apos;</code> ·{' '}
-            가로 스크롤 시 고정 컬럼이 제자리에 남습니다
+            pinned columns stay fixed during horizontal scroll
           </p>
           <DataGrid
             data={ALL_DATA}
