@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import {
   flexRender,
   type Row,
@@ -530,9 +530,9 @@ export function DataGridTableView<T extends object>({
   const virtual = hasFixedHeight && rows.length >= VIRTUAL_THRESHOLD
 
   // ── After each render, trigger column auto-measurement ─────────────────
-  // This lets useColumnSizing measure newly rendered (possibly virtual) rows
-  // without blocking the initial paint.
-  useLayoutEffect(() => {
+  // useEffect (not useLayoutEffect) so DOM measurement runs after paint.
+  // Scroll events paint first; measurement is not in the critical path.
+  useEffect(() => {
     onMeasureColumns?.()
   })
 
