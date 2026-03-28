@@ -5,74 +5,28 @@ import { DataGridTableView } from './DataGridTableView'
 import { DataGridPaginationBar } from './DataGridPaginationBar'
 import { cn } from '../../../lib/utils'
 
-export function DataGrid<T extends object>({
-  data = [],
-  columns,
-  isLoading,
-  error,
-  enableSorting = true,
-  initialSorting,
-  onSortingChange,
-  manualSorting,
-  columnFilters,
-  globalFilter,
-  onGlobalFilterChange,
-  searchableColumns,
-  leftFilters,
-  rightFilters,
-  enableColumnResizing = true,
-  enableColumnVisibility = false,
-  enableColumnFilters = false,
-  visibilityState,
-  initialPinning,
-  columnSizingMode = 'auto',
-  checkboxConfig,
-  onRowClick,
-  rowCursor,
-  tableKey,
-  persistState,
-  enablePagination = true,
-  paginationConfig,
-  pageSizes = [10, 20, 50, 100],
-  totalCount,
-  onPageChange,
-  tableHeight,
-  emptyMessage,
-  onTableReady,
-  onColumnSizingChange,
-}: DataGridProps<T>) {
+export function DataGrid<T extends object>(props: DataGridProps<T>) {
+  const {
+    isLoading,
+    error,
+    searchableColumns,
+    leftFilters,
+    rightFilters,
+    enableColumnVisibility = false,
+    enableColumnResizing = true,
+    enableColumnFilters = false,
+    onRowClick,
+    rowCursor,
+    tableHeight,
+    emptyMessage,
+    bordered,
+    enablePagination = true,
+    pageSizes = [10, 20, 50, 100],
+    totalCount,
+  } = props
+
   const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch } =
-    useDataGridBase({
-      data,
-      columns,
-      enableSorting,
-      initialSorting,
-      onSortingChange,
-      manualSorting,
-      columnFilters,
-      globalFilter,
-      onGlobalFilterChange,
-      searchableColumns,
-      enableColumnResizing,
-      enableColumnVisibility,
-      enableColumnFilters,
-      visibilityState,
-      initialPinning,
-      columnSizingMode,
-      checkboxConfig,
-      onRowClick,
-      rowCursor,
-      tableKey,
-      persistState,
-      enablePagination,
-      paginationConfig,
-      totalCount,
-      onPageChange,
-      tableHeight,
-      emptyMessage,
-      onTableReady,
-      onColumnSizingChange,
-    })
+    useDataGridBase(props)
 
   // When tableHeight is set the border div becomes the fixed-height container:
   // header sticks to top, body scrolls, pagination pins to bottom.
@@ -119,6 +73,7 @@ export function DataGrid<T extends object>({
           enableColumnFilters={enableColumnFilters}
           tableHeight={hasFixedHeight ? undefined : tableHeight}
           fillHeight={hasFixedHeight}
+          bordered={bordered}
         />
         {hasFixedHeight && enablePagination && (
           <DataGridPaginationBar

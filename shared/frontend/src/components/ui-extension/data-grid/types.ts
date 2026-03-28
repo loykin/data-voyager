@@ -50,10 +50,27 @@ export interface ExportConfig<T extends object> {
   mapRow?: (row: T) => Record<string, unknown>
 }
 
-export interface DataGridBaseProps<T extends object> {
+/**
+ * Rendering props owned by DataGridTableView.
+ * DataGridBaseProps and DataGridTableViewProps both extend this
+ * so these are declared exactly once.
+ */
+export interface TableViewConfig<T extends object> {
+  isLoading?: boolean
+  emptyMessage?: string
+  onRowClick?: (row: T) => void
+  rowCursor?: boolean
+  enableColumnResizing?: boolean
+  /** Show per-column filter row below the header (AG Grid style) */
+  enableColumnFilters?: boolean
+  tableHeight?: string | number | 'auto'
+  /** Show vertical dividers between columns */
+  bordered?: boolean
+}
+
+export interface DataGridBaseProps<T extends object> extends TableViewConfig<T> {
   data?: T[]
   columns: DataGridColumnDef<T>[]
-  isLoading?: boolean
   error?: Error | null
 
   // Sorting
@@ -62,9 +79,7 @@ export interface DataGridBaseProps<T extends object> {
   onSortingChange?: (sorting: SortingState) => void
   manualSorting?: boolean
 
-  // Filtering
-  /** Show per-column filter row below the header (AG Grid style) */
-  enableColumnFilters?: boolean
+  // Server-side filtering
   columnFilters?: ColumnFiltersState
   globalFilter?: string
   onGlobalFilterChange?: (value: string) => void
@@ -72,8 +87,7 @@ export interface DataGridBaseProps<T extends object> {
   leftFilters?: (table: Table<T>) => React.ReactNode
   rightFilters?: (table: Table<T>) => React.ReactNode
 
-  // Column sizing
-  enableColumnResizing?: boolean
+  // Column sizing & visibility
   enableColumnVisibility?: boolean
   visibilityState?: VisibilityState
   /** Initial column pinning — { left: ['id', ...], right: ['id', ...] } */
@@ -86,17 +100,9 @@ export interface DataGridBaseProps<T extends object> {
   // Export
   exportConfig?: ExportConfig<T>
 
-  // Rows
-  onRowClick?: (row: T) => void
-  rowCursor?: boolean
-
   // State persistence (Zustand)
   tableKey?: string
   persistState?: boolean
-
-  // UI
-  tableHeight?: string | number | 'auto'
-  emptyMessage?: string
 
   // Callbacks
   onTableReady?: (table: Table<T>) => void
@@ -112,8 +118,7 @@ export interface DataGridProps<T extends object> extends DataGridBaseProps<T> {
   onPageChange?: (pageIndex: number, pageSize: number) => void
 }
 
-export interface DataGridInfinityProps<T extends object>
-  extends DataGridBaseProps<T> {
+export interface DataGridInfinityProps<T extends object> extends DataGridBaseProps<T> {
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
   fetchNextPage?: () => void
@@ -121,8 +126,7 @@ export interface DataGridInfinityProps<T extends object>
   rootMargin?: string
 }
 
-export interface DataGridVirtualProps<T extends object>
-  extends DataGridBaseProps<T> {
+export interface DataGridVirtualProps<T extends object> extends DataGridBaseProps<T> {
   /** Estimated row height in px for virtualizer (default: 44) */
   estimateRowHeight?: number
   /** Rows to render outside visible area (default: 10) */

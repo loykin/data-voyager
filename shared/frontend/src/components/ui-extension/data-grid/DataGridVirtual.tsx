@@ -10,68 +10,27 @@ import { cn } from '../../../lib/utils'
  * - Only visible rows are painted → constant render time regardless of row count
  * - Combined with auto/flex column sizing for true Grafana-like experience
  */
-export function DataGridVirtual<T extends object>({
-  data = [],
-  columns,
-  isLoading,
-  error,
-  enableSorting = true,
-  initialSorting,
-  onSortingChange,
-  manualSorting,
-  columnFilters,
-  globalFilter,
-  onGlobalFilterChange,
-  searchableColumns,
-  leftFilters,
-  rightFilters,
-  enableColumnResizing = true,
-  enableColumnVisibility = false,
-  enableColumnFilters = false,
-  visibilityState,
-  initialPinning,
-  columnSizingMode = 'auto',
-  checkboxConfig,
-  onRowClick,
-  rowCursor,
-  tableKey,
-  persistState,
-  tableHeight = 600,
-  emptyMessage,
-  onTableReady,
-  onColumnSizingChange,
-  estimateRowHeight = 44,
-  overscan = 10,
-}: DataGridVirtualProps<T>) {
+export function DataGridVirtual<T extends object>(props: DataGridVirtualProps<T>) {
+  const {
+    isLoading,
+    error,
+    searchableColumns,
+    leftFilters,
+    rightFilters,
+    enableColumnVisibility = false,
+    enableColumnResizing = true,
+    enableColumnFilters = false,
+    onRowClick,
+    rowCursor,
+    tableHeight = 600,
+    emptyMessage,
+    bordered,
+    estimateRowHeight = 44,
+    overscan = 10,
+  } = props
+
   const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch } =
-    useDataGridBase({
-      data,
-      columns,
-      enableSorting,
-      initialSorting,
-      onSortingChange,
-      manualSorting,
-      columnFilters,
-      globalFilter,
-      onGlobalFilterChange,
-      searchableColumns,
-      enableColumnResizing,
-      enableColumnVisibility,
-      enableColumnFilters,
-      visibilityState,
-      initialPinning,
-      columnSizingMode,
-      checkboxConfig,
-      onRowClick,
-      rowCursor,
-      tableKey,
-      persistState,
-      enablePagination: false,
-      tableHeight,
-      emptyMessage,
-      onTableReady,
-      onColumnSizingChange,
-    })
+    useDataGridBase({ ...props, tableHeight, enablePagination: false })
 
   if (error) {
     return (
@@ -106,6 +65,7 @@ export function DataGridVirtual<T extends object>({
           enableColumnFilters={enableColumnFilters}
           tableHeight={tableHeight}
           virtual
+          bordered={bordered}
           estimateRowHeight={estimateRowHeight}
           overscan={overscan}
         />

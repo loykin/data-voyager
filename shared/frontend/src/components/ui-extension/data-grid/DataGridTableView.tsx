@@ -16,22 +16,16 @@ import { Button } from '../../ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { ScrollTable } from './ScrollTable'
+import type { TableViewConfig } from './types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Props
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface DataGridTableViewProps<T extends object> {
+export interface DataGridTableViewProps<T extends object> extends TableViewConfig<T> {
   table: Table<T>
   rows: Row<T>[]
   containerRef: React.RefObject<HTMLDivElement | null>
-  isLoading?: boolean
-  emptyMessage?: string
-  onRowClick?: (row: T) => void
-  rowCursor?: boolean
-  enableColumnResizing?: boolean
-  enableColumnFilters?: boolean
-  tableHeight?: string | number | 'auto'
   virtual?: boolean
   estimateRowHeight?: number
   overscan?: number
@@ -83,10 +77,10 @@ function isPinnedEdge<T extends object>(col: Column<T>, table: Table<T>): 'left-
 // DataGridHeaderRow
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface DataGridHeaderRowProps<T extends object> {
+interface DataGridHeaderRowProps<T extends object>
+  extends Pick<TableViewConfig<T>, 'enableColumnResizing' | 'bordered'> {
   headerGroup: HeaderGroup<T>
   table: Table<T>
-  enableColumnResizing: boolean
   virtual: boolean
 }
 
@@ -95,6 +89,7 @@ function DataGridHeaderRow<T extends object>({
   table,
   enableColumnResizing,
   virtual,
+  bordered,
 }: DataGridHeaderRowProps<T>) {
   return (
     <TableRow
@@ -112,6 +107,7 @@ function DataGridHeaderRow<T extends object>({
             'text-muted-foreground whitespace-normal',
             'select-none group',
             header.column.getCanSort() && 'cursor-pointer',
+            bordered && 'border-r border-border',
             edge === 'left-edge' && 'shadow-[1px_0_0_0_hsl(var(--border))]',
             edge === 'right-edge' && 'shadow-[-1px_0_0_0_hsl(var(--border))]',
           )}
@@ -241,7 +237,8 @@ function NumberFilterPopover<T extends object>({ col }: { col: Column<T> }) {
 // DataGridFilterRow
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface DataGridFilterRowProps<T extends object> {
+interface DataGridFilterRowProps<T extends object>
+  extends Pick<TableViewConfig<T>, 'bordered'> {
   visibleLeafColumns: Column<T>[]
   selectOptions: Record<string, string[]>
   virtual: boolean
@@ -251,6 +248,7 @@ function DataGridFilterRow<T extends object>({
   visibleLeafColumns,
   selectOptions,
   virtual,
+  bordered,
 }: DataGridFilterRowProps<T>) {
   return (
     <TableRow
@@ -271,11 +269,11 @@ function DataGridFilterRow<T extends object>({
           : []
 
         if (ft === false) {
-          return <TableHead key={col.id} className="px-2 py-1 h-auto" style={thStyle} />
+          return <TableHead key={col.id} className={cn('px-2 py-1 h-auto', bordered && 'border-r border-border')} style={thStyle} />
         }
 
         return (
-          <TableHead key={col.id} className="px-2 py-1 h-auto font-normal" style={thStyle}>
+          <TableHead key={col.id} className={cn('px-2 py-1 h-auto font-normal', bordered && 'border-r border-border')} style={thStyle}>
             {ft === 'select' ? (
               <Select
                 items={selectItems}
@@ -329,11 +327,10 @@ function DataGridFilterRow<T extends object>({
 // DataGridBodyRow
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface DataGridBodyRowProps<T extends object> {
+interface DataGridBodyRowProps<T extends object>
+  extends Pick<TableViewConfig<T>, 'onRowClick' | 'rowCursor' | 'bordered'> {
   row: Row<T>
   table: Table<T>
-  onRowClick?: (row: T) => void
-  rowCursor?: boolean
   style?: React.CSSProperties
   dataIndex?: number
   measureRef?: (node: Element | null) => void
@@ -349,6 +346,7 @@ function DataGridBodyRow<T extends object>({
   dataIndex,
   measureRef,
   showSpacer = false,
+  bordered = false,
 }: DataGridBodyRowProps<T>) {
   return (
     <TableRow
@@ -370,6 +368,7 @@ function DataGridBodyRow<T extends object>({
               'px-3 py-2 overflow-hidden bg-background',
               cell.column.columnDef.meta?.align === 'right' && 'text-right',
               cell.column.columnDef.meta?.align === 'center' && 'text-center',
+              bordered && 'border-r border-border',
               edge === 'left-edge' && 'shadow-[1px_0_0_0_hsl(var(--border))]',
               edge === 'right-edge' && 'shadow-[-1px_0_0_0_hsl(var(--border))]',
             )}
@@ -391,12 +390,11 @@ function DataGridBodyRow<T extends object>({
 // DataGridVirtualBody
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface DataGridVirtualBodyProps<T extends object> {
+interface DataGridVirtualBodyProps<T extends object>
+  extends Pick<TableViewConfig<T>, 'onRowClick' | 'rowCursor' | 'bordered'> {
   rows: Row<T>[]
   table: Table<T>
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>
-  onRowClick?: (row: T) => void
-  rowCursor?: boolean
 }
 
 function DataGridVirtualBody<T extends object>({
@@ -405,6 +403,7 @@ function DataGridVirtualBody<T extends object>({
   rowVirtualizer,
   onRowClick,
   rowCursor,
+  bordered,
 }: DataGridVirtualBodyProps<T>) {
   const virtualItems = rowVirtualizer.getVirtualItems()
   const totalSize = rowVirtualizer.getTotalSize()
@@ -420,6 +419,7 @@ function DataGridVirtualBody<T extends object>({
             table={table}
             onRowClick={onRowClick}
             rowCursor={rowCursor}
+            bordered={bordered}
             dataIndex={virtualRow.index}
             measureRef={rowVirtualizer.measureElement}
             style={{ position: 'absolute', width: '100%', transform: `translateY(${virtualRow.start}px)` }}
@@ -434,14 +434,11 @@ function DataGridVirtualBody<T extends object>({
 // DataGridFlexBody
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface DataGridFlexBodyProps<T extends object> {
+interface DataGridFlexBodyProps<T extends object>
+  extends Pick<TableViewConfig<T>, 'isLoading' | 'emptyMessage' | 'onRowClick' | 'rowCursor' | 'bordered'> {
   rows: Row<T>[]
   table: Table<T>
   visibleLeafColumns: Column<T>[]
-  isLoading?: boolean
-  emptyMessage: string
-  onRowClick?: (row: T) => void
-  rowCursor?: boolean
 }
 
 function DataGridFlexBody<T extends object>({
@@ -452,6 +449,7 @@ function DataGridFlexBody<T extends object>({
   emptyMessage,
   onRowClick,
   rowCursor,
+  bordered,
 }: DataGridFlexBodyProps<T>) {
   if (isLoading) {
     return (
@@ -459,7 +457,7 @@ function DataGridFlexBody<T extends object>({
         {Array.from({ length: 6 }).map((_, i) => (
           <TableRow key={i} className="flex w-full">
             {visibleLeafColumns.map((col) => (
-              <TableCell key={col.id} className="px-3 py-2" style={colStyle(col)}>
+              <TableCell key={col.id} className={cn('px-3 py-2', bordered && 'border-r border-border')} style={colStyle(col)}>
                 <div className="h-4 animate-pulse rounded bg-muted" />
               </TableCell>
             ))}
@@ -491,6 +489,7 @@ function DataGridFlexBody<T extends object>({
           table={table}
           onRowClick={onRowClick}
           rowCursor={rowCursor}
+          bordered={bordered}
           showSpacer
         />
       ))}
@@ -519,6 +518,7 @@ export function DataGridTableView<T extends object>({
   loadMoreRef,
   isFetchingNextPage,
   fillHeight = false,
+  bordered = false,
 }: DataGridTableViewProps<T>) {
   const headerGroups = table.getHeaderGroups()
   const visibleLeafColumns = table.getVisibleLeafColumns()
@@ -584,6 +584,7 @@ export function DataGridTableView<T extends object>({
               table={table}
               enableColumnResizing={enableColumnResizing}
               virtual={virtual}
+              bordered={bordered}
             />
           ))}
           {enableColumnFilters && (
@@ -591,6 +592,7 @@ export function DataGridTableView<T extends object>({
               visibleLeafColumns={visibleLeafColumns}
               selectOptions={selectOptions}
               virtual={virtual}
+              bordered={bordered}
             />
           )}
         </TableHeader>
@@ -602,6 +604,7 @@ export function DataGridTableView<T extends object>({
             rowVirtualizer={rowVirtualizer}
             onRowClick={onRowClick}
             rowCursor={rowCursor}
+            bordered={bordered}
           />
         ) : (
           <DataGridFlexBody
@@ -612,6 +615,7 @@ export function DataGridTableView<T extends object>({
             emptyMessage={emptyMessage}
             onRowClick={onRowClick}
             rowCursor={rowCursor}
+            bordered={bordered}
           />
         )}
       </ScrollTable>
