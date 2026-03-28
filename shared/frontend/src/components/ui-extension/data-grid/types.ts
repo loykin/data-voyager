@@ -63,11 +63,6 @@ export interface CheckboxConfig<T extends object> {
   onSelectOne: (rowId: string, checked: boolean) => void
 }
 
-export interface ExportConfig<T extends object> {
-  fileName?: string
-  mapRow?: (row: T) => Record<string, unknown>
-}
-
 /**
  * Rendering props owned by DataGridTableView.
  * DataGridBaseProps and DataGridTableViewProps both extend this
@@ -122,9 +117,6 @@ export interface DataGridBaseProps<T extends object> extends TableViewConfig<T> 
 
   // Selection
   checkboxConfig?: CheckboxConfig<T>
-
-  // Export
-  exportConfig?: ExportConfig<T>
 
   // State persistence (Zustand)
   tableKey?: string

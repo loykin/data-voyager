@@ -3,6 +3,7 @@ import type { DataGridBaseProps, DataGridColumnDef } from '../types'
 import { createCheckboxColumn } from '../checkbox-column'
 import { useDataGridCore } from './useDataGridCore'
 import { useColumnSizing } from './useColumnSizing'
+import { useTableStore } from './useTableStore'
 
 interface UseDataGridBaseOptions<T extends object> extends DataGridBaseProps<T> {
   columns: DataGridColumnDef<T>[]
@@ -42,9 +43,12 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     bordered,
   } = options
 
+  const { tables } = useTableStore()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [searchValue, setSearchValue] = useState(globalFilter ?? '')
+  const [searchValue, setSearchValue] = useState(
+    globalFilter ?? (persistState && tableKey ? (tables[tableKey]?.searchTerm ?? '') : '')
+  )
 
   const columnsWithCheckbox = useMemo(() => {
     if (!checkboxConfig) return columns

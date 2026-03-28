@@ -9,5 +9,4 @@ export type {
   TableViewConfig,
   ColumnSizingMode,
   CheckboxConfig,
-  ExportConfig,
 } from './types'
