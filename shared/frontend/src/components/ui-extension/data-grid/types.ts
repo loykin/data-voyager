@@ -37,6 +37,18 @@ declare module '@tanstack/react-table' {
      * - false    : disable filter for this column
      */
     filterType?: 'text' | 'select' | 'number' | false
+    /**
+     * Row action menu items. DataGrid renders a ⋯ trigger button in this
+     * column and manages a single shared dropdown at the table level —
+     * no per-row dropdown instances, popup survives data refreshes.
+     */
+    actions?: (row: TData) => Array<{
+      label: string
+      onClick: (row: TData) => void
+      variant?: 'default' | 'destructive'
+      disabled?: boolean
+      icon?: React.ReactNode
+    }>
   }
 }
 

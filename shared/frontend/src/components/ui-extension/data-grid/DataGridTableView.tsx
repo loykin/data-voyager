@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   flexRender,
   type Row,
@@ -7,8 +7,9 @@ import {
   type HeaderGroup,
 } from '@tanstack/react-table'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, MoreHorizontal, SlidersHorizontal, X } from 'lucide-react'
 import type { Virtualizer } from '@tanstack/react-virtual'
+import { Menu as ActionMenu } from '@base-ui/react/menu'
 import { cn } from '../../../lib/utils'
 import { TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui/table'
 import { Input } from '../../ui/input'
@@ -334,6 +335,7 @@ interface DataGridBodyRowProps<T extends object>
   dataIndex?: number
   measureRef?: (node: Element | null) => void
   showSpacer?: boolean
+  onActionTrigger?: (row: T, el: HTMLElement) => void
 }
 
 function DataGridBodyRow<T extends object>({
@@ -346,6 +348,7 @@ function DataGridBodyRow<T extends object>({
   measureRef,
   showSpacer = false,
   bordered = false,
+  onActionTrigger,
 }: DataGridBodyRowProps<T>) {
   return (
     <TableRow
@@ -359,6 +362,7 @@ function DataGridBodyRow<T extends object>({
       style={style}
     >
       {row.getVisibleCells().map((cell) => {
+        const meta = cell.column.columnDef.meta
         const edge = isPinnedEdge(cell.column, table)
         return (
           <TableCell
@@ -367,17 +371,31 @@ function DataGridBodyRow<T extends object>({
             data-col-id={cell.column.id}
             className={cn(
               'px-3 py-2 overflow-hidden bg-background',
-              cell.column.columnDef.meta?.align === 'right' && 'text-right',
-              cell.column.columnDef.meta?.align === 'center' && 'text-center',
+              meta?.align === 'right' && 'text-right',
+              meta?.align === 'center' && 'text-center',
               bordered && 'border-r border-border',
               edge === 'left-edge' && 'shadow-[1px_0_0_0_hsl(var(--border))]',
               edge === 'right-edge' && 'shadow-[-1px_0_0_0_hsl(var(--border))]',
             )}
             style={colStyle(cell.column)}
           >
-            <span className={cn('block', cell.column.columnDef.meta?.wrap ? 'whitespace-normal' : 'truncate')}>
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </span>
+            {meta?.actions != null ? (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onActionTrigger?.(row.original, e.currentTarget as HTMLElement)
+                }}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            ) : (
+              <span className={cn('block', meta?.wrap ? 'whitespace-normal' : 'truncate')}>
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </span>
+            )}
           </TableCell>
         )
       })}
@@ -395,6 +413,7 @@ interface DataGridVirtualBodyProps<T extends object>
   rows: Row<T>[]
   table: Table<T>
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>
+  onActionTrigger?: (row: T, el: HTMLElement) => void
 }
 
 function DataGridVirtualBody<T extends object>({
@@ -404,6 +423,7 @@ function DataGridVirtualBody<T extends object>({
   onRowClick,
   rowCursor,
   bordered,
+  onActionTrigger,
 }: DataGridVirtualBodyProps<T>) {
   const virtualItems = rowVirtualizer.getVirtualItems()
   const totalSize = rowVirtualizer.getTotalSize()
@@ -423,6 +443,7 @@ function DataGridVirtualBody<T extends object>({
             dataIndex={virtualRow.index}
             measureRef={rowVirtualizer.measureElement}
             style={{ position: 'absolute', width: '100%', transform: `translateY(${virtualRow.start}px)` }}
+            onActionTrigger={onActionTrigger}
           />
         )
       })}
@@ -439,6 +460,7 @@ interface DataGridFlexBodyProps<T extends object>
   rows: Row<T>[]
   table: Table<T>
   visibleLeafColumns: Column<T>[]
+  onActionTrigger?: (row: T, el: HTMLElement) => void
 }
 
 function DataGridFlexBody<T extends object>({
@@ -450,7 +472,9 @@ function DataGridFlexBody<T extends object>({
   onRowClick,
   rowCursor,
   bordered,
+  onActionTrigger,
 }: DataGridFlexBodyProps<T>) {
+
   if (isLoading) {
     return (
       <TableBody style={{ display: 'block' }}>
@@ -491,6 +515,7 @@ function DataGridFlexBody<T extends object>({
           rowCursor={rowCursor}
           bordered={bordered}
           showSpacer
+          onActionTrigger={onActionTrigger}
         />
       ))}
     </TableBody>
@@ -520,8 +545,23 @@ export function DataGridTableView<T extends object>({
   bordered = false,
   onMeasureColumns,
 }: DataGridTableViewProps<T>) {
+  // ── Action menu state — ONE menu at table level, anchored to the clicked trigger ─
+  const [actionMenuOpen, setActionMenuOpen] = useState(false)
+  const [activeRow, setActiveRow] = useState<T | null>(null)
+  const anchorRef = useRef<HTMLElement | null>(null)
+
+  const handleActionTrigger = useCallback((row: T, el: HTMLElement) => {
+    anchorRef.current = el
+    setActiveRow(row)
+    setActionMenuOpen(true)
+  }, [])
+
   const headerGroups = table.getHeaderGroups()
   const visibleLeafColumns = table.getVisibleLeafColumns()
+
+  // Find the column that has meta.actions (if any) — used to build the shared action menu
+  const actionCol = visibleLeafColumns.find((col) => col.columnDef.meta?.actions != null)
+  const actionItems = actionCol && activeRow ? actionCol.columnDef.meta!.actions!(activeRow) : []
 
   const hasFixedHeight = tableHeight != null && tableHeight !== 'auto'
 
@@ -580,66 +620,103 @@ export function DataGridTableView<T extends object>({
   }
 
   return (
-    <div ref={containerRef} style={containerStyle}>
-      <ScrollTable
-        style={
-          virtual
-            ? { display: 'grid', width: table.getTotalSize() }
-            : { display: 'block', width: table.getTotalSize(), minWidth: '100%' }
-        }
-      >
-        <TableHeader
-          className="sticky top-0 z-10 bg-background [&_tr]:border-b"
-          style={{ display: 'block', transform: 'translateZ(0)', willChange: 'transform' }}
+    <>
+      <div ref={containerRef} style={containerStyle}>
+        <ScrollTable
+          style={
+            virtual
+              ? { display: 'grid', width: table.getTotalSize() }
+              : { display: 'block', width: table.getTotalSize(), minWidth: '100%' }
+          }
         >
-          {headerGroups.map((headerGroup) => (
-            <DataGridHeaderRow
-              key={headerGroup.id}
-              headerGroup={headerGroup}
+          <TableHeader
+            className="sticky top-0 z-10 bg-background [&_tr]:border-b"
+            style={{ display: 'block', transform: 'translateZ(0)', willChange: 'transform' }}
+          >
+            {headerGroups.map((headerGroup) => (
+              <DataGridHeaderRow
+                key={headerGroup.id}
+                headerGroup={headerGroup}
+                table={table}
+                enableColumnResizing={enableColumnResizing}
+                virtual={virtual}
+                bordered={bordered}
+              />
+            ))}
+            {enableColumnFilters && (
+              <DataGridFilterRow
+                visibleLeafColumns={visibleLeafColumns}
+                selectOptions={selectOptions}
+                virtual={virtual}
+                bordered={bordered}
+              />
+            )}
+          </TableHeader>
+
+          {virtual ? (
+            <DataGridVirtualBody
+              rows={rows}
               table={table}
-              enableColumnResizing={enableColumnResizing}
-              virtual={virtual}
+              rowVirtualizer={rowVirtualizer}
+              onRowClick={onRowClick}
+              rowCursor={rowCursor}
               bordered={bordered}
+              onActionTrigger={actionCol ? handleActionTrigger : undefined}
             />
-          ))}
-          {enableColumnFilters && (
-            <DataGridFilterRow
+          ) : (
+            <DataGridFlexBody
+              rows={rows}
+              table={table}
               visibleLeafColumns={visibleLeafColumns}
-              selectOptions={selectOptions}
-              virtual={virtual}
+              isLoading={isLoading}
+              emptyMessage={emptyMessage}
+              onRowClick={onRowClick}
+              rowCursor={rowCursor}
               bordered={bordered}
+              onActionTrigger={actionCol ? handleActionTrigger : undefined}
             />
           )}
-        </TableHeader>
+        </ScrollTable>
 
-        {virtual ? (
-          <DataGridVirtualBody
-            rows={rows}
-            table={table}
-            rowVirtualizer={rowVirtualizer}
-            onRowClick={onRowClick}
-            rowCursor={rowCursor}
-            bordered={bordered}
-          />
-        ) : (
-          <DataGridFlexBody
-            rows={rows}
-            table={table}
-            visibleLeafColumns={visibleLeafColumns}
-            isLoading={isLoading}
-            emptyMessage={emptyMessage}
-            onRowClick={onRowClick}
-            rowCursor={rowCursor}
-            bordered={bordered}
-          />
+        {loadMoreRef && (
+          <div ref={loadMoreRef} className="py-2 flex justify-center">
+            {isFetchingNextPage && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+          </div>
         )}
-      </ScrollTable>
+      </div>
 
-      {loadMoreRef && (
-        <div ref={loadMoreRef} className="py-2 flex justify-center">
-          {isFetchingNextPage && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
-        </div>
+      {/* Single shared action menu — anchored to the clicked trigger button */}
+      {actionCol && (
+        <ActionMenu.Root open={actionMenuOpen} onOpenChange={setActionMenuOpen}>
+          <ActionMenu.Portal>
+            <ActionMenu.Positioner
+              anchor={anchorRef.current}
+              side="bottom"
+              align="end"
+              sideOffset={4}
+              className="isolate z-50 outline-none"
+            >
+              <ActionMenu.Popup className="min-w-32 origin-(--transform-origin) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+                {actionItems.map((item, i) => (
+                  <ActionMenu.Item
+                    key={i}
+                    disabled={item.disabled}
+                    data-variant={item.variant ?? 'default'}
+                    onClick={() => {
+                      item.onClick(activeRow!)
+                      setActionMenuOpen(false)
+                    }}
+                    className="relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+                  >
+                    {item.icon}
+                    {item.label}
+                  </ActionMenu.Item>
+                ))}
+              </ActionMenu.Popup>
+            </ActionMenu.Positioner>
+          </ActionMenu.Portal>
+        </ActionMenu.Root>
       )}
-    </div>
+    </>
   )
 }
