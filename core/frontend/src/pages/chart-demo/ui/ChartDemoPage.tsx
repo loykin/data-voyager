@@ -37,6 +37,26 @@ function generateData(): AlignedData {
 
 const DEMO_DATA = generateData()
 
+// Dual-axis demo data: temperature (°C, left) + humidity (%, right)
+function generateDualData(): AlignedData {
+  const ts:   number[]          = []
+  const temp: (number | null)[] = []
+  const hum:  (number | null)[] = []
+  for (let i = 0; i < N; i++) {
+    ts.push(DEMO_START + i * STEP)
+    temp.push(20 + Math.sin(i / 20) * 8 + Math.random() * 1.5)
+    hum.push(55 + Math.cos(i / 12) * 20 + Math.random() * 3)
+  }
+  return [ts, temp, hum]
+}
+
+const DUAL_DATA = generateDualData()
+
+const DUAL_SERIES: SeriesConfig[] = [
+  { label: 'Temperature', color: '#ef4444', unit: '°C', type: 'area', fillOpacity: 0.1, yAxis: 'left'  },
+  { label: 'Humidity',    color: '#3b82f6', unit: '%',  type: 'line',                  yAxis: 'right' },
+]
+
 const BASE_SERIES = [
   { label: 'CPU',    color: '#3b82f6', unit: '%'    },
   { label: 'Memory', color: '#10b981', unit: '%'    },
@@ -379,6 +399,25 @@ export function ChartDemoPage() {
           Last selection: <strong className="text-foreground">{lastSelection}</strong>
         </p>
       )}
+
+      {/* Dual Y-axis example */}
+      <div>
+        <h2 className="text-base font-semibold mb-1">Dual Y-axis</h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          Temperature (°C, left) · Humidity (%, right) — each series bound to its own scale
+        </p>
+        <div className="rounded-md border p-4">
+          <TimeSeriesChart
+            data={DUAL_DATA}
+            series={DUAL_SERIES}
+            height={260}
+            yUnit="°C"
+            yUnit2="%"
+            legendPosition="bottom"
+            selectionMode="x"
+          />
+        </div>
+      </div>
     </div>
   )
 }
