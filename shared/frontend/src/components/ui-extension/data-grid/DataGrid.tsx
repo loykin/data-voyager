@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { ColumnSizingState } from '@tanstack/react-table'
 import { Search } from 'lucide-react'
 import type { DataGridProps } from './types'
@@ -7,6 +7,8 @@ import { useDataGridCore } from './hooks/useDataGridCore'
 import { useColumnSizing } from './hooks/useColumnSizing'
 import { DataGridTableView } from './DataGridTableView'
 import { DataGridPaginationBar } from './DataGridPaginationBar'
+import { ColumnVisibilityDropdown } from './ColumnVisibilityDropdown'
+import { createCheckboxColumn } from './checkbox-column'
 import { cn } from '../../../lib/utils'
 
 export function DataGrid<T extends object>({
@@ -25,9 +27,12 @@ export function DataGrid<T extends object>({
   leftFilters,
   rightFilters,
   enableColumnResizing = true,
+  enableColumnVisibility = false,
   enableColumnFilters = false,
   visibilityState,
+  initialPinning,
   columnSizingMode = 'auto',
+  checkboxConfig,
   onRowClick,
   rowCursor,
   tableKey,
@@ -44,12 +49,17 @@ export function DataGrid<T extends object>({
 }: DataGridProps<T>) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [searchValue, setSearchValue] = useState('')
+  const [searchValue, setSearchValue] = useState(globalFilter ?? '')
   const [sizing, setSizing] = useState<ColumnSizingState>({})
+
+  const columnsWithCheckbox = useMemo(() => {
+    if (!checkboxConfig) return columns
+    return [createCheckboxColumn(checkboxConfig), ...columns]
+  }, [columns, checkboxConfig])
 
   const { table, handleGlobalFilterChange } = useDataGridCore({
       data,
-      columns,
+      columns: columnsWithCheckbox,
       enableSorting,
       initialSorting,
       onSortingChange,
@@ -61,6 +71,7 @@ export function DataGrid<T extends object>({
       enableColumnResizing,
       enableColumnFilters,
       visibilityState,
+      initialPinning,
       tableKey,
       persistState,
       enablePagination,
@@ -97,7 +108,7 @@ export function DataGrid<T extends object>({
   return (
     <div ref={wrapperRef} className="flex flex-col gap-3 w-full min-w-0 overflow-hidden">
       {/* ── Toolbar ──────────────────────────────────────────────────── */}
-      {(searchableColumns?.length || leftFilters || rightFilters) && (
+      {(searchableColumns?.length || leftFilters || rightFilters || enableColumnVisibility) && (
         <div className="flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2">
             {(searchableColumns?.length || !leftFilters) && (
@@ -114,7 +125,10 @@ export function DataGrid<T extends object>({
             )}
             {leftFilters?.(table)}
           </div>
-          <div className="flex items-center gap-2">{rightFilters?.(table)}</div>
+          <div className="flex items-center gap-2">
+            {rightFilters?.(table)}
+            {enableColumnVisibility && <ColumnVisibilityDropdown table={table} />}
+          </div>
         </div>
       )}
 
@@ -136,7 +150,6 @@ export function DataGrid<T extends object>({
           rowCursor={rowCursor}
           enableColumnResizing={enableColumnResizing}
           enableColumnFilters={enableColumnFilters}
-          sizing={sizing}
           tableHeight={hasFixedHeight ? undefined : tableHeight}
           fillHeight={hasFixedHeight}
         />
