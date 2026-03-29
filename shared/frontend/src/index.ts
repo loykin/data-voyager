@@ -26,6 +26,9 @@ export * from "./components/widgets/data-grid";
 // TimeSeriesChart
 export * from "./components/widgets/charts/time-series";
 
+// Histogram
+export * from "./components/widgets/charts/histogram";
+
 // Templates
 export * from "./components/templates/TabbedPageTemplate";
 
