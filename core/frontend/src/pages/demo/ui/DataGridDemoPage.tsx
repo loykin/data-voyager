@@ -9,6 +9,7 @@ import { SelectionTab }   from './tabs/selection'
 import { BorderedTab }    from './tabs/bordered'
 import { LargeListTab }   from './tabs/large-list'
 import { LiveUpdateTab }  from './tabs/live-update'
+import { SidePanelTab }   from './tabs/side-panel'
 
 const tabs = [
   { id: 'pagination',   label: 'Pagination',       content: <PaginationTab /> },
@@ -20,6 +21,7 @@ const tabs = [
   { id: 'dashboard',    label: 'Dashboard',        content: <DashboardTab /> },
   { id: 'selection',    label: 'Row Selection',    content: <SelectionTab /> },
   { id: 'bordered',     label: 'Bordered',         content: <BorderedTab /> },
+  { id: 'side-panel',   label: 'Side Panel',       content: <SidePanelTab /> },
 ]
 
 export function DataGridDemoPage() {

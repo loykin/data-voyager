@@ -23,6 +23,9 @@ export * from "./components/ui/tooltip";
 // DataGrid
 export * from "./components/widgets/data-grid";
 
+// SidePanel
+export * from "./components/widgets/side-panel";
+
 // TimeSeriesChart
 export * from "./components/widgets/charts/time-series";
 

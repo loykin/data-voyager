@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { SidePanelHost } from '@data-voyager/shared-ui'
 import { AppLayout } from '@/widgets/app-layout'
 
 const DatasourcePage = React.lazy(() =>
@@ -45,6 +46,7 @@ function AppLayoutRoute() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <SidePanelHost />
       <BrowserRouter basename="/ui">
         <React.Suspense
           fallback={
