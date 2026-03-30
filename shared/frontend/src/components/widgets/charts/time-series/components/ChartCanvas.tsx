@@ -205,7 +205,7 @@ export function ChartCanvas({
     return {
       width:     300,  // overridden by ResizeObserver in useChart
       height,
-      drawOrder: ['series', 'axes'] as uPlot.DrawOrderKey[],
+      drawOrder: ['axes', 'series'] as uPlot.DrawOrderKey[],
       legend:    { show: false },
       cursor:    {
         drag: { x: false, y: false },

@@ -77,7 +77,7 @@ export function HistogramCanvas({
     return {
       width:     300,
       height,
-      drawOrder: ['series', 'axes'] as uPlot.DrawOrderKey[],
+      drawOrder: ['axes', 'series'] as uPlot.DrawOrderKey[],
       legend:    { show: false },
       cursor:    { drag: { x: false, y: false } },
       scales: {
