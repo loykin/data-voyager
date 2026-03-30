@@ -1,6 +1,6 @@
 import type React from 'react'
 import type uPlot from 'uplot'
-import type { LineStyle, AxisConfig, SelectionMode, SelectionResult } from '../core'
+import type { LineStyle, AxisConfig, SelectionMode, SelectionResult, BaseChartProps } from '../core'
 
 // uPlot's aligned data format:
 // [timestamps, series1, series2, ...]  — all arrays must be the same length.
@@ -47,7 +47,7 @@ export interface SeriesConfig {
 }
 
 
-export interface TimeSeriesChartProps {
+export interface TimeSeriesChartProps extends BaseChartProps {
   // ── Data ─────────────────────────────────────────────────────────────────
   /** AlignedData: [timestamps, ...series] */
   data: AlignedData
@@ -55,8 +55,6 @@ export interface TimeSeriesChartProps {
   series: SeriesConfig[]
 
   // ── Layout ───────────────────────────────────────────────────────────────
-  /** Canvas height in px (default 300) */
-  height?: number
   /** Where to render the legend (default 'bottom') */
   legendPosition?: LegendPosition
   /** Legend display mode (default 'list') */
@@ -71,8 +69,6 @@ export interface TimeSeriesChartProps {
    * - 'tick':  unit suffix on each tick value — e.g. "30 %" (saves label space)
    */
   yUnitDisplay?: 'label' | 'tick'
-  yMin?:  number
-  yMax?:  number
   /** Right y-axis unit label. When any series has yAxis='right', a second axis is shown. */
   yUnit2?: string
   y2Min?:  number
@@ -89,16 +85,6 @@ export interface TimeSeriesChartProps {
    * Defaults to the browser's locale.
    */
   locale?: string
-
-  // ── Grid / axis style ────────────────────────────────────────────────────
-  /** Grid lines inside the plot area. `false` = hide. */
-  gridStyle?: LineStyle | false
-  /**
-   * Axis configuration: border line + tick marks as a unit.
-   * `false` = hide both line and ticks entirely.
-   * Fine-grained: `{ line: false }` hides only the border, `{ ticks: false }` hides only ticks.
-   */
-  axisStyle?: AxisConfig | false
 
   // ── Bar stack ────────────────────────────────────────────────────────────
   /** Stack bar series cumulatively. Only applies when series have type='bars' */
@@ -128,8 +114,4 @@ export interface TimeSeriesChartProps {
    * When provided, `legendPosition` / `legendFormat` are ignored.
    */
   renderLegend?: (items: import('./hooks/useLegendState').LegendItem[]) => React.ReactNode
-
-  // ── Loading / error ──────────────────────────────────────────────────────
-  isLoading?: boolean
-  error?:     Error | null
 }

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
-import { useChart, hexToRgba, resolveCssVar, makeAxisBorderPlugin } from '../../core'
+import { useChart, hexToRgba, makeAxisBorderPlugin, resolveAxisStyles, CHART_DEFAULT_LINE_WIDTH } from '../../core'
 import type { AxisConfig, LineStyle } from '../../core'
 
 interface HistogramCanvasProps {
@@ -54,31 +54,8 @@ export function HistogramCanvas({
   yUnitRef.current = yUnit
 
   const getOptions = useCallback((): uPlot.Options => {
-    const mutedFgColor = resolveCssVar('--muted-foreground', 'oklch(0.556 0 0)')
-    const borderColor  = resolveCssVar('--border',           'oklch(0.922 0 0)')
-    const DEFAULT_LINE_WIDTH = 0.5
-
-    const resolvedGrid: uPlot.Axis.Grid =
-      gridStyle === false
-        ? { show: false }
-        : {
-            stroke: gridStyle?.stroke ?? borderColor,
-            width:  gridStyle?.width  ?? DEFAULT_LINE_WIDTH,
-            dash:   gridStyle?.dash,
-          }
-
-    const tickConfig   = axisStyle === false ? false : (axisStyle?.ticks ?? undefined)
-    const resolvedTicks: uPlot.Axis.Ticks =
-      tickConfig === false
-        ? { show: false }
-        : {
-            stroke: tickConfig?.stroke ?? borderColor,
-            width:  tickConfig?.width  ?? DEFAULT_LINE_WIDTH,
-            dash:   tickConfig?.dash,
-          }
-
-    const axisLineStyle: LineStyle | false | undefined =
-      axisStyle === false ? false : axisStyle?.line
+    const { mutedFgColor, borderColor, resolvedGrid, resolvedTicks, axisLineStyle } =
+      resolveAxisStyles(gridStyle, axisStyle)
 
     // Closures capture refs so label format updates on next redraw (setData)
     // without needing to recreate the entire chart.
@@ -137,7 +114,7 @@ export function HistogramCanvas({
         },
       ],
       plugins: [
-        makeAxisBorderPlugin(axisLineStyle, borderColor, DEFAULT_LINE_WIDTH),
+        makeAxisBorderPlugin(axisLineStyle, borderColor, CHART_DEFAULT_LINE_WIDTH),
       ],
     }
   // normalize / xUnit / yUnit intentionally omitted — handled via refs above

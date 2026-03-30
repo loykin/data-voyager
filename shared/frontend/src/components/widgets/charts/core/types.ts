@@ -26,3 +26,19 @@ export interface SelectionResult {
   xRange?: [number, number]
   yRange?: [number, number]
 }
+
+/** Shared props common to all chart components */
+export interface BaseChartProps {
+  /** Canvas height in px (default 300) */
+  height?:    number
+  /** Grid lines inside the plot area. `false` = hide */
+  gridStyle?: LineStyle | false
+  /** Axis border + ticks. `false` = hide both */
+  axisStyle?: AxisConfig | false
+  /** Primary y-axis minimum (default: auto) */
+  yMin?:      number
+  /** Primary y-axis maximum (default: auto) */
+  yMax?:      number
+  isLoading?: boolean
+  error?:     Error | null
+}

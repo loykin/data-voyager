@@ -1,11 +1,9 @@
 import { useCallback, useMemo } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
-import { useChart } from '../../core'
-import { selectionPlugin } from '../../core'
-import { hexToRgba, resolveCssVar } from '../../core'
-import { makeAxisBorderPlugin } from '../../core'
-import type { AxisConfig, LineStyle, SeriesConfig, SelectionMode, SelectionResult } from '../types'
+import { useChart, selectionPlugin, hexToRgba, makeAxisBorderPlugin, resolveAxisStyles, CHART_DEFAULT_LINE_WIDTH } from '../../core'
+import type { SeriesConfig, SelectionMode, SelectionResult } from '../types'
+import type { AxisConfig, LineStyle } from '../../core'
 
 interface ChartCanvasProps {
   containerRef:  React.RefObject<HTMLDivElement | null>
@@ -56,12 +54,8 @@ export function ChartCanvas({
   onCursorMove,
 }: ChartCanvasProps) {
   const getOptions = useCallback((): uPlot.Options => {
-    // Resolve CSS variables to actual color values — canvas cannot parse var().
-    // The project uses oklch() colors directly, so return the value as-is.
-    const mutedFgColor = resolveCssVar('--muted-foreground', 'oklch(0.556 0 0)')
-    const borderColor  = resolveCssVar('--border',           'oklch(0.922 0 0)')
-
-    const DEFAULT_LINE_WIDTH = 0.5
+    const { mutedFgColor, borderColor, resolvedGrid, resolvedTicks, axisLineStyle } =
+      resolveAxisStyles(gridStyle, axisStyle)
 
     // Bar stacking: draw in reverse order (background → foreground)
     const isBarStack   = barStack && series.some(s => s.type === 'bars')
@@ -119,34 +113,6 @@ export function ChartCanvas({
       y:  { min: yMin,  max: yMax  },
       ...(hasRightAxis ? { y2: { min: y2Min, max: y2Max } } : {}),
     }
-
-    // ── Grid lines — fully independent ───────────────────────────────────────
-    const resolvedGrid: uPlot.Axis.Grid =
-      gridStyle === false
-        ? { show: false }
-        : {
-            stroke: gridStyle?.stroke ?? borderColor,
-            width:  gridStyle?.width  ?? DEFAULT_LINE_WIDTH,
-            dash:   gridStyle?.dash,
-          }
-
-    // ── Axis line + ticks — grouped under axisStyle ───────────────────────────
-    // axisStyle === false          → hide both line and ticks
-    // axisStyle.line === false     → hide only the border line
-    // axisStyle.ticks === false    → hide only the tick marks
-    const tickConfig = axisStyle === false ? false : (axisStyle?.ticks ?? undefined)
-    const resolvedTicks: uPlot.Axis.Ticks =
-      tickConfig === false
-        ? { show: false }
-        : {
-            stroke: tickConfig?.stroke ?? borderColor,
-            width:  tickConfig?.width  ?? DEFAULT_LINE_WIDTH,
-            dash:   tickConfig?.dash,
-          }
-
-    // Border line style extracted for the plugin
-    const axisLineStyle: LineStyle | false | undefined =
-      axisStyle === false ? false : axisStyle?.line
 
     const yInTickMode = yUnitDisplay === 'tick' && !!yUnit
     const yAxisValues: uPlot.Axis['values'] = yInTickMode
@@ -250,7 +216,7 @@ export function ChartCanvas({
       axes,
       plugins: [
         // Axis border line: drawn last via draw hook, fully independent of gridStyle
-        makeAxisBorderPlugin(axisLineStyle, borderColor, DEFAULT_LINE_WIDTH),
+        makeAxisBorderPlugin(axisLineStyle, borderColor, CHART_DEFAULT_LINE_WIDTH),
         selectionPlugin({ mode: selectionMode, onSelect }),
         ...(onCursorMove
           ? [{

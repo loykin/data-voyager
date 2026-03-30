@@ -4,7 +4,7 @@ import { HistogramCanvas } from './components/HistogramCanvas'
 import { useBins } from './hooks/useBins'
 import type { HistogramProps } from './types'
 
-export function Histogram({
+export function HistogramChart({
   values,
   bins,
   height       = 300,

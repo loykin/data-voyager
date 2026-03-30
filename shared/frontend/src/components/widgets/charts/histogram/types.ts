@@ -1,14 +1,11 @@
-import type { LineStyle, AxisConfig } from '../core'
+import type { BaseChartProps } from '../core'
 
-export interface HistogramProps {
+export interface HistogramProps extends BaseChartProps {
   /** Raw numeric values to bin and display */
   values: number[]
 
   /** Number of bins. Default: Sturges rule — ceil(log₂(n) + 1) */
   bins?: number
-
-  /** Canvas height in px (default 300) */
-  height?: number
 
   /** Bar color (hex, default '#3b82f6') */
   color?: string
@@ -24,17 +21,6 @@ export interface HistogramProps {
 
   /** Unit suffix on y-axis ticks — ignored when normalize=true (shows '%') */
   yUnit?: string
-  yMin?:  number
-  yMax?:  number
-
-  /** Grid lines inside the plot area. `false` = hide */
-  gridStyle?: LineStyle | false
-
-  /** Axis border + ticks. `false` = hide both */
-  axisStyle?: AxisConfig | false
-
-  isLoading?: boolean
-  error?:     Error | null
 }
 
 /** Output of useBins */

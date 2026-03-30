@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  Histogram,
+  HistogramChart,
   type AxisConfig,
   type LineStyle,
 } from '@data-voyager/shared-ui'
@@ -268,7 +268,7 @@ export function HistogramDemoPage() {
       </div>
 
       <div className="rounded-md border p-4">
-        <Histogram
+        <HistogramChart
           values={values}
           bins={binCount}
           height={height}
