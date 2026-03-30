@@ -1,0 +1,7 @@
+{
+  "name": "default",
+  "extensions": [
+    "datasources/postgresql",
+    "datasources/clickhouse"
+  ]
+}

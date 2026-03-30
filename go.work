@@ -1,4 +1,10 @@
-go 1.25.1
+go 1.26.1
 
-use ./core
-use ./shared
+use (
+	./sdk
+	./shared
+	./core
+	./extensions/datasources/postgresql
+	./extensions/datasources/clickhouse
+	./meta/scripts
+)

@@ -1,4 +1,6 @@
-.PHONY: help install dev build clean test serve start stop
+.PHONY: help generate install dev build clean test serve start stop
+
+SITE_MODE ?= default
 
 # Default target
 .DEFAULT_GOAL := help
@@ -23,6 +25,13 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
 	@echo ''
 
+generate: ## Generate extension loaders from meta/configs/$(SITE_MODE).json
+	@echo '$(CYAN)Generating extension loaders (SITE_MODE=$(SITE_MODE))...$(NC)'
+	@SITE_MODE=$(SITE_MODE) go run meta/scripts/generate.go --root .
+	@SITE_MODE=$(SITE_MODE) npx tsx meta/scripts/generate.ts --root .
+	@echo '$(GREEN)✓ Generated core/internal/generated/extensions.go$(NC)'
+	@echo '$(GREEN)✓ Generated core/frontend/src/generated/extension-loader.ts$(NC)'
+
 install: ## Install all dependencies (Go + pnpm)
 	@echo '$(CYAN)Installing dependencies...$(NC)'
 	@cd core && go mod download
@@ -46,12 +55,12 @@ dev-backend: ## Start backend dev server only
 	@mkdir -p $(DATA_DIR)
 	@GO_ENV=development go run core/cmd/server/main.go serve
 
-build: build-frontend build-backend ## Build both frontend and backend
+build: generate build-frontend build-backend ## Generate loaders, then build frontend and backend
 
 build-frontend: ## Build frontend (static export)
 	@echo '$(CYAN)Building frontend...$(NC)'
-	@pnpm build:export
-	@echo '$(GREEN)✓ Frontend built to core/frontend/out/$(NC)'
+	@pnpm build
+	@echo '$(GREEN)✓ Frontend built to core/frontend/dist/$(NC)'
 
 build-backend: ## Build backend binary
 	@echo '$(CYAN)Building backend...$(NC)'
@@ -87,8 +96,7 @@ clean: ## Clean build artifacts
 	@echo '$(CYAN)Cleaning build artifacts...$(NC)'
 	@rm -f $(BINARY_NAME)
 	@rm -f core/server
-	@rm -rf $(FRONTEND_DIR)/out
-	@rm -rf $(FRONTEND_DIR)/.next
+	@rm -rf $(FRONTEND_DIR)/dist
 	@rm -rf $(BUILD_DIR)
 	@echo '$(GREEN)✓ Clean complete$(NC)'
 

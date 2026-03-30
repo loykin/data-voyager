@@ -8,16 +8,17 @@ import (
 	"data-voyager/core/internal/datasource"
 	"data-voyager/core/internal/models"
 	"data-voyager/core/internal/store"
+	"data-voyager/sdk"
 	"github.com/gin-gonic/gin"
 )
 
-// DataSourceHandler handles data source API endpoints
+// DataSourceHandler handles data source API endpoints.
 type DataSourceHandler struct {
 	metadataStore *store.MetadataStore
 	registry      *datasource.Registry
 }
 
-// NewDataSourceHandler creates a new data source handler
+// NewDataSourceHandler creates a new DataSourceHandler.
 func NewDataSourceHandler(metadataStore *store.MetadataStore, registry *datasource.Registry) *DataSourceHandler {
 	return &DataSourceHandler{
 		metadataStore: metadataStore,
@@ -25,7 +26,7 @@ func NewDataSourceHandler(metadataStore *store.MetadataStore, registry *datasour
 	}
 }
 
-// RegisterRoutes registers data source routes
+// RegisterRoutes registers data source routes.
 func (h *DataSourceHandler) RegisterRoutes(r *gin.RouterGroup) {
 	ds := r.Group("/datasources")
 	{
@@ -39,22 +40,21 @@ func (h *DataSourceHandler) RegisterRoutes(r *gin.RouterGroup) {
 		ds.POST("/:id/query", h.QueryDataSource)
 	}
 
-	// Additional endpoints
 	r.GET("/datasource-types", h.GetSupportedTypes)
 	r.GET("/datasource-stats", h.GetDataSourceStats)
 }
 
-// CreateDataSourceRequest represents the request for creating a data source
+// CreateDataSourceRequest is the request body for creating a datasource.
 type CreateDataSourceRequest struct {
 	Name        string                 `json:"name" binding:"required"`
-	Type        models.DataSourceType  `json:"type" binding:"required"`
+	Type        sdk.DataSourceType     `json:"type" binding:"required"`
 	Config      map[string]interface{} `json:"config" binding:"required"`
 	Description string                 `json:"description"`
 	Tags        []string               `json:"tags"`
 	CreatedBy   string                 `json:"created_by"`
 }
 
-// UpdateDataSourceRequest represents the request for updating a data source
+// UpdateDataSourceRequest is the request body for updating a datasource.
 type UpdateDataSourceRequest struct {
 	Name        *string                `json:"name,omitempty"`
 	Config      map[string]interface{} `json:"config,omitempty"`
@@ -63,7 +63,7 @@ type UpdateDataSourceRequest struct {
 	IsActive    *bool                  `json:"is_active,omitempty"`
 }
 
-// QueryRequest represents a query request
+// QueryRequest is the request body for querying a datasource.
 type QueryRequest struct {
 	Query  string        `json:"query" binding:"required"`
 	Params []interface{} `json:"params,omitempty"`
@@ -72,19 +72,16 @@ type QueryRequest struct {
 
 // ListDataSources handles GET /api/v1/datasources
 func (h *DataSourceHandler) ListDataSources(c *gin.Context) {
-	// Parse query parameters for filtering
 	filter := &store.DataSourceFilter{}
 
 	if dsType := c.Query("type"); dsType != "" {
-		filter.Type = models.DataSourceType(dsType)
+		filter.Type = sdk.DataSourceType(dsType)
 	}
-
 	if isActiveStr := c.Query("is_active"); isActiveStr != "" {
 		if isActive, err := strconv.ParseBool(isActiveStr); err == nil {
 			filter.IsActive = &isActive
 		}
 	}
-
 	if createdBy := c.Query("created_by"); createdBy != "" {
 		filter.CreatedBy = createdBy
 	}
@@ -106,48 +103,30 @@ func (h *DataSourceHandler) CreateDataSource(c *gin.Context) {
 		return
 	}
 
-	// Validate that the plugin exists
 	plugin, exists := h.registry.Get(req.Type)
 	if !exists {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported data source type"})
 		return
 	}
 
-	// Convert config map to JSON and back to proper struct for validation
 	configJSON, err := json.Marshal(req.Config)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to serialize configuration"})
 		return
 	}
 
-	// Parse config based on type for validation
-	var config models.ConnectionConfig
-	switch req.Type {
-	case models.DataSourceTypeClickHouse:
-		config = &models.ClickHouseConfig{}
-	case models.DataSourceTypePostgreSQL:
-		config = &models.PostgreSQLConfig{}
-	case models.DataSourceTypeSQLite:
-		config = &models.SQLiteConfig{}
-	case models.DataSourceTypeOpenSearch:
-		config = &models.OpenSearchConfig{}
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported data source type"})
+	// Each plugin deserializes its own config — no switch statement needed.
+	config, err := plugin.ParseConfig(configJSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse configuration: " + err.Error()})
 		return
 	}
 
-	if err := json.Unmarshal(configJSON, config); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse configuration"})
-		return
-	}
-
-	// Validate configuration
 	if err := plugin.ValidateConfig(config); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid configuration: " + err.Error()})
 		return
 	}
 
-	// Create data source
 	ds := &models.DataSource{
 		Name:        req.Name,
 		Type:        req.Type,
@@ -197,14 +176,12 @@ func (h *DataSourceHandler) UpdateDataSource(c *gin.Context) {
 		return
 	}
 
-	// Get existing data source
 	ds, err := h.metadataStore.GetDataSource(c.Request.Context(), uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "data source not found"})
 		return
 	}
 
-	// Update fields
 	if req.Name != nil {
 		ds.Name = *req.Name
 	}
@@ -218,21 +195,24 @@ func (h *DataSourceHandler) UpdateDataSource(c *gin.Context) {
 		ds.IsActive = *req.IsActive
 	}
 	if req.Config != nil {
-		// Validate configuration if provided
 		plugin, exists := h.registry.Get(ds.Type)
 		if exists {
-			if err := plugin.ValidateConfig(req.Config); err != nil {
+			configJSON, err := json.Marshal(req.Config)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to serialize configuration"})
+				return
+			}
+			config, err := plugin.ParseConfig(configJSON)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse configuration: " + err.Error()})
+				return
+			}
+			if err := plugin.ValidateConfig(config); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid configuration: " + err.Error()})
 				return
 			}
+			ds.Config = configJSON
 		}
-
-		configJSON, err := json.Marshal(req.Config)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to serialize configuration"})
-			return
-		}
-		ds.Config = configJSON
 	}
 
 	if err := h.metadataStore.UpdateDataSource(c.Request.Context(), ds); err != nil {
@@ -279,34 +259,15 @@ func (h *DataSourceHandler) TestDataSource(c *gin.Context) {
 		return
 	}
 
-	// Parse config based on type
-	var config models.ConnectionConfig
-	switch ds.Type {
-	case models.DataSourceTypeClickHouse:
-		config = &models.ClickHouseConfig{}
-	case models.DataSourceTypePostgreSQL:
-		config = &models.PostgreSQLConfig{}
-	case models.DataSourceTypeSQLite:
-		config = &models.SQLiteConfig{}
-	case models.DataSourceTypeOpenSearch:
-		config = &models.OpenSearchConfig{}
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported data source type"})
-		return
-	}
-
-	if err := json.Unmarshal(ds.Config, config); err != nil {
+	config, err := plugin.ParseConfig(ds.Config)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse configuration"})
 		return
 	}
 
-	// Test connection
 	result, err := plugin.TestConnection(c.Request.Context(), config)
 	if err != nil {
-		result = &models.ConnectionTestResult{
-			IsConnected: false,
-			Message:     err.Error(),
-		}
+		result = &sdk.ConnectionTestResult{IsConnected: false, Message: err.Error()}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": result})
@@ -320,8 +281,6 @@ func (h *DataSourceHandler) GetDataSourceSchema(c *gin.Context) {
 		return
 	}
 
-	// Implementation for getting schema would go here
-	// This would use the connection to get table/column information
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented yet"})
 }
 
@@ -339,14 +298,12 @@ func (h *DataSourceHandler) QueryDataSource(c *gin.Context) {
 		return
 	}
 
-	// Implementation for executing queries would go here
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented yet"})
 }
 
 // GetSupportedTypes handles GET /api/v1/datasource-types
 func (h *DataSourceHandler) GetSupportedTypes(c *gin.Context) {
-	types := h.registry.GetSupportedTypes()
-	c.JSON(http.StatusOK, gin.H{"data": types})
+	c.JSON(http.StatusOK, gin.H{"data": h.registry.GetSupportedTypes()})
 }
 
 // GetDataSourceStats handles GET /api/v1/datasource-stats

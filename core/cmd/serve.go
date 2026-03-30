@@ -14,6 +14,7 @@ import (
 	"data-voyager/core/internal/api"
 	"data-voyager/core/internal/config"
 	"data-voyager/core/internal/datasource"
+	_ "data-voyager/core/internal/generated" // load extension init() registrations
 	"data-voyager/core/internal/service"
 	"data-voyager/core/internal/store"
 

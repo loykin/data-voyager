@@ -1,0 +1,14 @@
+import type { DatasourcePlugin } from '@data-voyager/sdk';
+import { datasourceRegistry } from '@data-voyager/sdk';
+import { PostgreSQLConfigForm } from './ConfigForm';
+
+const plugin: DatasourcePlugin = {
+  id: 'postgresql',
+  name: 'PostgreSQL',
+  description: 'Connect to PostgreSQL databases',
+  configComponent: PostgreSQLConfigForm,
+};
+
+datasourceRegistry.register(plugin);
+
+export { plugin };

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"data-voyager/core/internal/models"
+	"data-voyager/sdk"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -143,8 +144,8 @@ func (s *MetadataStore) GetDataSourceStats(ctx context.Context) (*DataSourceStat
 
 	// Count by type
 	var typeCounts []struct {
-		Type  models.DataSourceType `json:"type"`
-		Count int64                 `json:"count"`
+		Type  sdk.DataSourceType `json:"type"`
+		Count int64              `json:"count"`
 	}
 	if err := s.db.WithContext(ctx).Model(&models.DataSource{}).
 		Select("type, count(*) as count").
@@ -153,7 +154,7 @@ func (s *MetadataStore) GetDataSourceStats(ctx context.Context) (*DataSourceStat
 		return nil, err
 	}
 
-	stats.CountByType = make(map[models.DataSourceType]int64)
+	stats.CountByType = make(map[sdk.DataSourceType]int64)
 	for _, tc := range typeCounts {
 		stats.CountByType[tc.Type] = tc.Count
 	}
@@ -163,17 +164,17 @@ func (s *MetadataStore) GetDataSourceStats(ctx context.Context) (*DataSourceStat
 
 // DataSourceFilter represents filters for listing datasources
 type DataSourceFilter struct {
-	Type      models.DataSourceType `json:"type,omitempty"`
-	IsActive  *bool                 `json:"is_active,omitempty"`
-	CreatedBy string                `json:"created_by,omitempty"`
-	Tags      []string              `json:"tags,omitempty"`
+	Type      sdk.DataSourceType `json:"type,omitempty"`
+	IsActive  *bool              `json:"is_active,omitempty"`
+	CreatedBy string             `json:"created_by,omitempty"`
+	Tags      []string           `json:"tags,omitempty"`
 }
 
 // DataSourceStats represents statistics about datasources
 type DataSourceStats struct {
-	TotalCount  int64                           `json:"total_count"`
-	ActiveCount int64                           `json:"active_count"`
-	CountByType map[models.DataSourceType]int64 `json:"count_by_type"`
+	TotalCount  int64                        `json:"total_count"`
+	ActiveCount int64                        `json:"active_count"`
+	CountByType map[sdk.DataSourceType]int64 `json:"count_by_type"`
 }
 
 // Close closes the database connection

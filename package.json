@@ -2,17 +2,18 @@
   "name": "data-voyager",
   "private": true,
   "scripts": {
+    "generate": "npx tsx meta/scripts/generate.ts",
     "dev": "pnpm --filter data-voyager-frontend dev",
     "dev:backend": "cd core && GO_ENV=development go run cmd/server/main.go serve",
     "dev:all": "concurrently \"pnpm dev\" \"pnpm dev:backend\"",
     "build": "pnpm --filter data-voyager-frontend build",
-    "build:export": "pnpm --filter data-voyager-frontend build:export",
     "build:go": "cd core && go build -o ../data-voyager ./cmd/server",
-    "build:all": "pnpm build:export && pnpm build:go"
+    "build:all": "pnpm build && pnpm build:go"
   },
   "dependencies": {},
   "devDependencies": {
     "@types/node": "^20",
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "tsx": "^4.19.4"
   }
 }

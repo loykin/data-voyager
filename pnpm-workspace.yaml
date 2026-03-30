@@ -1,3 +1,5 @@
 packages:
-  - 'core/frontend'
+  - 'sdk/frontend'
   - 'shared/frontend'
+  - 'core/frontend'
+  - 'extensions/**/frontend'
