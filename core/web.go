@@ -4,7 +4,7 @@ import (
 	"embed"
 	"io"
 	"io/fs"
-	"log"
+	"log/slog"
 	"mime"
 	"net/http"
 	"net/http/httputil"
@@ -34,7 +34,7 @@ type StaticFileSystemConfig struct {
 func DefaultStaticConfig() *StaticFileSystemConfig {
 	frontendFiles, err := fs.Sub(frontendFS, "frontend/out")
 	if err != nil {
-		log.Printf("Warning: Failed to create sub filesystem: %v", err)
+		slog.Warn("failed to create sub filesystem, falling back to root", "err", err)
 		frontendFiles = frontendFS
 	}
 
@@ -139,7 +139,7 @@ func serveFile(c *gin.Context, config *StaticFileSystemConfig, urlPath string) b
 func serveIndexHTML(c *gin.Context, config *StaticFileSystemConfig) {
 	file, err := config.FS.Open("index.html")
 	if err != nil {
-		log.Printf("Failed to open index.html: %v", err)
+		slog.Error("failed to open index.html", "err", err)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -242,7 +242,7 @@ func getContentType(filePath string) string {
 func ServeFrontend(r *gin.Engine) {
 	// Check if we're in development mode (GO_ENV=development)
 	if os.Getenv("GO_ENV") == "development" {
-		log.Println("Development mode: proxying /ui to Next.js dev server at http://localhost:3000")
+		slog.Info("development mode: proxying /ui to frontend dev server", "target", "http://localhost:3000")
 		setupDevProxy(r)
 		return
 	}
@@ -261,22 +261,16 @@ func ServeFrontend(r *gin.Engine) {
 func setupDevProxy(r *gin.Engine) {
 	nextJSURL, err := url.Parse("http://localhost:3000")
 	if err != nil {
-		log.Fatalf("Failed to parse Next.js URL: %v", err)
+		slog.Error("failed to parse dev server URL", "err", err)
+		os.Exit(1)
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(nextJSURL)
-
-	// Customize the director to properly handle /ui prefix
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		originalDirector(req)
-		req.Host = nextJSURL.Host
-		req.URL.Scheme = nextJSURL.Scheme
-		req.URL.Host = nextJSURL.Host
-
-		// Next.js dev server expects /ui prefix in the path
-		// because of basePath: "/ui" in next.config.ts
-		log.Printf("Proxying %s to Next.js: %s", req.URL.Path, req.URL.String())
+	proxy := &httputil.ReverseProxy{
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetURL(nextJSURL)
+			r.Out.Host = nextJSURL.Host
+			slog.Debug("proxying request to dev server", "path", r.In.URL.Path, "target", r.Out.URL.String())
+		},
 	}
 
 	// Handle all /ui routes

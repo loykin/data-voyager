@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -38,9 +39,9 @@ func InitViper(configName, configPath string) (*ViperConfig, error) {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
-		fmt.Println("Config file not found, using defaults")
+		slog.Warn("config file not found, using defaults")
 	} else {
-		fmt.Printf("Using config file: %s\n", v.ConfigFileUsed())
+		slog.Info("loaded config file", "path", v.ConfigFileUsed())
 	}
 
 	var cfg ViperConfig

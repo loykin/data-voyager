@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +16,7 @@ import (
 	"data-voyager/core/internal/connection"
 	"data-voyager/core/internal/datasource"
 	_ "data-voyager/core/internal/generated" // load extension init() registrations
+	"data-voyager/core/internal/logger"
 	"data-voyager/core/internal/store"
 
 	"github.com/gin-gonic/gin"
@@ -60,11 +61,16 @@ func runServe(_ *cobra.Command, _ []string) error {
 		cfg.Server.Port = port
 	}
 
+	if err := logger.Setup(cfg.Logging); err != nil {
+		return fmt.Errorf("failed to setup logger: %w", err)
+	}
+
 	if verbose {
-		log.Printf("Configuration loaded:")
-		log.Printf("  Server: %s:%d", cfg.Server.Host, cfg.Server.Port)
-		log.Printf("  Metadata Store: %s (%s)", cfg.MetadataStore.Driver, cfg.MetadataStore.DSN)
-		log.Printf("  Log Level: %s", cfg.Logging.Level)
+		slog.Debug("configuration loaded",
+			"server", fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
+			"metadata_store_type", cfg.MetadataStore.Type,
+			"log_level", cfg.Logging.Level,
+		)
 	}
 
 	db, err := store.Open(cfg.MetadataStore)
@@ -93,7 +99,8 @@ func runServe(_ *cobra.Command, _ []string) error {
 	if cfg.Logging.Level != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	r := gin.Default()
+	r := gin.New()
+	r.Use(logger.GinMiddleware(), gin.Recovery())
 
 	r.GET("/health", func(c *gin.Context) {
 		ctx := context.Background()
@@ -138,25 +145,26 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 
 	go func() {
-		log.Printf("Starting Data Voyager server on %s", addr)
+		slog.Info("starting server", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			slog.Error("server failed", "err", err)
+			os.Exit(1)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	slog.Info("shutting down server")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Server forced to shutdown: %v", err)
+		slog.Error("server forced to shutdown", "err", err)
 		return err
 	}
 
-	log.Println("Server exited")
+	slog.Info("server exited")
 	return nil
 }
