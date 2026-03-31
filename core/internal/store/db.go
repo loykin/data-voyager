@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
 
+	"data-voyager/core/internal/config"
 	"data-voyager/core/internal/connection"
 	stmysql "data-voyager/core/internal/store/mysql"
 	stpostgres "data-voyager/core/internal/store/postgres"
@@ -26,13 +27,6 @@ var sqliteMigrations embed.FS
 //go:embed migrations/mysql/*.sql
 var mysqlMigrations embed.FS
 
-// DBConfig holds connection and migration settings for the metadata store.
-type DBConfig struct {
-	Driver  string `toml:"driver" mapstructure:"driver"`
-	DSN     string `toml:"dsn" mapstructure:"dsn"`
-	Migrate bool   `toml:"migrate_on_start" mapstructure:"migrate_on_start"`
-}
-
 // Repos holds all repository implementations for the selected driver.
 // New service repositories are added here as fields.
 type Repos struct {
@@ -40,7 +34,7 @@ type Repos struct {
 }
 
 // Open opens a sqlx.DB connection and optionally runs goose migrations.
-func Open(cfg DBConfig) (*sqlx.DB, error) {
+func Open(cfg config.DBConfig) (*sqlx.DB, error) {
 	driver := normalizeDriver(cfg.Driver)
 
 	db, err := sqlx.Open(driver, cfg.DSN)

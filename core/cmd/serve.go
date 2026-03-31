@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"data-voyager/core"
+	"data-voyager/core/internal/app"
 	"data-voyager/core/internal/config"
 	"data-voyager/core/internal/connection"
 	"data-voyager/core/internal/datasource"
@@ -79,8 +80,15 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	registry := datasource.NewRegistry()
 
-	svc := connection.NewService(repos.Connection, registry)
-	svc.InitializePlugins()
+	// Register all service loaders. Add new domains here as the app grows.
+	loaders := []app.Loader{
+		connection.NewLoader(repos.Connection, registry, cfg),
+	}
+	for _, l := range loaders {
+		if err := l.Load(); err != nil {
+			return fmt.Errorf("loader failed: %w", err)
+		}
+	}
 
 	if cfg.Logging.Level != "debug" {
 		gin.SetMode(gin.ReleaseMode)
@@ -89,7 +97,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	r.GET("/health", func(c *gin.Context) {
 		ctx := context.Background()
-		if err := svc.HealthCheck(ctx); err != nil {
+		if err := repos.Connection.Health(ctx); err != nil {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
 				"status":  "unhealthy",
 				"message": "metadata store is unhealthy",
@@ -114,7 +122,9 @@ func runServe(_ *cobra.Command, _ []string) error {
 			})
 		})
 
-		connection.NewHandler(repos.Connection, registry).RegisterRoutes(apiV1)
+		for _, l := range loaders {
+			l.RegisterRoutes(apiV1)
+		}
 	}
 
 	core.ServeFrontend(r)

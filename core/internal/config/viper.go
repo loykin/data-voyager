@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"data-voyager/core/internal/store"
 	"github.com/spf13/viper"
 )
 
 // ViperConfig mirrors Config but uses mapstructure tags for Viper unmarshaling.
 type ViperConfig struct {
 	Server        ServerConfig   `mapstructure:"server"`
-	MetadataStore store.DBConfig `mapstructure:"metadata_store"`
+	MetadataStore DBConfig       `mapstructure:"metadata_store"`
 	Logging       LoggingConfig  `mapstructure:"logging"`
 	Security      SecurityConfig `mapstructure:"security"`
 }

@@ -1,14 +1,20 @@
 package config
 
-import (
-	"data-voyager/core/internal/store"
-	"fmt"
-)
+import "fmt"
+
+// DBConfig holds connection and migration settings for the metadata store.
+// Defined here (not in store/) so that service packages can receive config
+// without creating an import cycle through store → connection → config.
+type DBConfig struct {
+	Driver  string `toml:"driver"           mapstructure:"driver"`
+	DSN     string `toml:"dsn"              mapstructure:"dsn"`
+	Migrate bool   `toml:"migrate_on_start" mapstructure:"migrate_on_start"`
+}
 
 // Config represents the application configuration.
 type Config struct {
 	Server        ServerConfig   `toml:"server"`
-	MetadataStore store.DBConfig `toml:"metadata_store"`
+	MetadataStore DBConfig       `toml:"metadata_store"`
 	Logging       LoggingConfig  `toml:"logging"`
 	Security      SecurityConfig `toml:"security"`
 }
