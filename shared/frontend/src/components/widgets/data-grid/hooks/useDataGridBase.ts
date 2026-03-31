@@ -1,9 +1,8 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import type { DataGridBaseProps, DataGridColumnDef } from '../types'
 import { createCheckboxColumn } from '../checkbox-column'
 import { useDataGridCore } from './useDataGridCore'
 import { useColumnSizing } from './useColumnSizing'
-import { useTableStore } from './useTableStore'
 
 interface UseDataGridBaseOptions<T extends object> extends DataGridBaseProps<T> {
   columns: DataGridColumnDef<T>[]
@@ -43,12 +42,8 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     bordered,
   } = options
 
-  const { tables } = useTableStore()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [searchValue, setSearchValue] = useState(
-    globalFilter ?? (persistState && tableKey ? (tables[tableKey]?.searchTerm ?? '') : '')
-  )
 
   const columnsWithCheckbox = useMemo(() => {
     if (!checkboxConfig) return columns
@@ -61,7 +56,7 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     mode: columnSizingMode,
   })
 
-  const { table, handleGlobalFilterChange } = useDataGridCore({
+  const { table } = useDataGridCore({
     data,
     columns: columnsWithCheckbox,
     enableSorting,
@@ -90,10 +85,5 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
 
   const rows = table.getRowModel().rows
 
-  const handleSearch = (value: string) => {
-    setSearchValue(value)
-    handleGlobalFilterChange(value)
-  }
-
-  return { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch, bordered, measure }
+  return { wrapperRef, containerRef, table, rows, isSized, bordered, measure }
 }

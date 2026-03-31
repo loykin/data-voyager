@@ -1,16 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { datasourceApi } from '../api/datasource.api'
-import type { DataSource } from './datasource.types'
+import type { UpdateConnectionRequest } from './datasource.types'
 
 export const datasourceKeys = {
-  all: ['datasources'] as const,
-  one: (id: number) => ['datasources', id] as const,
+  all: ['connections'] as const,
+  filtered: (type?: string) => ['connections', { type }] as const,
+  one: (id: number) => ['connections', id] as const,
 }
 
-export const useDatasources = () => {
+export const useDatasources = (type?: string) => {
   return useQuery({
-    queryKey: datasourceKeys.all,
-    queryFn: datasourceApi.getList,
+    queryKey: datasourceKeys.filtered(type),
+    queryFn: () => datasourceApi.getList(type),
   })
 }
 
@@ -24,7 +25,6 @@ export const useDatasource = (id: number) => {
 
 export const useDeleteDatasource = () => {
   const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: (id: number) => datasourceApi.remove(id),
     onSuccess: () => {
@@ -35,9 +35,8 @@ export const useDeleteDatasource = () => {
 
 export const useUpdateDatasource = () => {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<DataSource> }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateConnectionRequest }) =>
       datasourceApi.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all })

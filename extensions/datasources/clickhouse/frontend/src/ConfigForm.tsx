@@ -1,58 +1,82 @@
-import type { DatasourceConfigProps } from '@data-voyager/sdk';
+import { Input } from '@data-voyager/shared-ui/components/ui/input'
+import { Label } from '@data-voyager/shared-ui/components/ui/label'
+import { Switch } from '@data-voyager/shared-ui/components/ui/switch'
+import type { DatasourceConfigProps } from '@data-voyager/sdk'
 
 interface ClickHouseConfig {
-  host: string;
-  port: number;
-  database: string;
-  username: string;
-  password: string;
-  secure: boolean;
+  host: string
+  port: number
+  database: string
+  username: string
+  password: string
+  secure: boolean
 }
 
 export function ClickHouseConfigForm({ config, onChange }: DatasourceConfigProps) {
-  const cfg = config as Partial<ClickHouseConfig>;
+  const cfg = config as Partial<ClickHouseConfig>
 
-  const handleChange = (key: keyof ClickHouseConfig, value: string | number | boolean) => {
-    onChange({ ...cfg, [key]: value });
-  };
+  const set = (key: keyof ClickHouseConfig, value: string | number | boolean) =>
+    onChange({ ...cfg, [key]: value })
 
   return (
-    <div>
-      <input
-        placeholder="Host"
-        value={cfg.host ?? ''}
-        onChange={(e) => handleChange('host', e.target.value)}
-      />
-      <input
-        type="number"
-        placeholder="Port (9000)"
-        value={cfg.port ?? 9000}
-        onChange={(e) => handleChange('port', Number(e.target.value))}
-      />
-      <input
-        placeholder="Database"
-        value={cfg.database ?? ''}
-        onChange={(e) => handleChange('database', e.target.value)}
-      />
-      <input
-        placeholder="Username"
-        value={cfg.username ?? ''}
-        onChange={(e) => handleChange('username', e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={cfg.password ?? ''}
-        onChange={(e) => handleChange('password', e.target.value)}
-      />
-      <label>
-        <input
-          type="checkbox"
-          checked={cfg.secure ?? false}
-          onChange={(e) => handleChange('secure', e.target.checked)}
+    <div className="flex flex-col gap-4 max-w-lg">
+      <div className="grid grid-cols-[1fr_120px] gap-3">
+        <div className="space-y-2">
+          <Label>Host</Label>
+          <Input
+            placeholder="localhost"
+            value={cfg.host ?? ''}
+            onChange={(e) => set('host', e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Port</Label>
+          <Input
+            placeholder="9000"
+            value={cfg.port || ''}
+            onChange={(e) => set('port', Number(e.target.value) || 9000)}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Database</Label>
+        <Input
+          placeholder="default"
+          value={cfg.database ?? ''}
+          onChange={(e) => set('database', e.target.value)}
         />
-        Secure (TLS)
-      </label>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Username</Label>
+        <Input
+          placeholder="default"
+          value={cfg.username ?? ''}
+          onChange={(e) => set('username', e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Password</Label>
+        <Input
+          type="password"
+          placeholder="••••••••"
+          value={cfg.password ?? ''}
+          onChange={(e) => set('password', e.target.value)}
+        />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Switch
+          checked={cfg.secure ?? false}
+          onCheckedChange={(v) => set('secure', v)}
+          id="secure"
+        />
+        <Label htmlFor="secure" className="cursor-pointer">
+          Secure (TLS)
+        </Label>
+      </div>
     </div>
-  );
+  )
 }

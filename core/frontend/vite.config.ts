@@ -18,10 +18,18 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@data-voyager/shared-ui': path.resolve(__dirname, '../../shared/frontend/src'),
+      '@data-voyager/sdk': path.resolve(__dirname, '../../sdk/frontend/src'),
+      '@data-voyager/extension-datasource-postgresql': path.resolve(__dirname, '../../extensions/datasources/postgresql/frontend/src'),
+      '@data-voyager/extension-datasource-clickhouse': path.resolve(__dirname, '../../extensions/datasources/clickhouse/frontend/src'),
     },
   },
   optimizeDeps: {
-    exclude: ['@data-voyager/shared-ui'],
+    exclude: [
+      '@data-voyager/shared-ui',
+      '@data-voyager/sdk',
+      '@data-voyager/extension-datasource-postgresql',
+      '@data-voyager/extension-datasource-clickhouse',
+    ],
   },
   server: {
     port: 3000,

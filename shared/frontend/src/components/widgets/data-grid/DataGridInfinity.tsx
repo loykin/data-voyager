@@ -9,10 +9,8 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
   const {
     isLoading,
     error,
-    searchableColumns,
     leftFilters,
     rightFilters,
-    enableColumnVisibility = false,
     enableColumnResizing = true,
     enableColumnFilters = false,
     onRowClick,
@@ -28,7 +26,7 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
     rootMargin = '100px',
   } = props
 
-  const { wrapperRef, containerRef, table, rows, isSized, searchValue, handleSearch, measure } =
+  const { wrapperRef, containerRef, table, rows, isSized, measure } =
     useDataGridBase({ ...props, enablePagination: false })
 
   const { loadMoreRef } = useInfiniteScroll({
@@ -51,12 +49,8 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
     <div ref={wrapperRef} className="flex flex-col gap-3 w-full min-w-0 overflow-hidden">
       <DataGridToolbar
         table={table}
-        searchValue={searchValue}
-        onSearch={handleSearch}
-        searchableColumns={searchableColumns}
         leftFilters={leftFilters}
         rightFilters={rightFilters}
-        enableColumnVisibility={enableColumnVisibility}
       />
 
       <div

@@ -109,7 +109,6 @@ export interface DataGridBaseProps<T extends object> extends TableViewConfig<T> 
   rightFilters?: (table: Table<T>) => React.ReactNode
 
   // Column sizing & visibility
-  enableColumnVisibility?: boolean
   visibilityState?: VisibilityState
   /** Initial column pinning — { left: ['id', ...], right: ['id', ...] } */
   initialPinning?: ColumnPinningState

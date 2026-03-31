@@ -9,7 +9,8 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "@data-voyager/sdk": "workspace:*"
+    "@data-voyager/sdk": "workspace:*",
+    "@data-voyager/shared-ui": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

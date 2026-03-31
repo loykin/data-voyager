@@ -1,11 +1,12 @@
 export type {
   DataSource,
+  Connection,
   ConnectionConfig,
   ConnectionTestResult,
-  SchemaInfo,
-  QueryResult,
+  CreateConnectionRequest,
+  UpdateConnectionRequest,
+  TestConnectionRequest,
 } from './model/datasource.types'
-export { DataSourceType } from './model/datasource.types'
 export { datasourceApi } from './api/datasource.api'
 export {
   useDatasources,

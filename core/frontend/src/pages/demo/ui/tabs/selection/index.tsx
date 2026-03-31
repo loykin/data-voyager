@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DataGrid } from '@data-voyager/shared-ui'
+import { DataGrid, ColumnVisibilityDropdown } from '@data-voyager/shared-ui'
 import { SMALL_DATA } from '../../data'
 import { columns } from '../../columns'
 
@@ -25,7 +25,7 @@ export function SelectionTab() {
         data={SMALL_DATA}
         columns={columns}
         enableSorting
-        enableColumnVisibility
+        rightFilters={(table) => <ColumnVisibilityDropdown table={table} />}
         pageSizes={[10, 20, 50]}
         emptyMessage="No employees found"
         checkboxConfig={{

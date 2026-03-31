@@ -1,12 +1,15 @@
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@data-voyager/shared-ui/components/ui/card'
-import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Input } from '@data-voyager/shared-ui/components/ui/input'
 import { Label } from '@data-voyager/shared-ui/components/ui/label'
+import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Switch } from '@data-voyager/shared-ui/components/ui/switch'
-import { Loader2 } from 'lucide-react'
+import { Alert, AlertDescription } from '@data-voyager/shared-ui/components/ui/alert'
+import { Separator } from '@data-voyager/shared-ui/components/ui/separator'
+import { Loader2, Check, X, TestTube } from 'lucide-react'
+import { datasourceRegistry } from '@data-voyager/sdk'
 import { useDatasource, useUpdateDatasource } from '@/entities/datasource'
-import { useState, useEffect } from 'react'
+import { useTestConnection } from '@/features/datasource/test-connection'
 
 export function DatasourceEditPage() {
   const navigate = useNavigate()
@@ -15,104 +18,174 @@ export function DatasourceEditPage() {
 
   const { data: datasource, isLoading } = useDatasource(id)
   const { mutate: updateDatasource, isPending } = useUpdateDatasource()
+  const { testConnection, testing } = useTestConnection()
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    isActive: true,
-  })
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [tags, setTags] = useState('')
+  const [isActive, setIsActive] = useState(true)
+  const [config, setConfig] = useState<Record<string, unknown>>({})
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
   useEffect(() => {
     if (datasource) {
-      setFormData({
-        name: datasource.name,
-        description: datasource.description ?? '',
-        isActive: datasource.isActive,
-      })
+      setName(datasource.name)
+      setDescription(datasource.description ?? '')
+      setTags((datasource.tags ?? []).join(', '))
+      setIsActive(datasource.is_active)
+      try {
+        setConfig(
+          typeof datasource.config === 'string'
+            ? JSON.parse(datasource.config)
+            : (datasource.config as Record<string, unknown>) ?? {}
+        )
+      } catch {
+        setConfig({})
+      }
     }
   }, [datasource])
+
+  const plugin = datasource ? datasourceRegistry.get(datasource.type) : undefined
+  const ConfigComponent = plugin?.configComponent
+
+  const handleTest = async () => {
+    if (!datasource) return
+    setTestResult(null)
+    try {
+      const result = await testConnection({ type: datasource.type, config })
+      setTestResult({ success: result.is_connected, message: result.message })
+    } catch (err) {
+      setTestResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Test failed',
+      })
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     updateDatasource(
-      { id, data: formData },
+      {
+        id,
+        data: {
+          name,
+          description: description || undefined,
+          tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+          is_active: isActive,
+          config,
+        },
+      },
       { onSuccess: () => navigate('/datasource') }
     )
   }
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     )
   }
 
   if (!datasource) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center">
-          <p className="text-destructive mb-4">Datasource not found</p>
-          <Button onClick={() => navigate('/datasource')}>Back to List</Button>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-destructive">Datasource not found</p>
+        <Button onClick={() => navigate('/datasource')}>Back to List</Button>
+      </div>
     )
   }
 
   return (
-    <Card>
-        <CardHeader>
-          <CardTitle>Edit Data Source — {datasource.name}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-            </div>
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Edit — {datasource.name}</h1>
+        <p className="text-sm text-muted-foreground">Update connection settings</p>
+      </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="type">Type</Label>
-              <Input id="type" value={datasource.type} disabled className="bg-muted" />
-              <p className="text-sm text-muted-foreground">Type cannot be changed</p>
-            </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4 max-w-lg">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">General</h2>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="name">Name *</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={formData.isActive}
-                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-              />
-              <Label htmlFor="isActive">Active</Label>
-            </div>
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <Input value={datasource.type} disabled className="bg-muted" />
+          </div>
 
-            <div className="flex gap-4">
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/datasource')}>
-                Cancel
-              </Button>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags</Label>
+            <Input
+              id="tags"
+              placeholder="tag1, tag2"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Switch checked={isActive} onCheckedChange={setIsActive} id="isActive" />
+            <Label htmlFor="isActive" className="cursor-pointer">Active</Label>
+          </div>
+        </section>
+
+        <Separator />
+
+        <section className="flex flex-col gap-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            {plugin ? `${plugin.name} Connection` : `${datasource.type} Connection`}
+          </h2>
+          {ConfigComponent ? (
+            <ConfigComponent config={config} onChange={setConfig} onTest={handleTest} />
+          ) : (
+            <p className="text-sm text-muted-foreground">No configuration UI registered for "{datasource.type}"</p>
+          )}
+        </section>
+
+        {testResult && (
+          <Alert className={testResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+            <div className="flex items-center gap-2">
+              {testResult.success
+                ? <Check className="h-4 w-4 text-green-600" />
+                : <X className="h-4 w-4 text-red-600" />}
+              <AlertDescription className={testResult.success ? 'text-green-800' : 'text-red-800'}>
+                {testResult.message}
+              </AlertDescription>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </Alert>
+        )}
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <Button type="button" variant="outline" onClick={handleTest} disabled={testing}>
+            {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TestTube className="mr-2 h-4 w-4" />}
+            Test Connection
+          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => navigate('/datasource')}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
   )
 }

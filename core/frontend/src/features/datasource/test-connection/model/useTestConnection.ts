@@ -1,16 +1,16 @@
 import { useMutation } from '@tanstack/react-query'
 import { datasourceApi } from '@/entities/datasource'
-import type { ConnectionConfig } from '@/entities/datasource'
+import type { TestConnectionRequest, ConnectionTestResult } from '@/entities/datasource'
 
 export const useTestConnection = () => {
   const mutation = useMutation({
-    mutationFn: (config: ConnectionConfig) => datasourceApi.testConnection(config),
+    mutationFn: (req: TestConnectionRequest) => datasourceApi.testConfig(req),
   })
 
   return {
     testConnection: mutation.mutateAsync,
     testing: mutation.isPending,
-    testResult: mutation.data ?? null,
+    testResult: mutation.data as ConnectionTestResult | null,
     testError: mutation.error?.message ?? null,
     reset: mutation.reset,
   }

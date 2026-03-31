@@ -20,6 +20,15 @@ importers:
 
   core/frontend:
     dependencies:
+      '@data-voyager/extension-datasource-clickhouse':
+        specifier: workspace:*
+        version: link:../../extensions/datasources/clickhouse/frontend
+      '@data-voyager/extension-datasource-postgresql':
+        specifier: workspace:*
+        version: link:../../extensions/datasources/postgresql/frontend
+      '@data-voyager/sdk':
+        specifier: workspace:*
+        version: link:../../sdk/frontend
       '@data-voyager/shared-ui':
         specifier: workspace:*
         version: link:../../shared/frontend
@@ -123,6 +132,9 @@ importers:
       '@data-voyager/sdk':
         specifier: workspace:*
         version: link:../../../../sdk/frontend
+      '@data-voyager/shared-ui':
+        specifier: workspace:*
+        version: link:../../../../shared/frontend
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -139,6 +151,9 @@ importers:
       '@data-voyager/sdk':
         specifier: workspace:*
         version: link:../../../../sdk/frontend
+      '@data-voyager/shared-ui':
+        specifier: workspace:*
+        version: link:../../../../shared/frontend
       react:
         specifier: ^19.0.0
         version: 19.2.4

@@ -1,337 +1,198 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@data-voyager/shared-ui/components/ui/card'
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@data-voyager/shared-ui/components/ui/form'
 import { Input } from '@data-voyager/shared-ui/components/ui/input'
+import { Label } from '@data-voyager/shared-ui/components/ui/label'
 import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@data-voyager/shared-ui/components/ui/select'
 import { Switch } from '@data-voyager/shared-ui/components/ui/switch'
 import { Alert, AlertDescription } from '@data-voyager/shared-ui/components/ui/alert'
+import { Separator } from '@data-voyager/shared-ui/components/ui/separator'
 import { Loader2, Check, X, TestTube } from 'lucide-react'
-import { DataSourceType } from '@/entities/datasource'
-import { useTestConnection } from '@/features/datasource/test-connection'
+import { datasourceRegistry } from '@data-voyager/sdk'
+import type { DatasourcePlugin } from '@data-voyager/sdk'
+import { useQuery } from '@tanstack/react-query'
+import { datasourceApi } from '@/entities/datasource'
 import { useCreateDatasource } from '../model/useCreateDatasource'
-
-const formSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  type: z.nativeEnum(DataSourceType),
-  description: z.string().optional(),
-  host: z.string().min(1, 'Host is required'),
-  port: z.number().min(1, 'Valid port is required'),
-  database: z.string().min(1, 'Database is required'),
-  username: z.string().optional(),
-  password: z.string().optional(),
-  isActive: z.boolean(),
-  tags: z.string().optional(),
-})
-
-type FormData = z.infer<typeof formSchema>
-
-const DEFAULT_PORTS: Record<DataSourceType, number> = {
-  [DataSourceType.PostgreSQL]: 5432,
-  [DataSourceType.ClickHouse]: 9000,
-  [DataSourceType.SQLite]: 0,
-  [DataSourceType.OpenSearch]: 9200,
-}
+import { useTestConnection } from '@/features/datasource/test-connection'
 
 export function DataSourceCreateForm() {
   const navigate = useNavigate()
-  const [connectionTestResult, setConnectionTestResult] = useState<{
-    success: boolean
-    message: string
-  } | null>(null)
+
+  const { data: backendTypes = [] } = useQuery({
+    queryKey: ['connection-types'],
+    queryFn: datasourceApi.getTypes,
+  })
+
+  const availablePlugins: DatasourcePlugin[] = datasourceRegistry
+    .getAll()
+    .filter((p) => backendTypes.includes(p.id))
+
+  const [selectedType, setSelectedType] = useState('')
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [tags, setTags] = useState('')
+  const [isActive, setIsActive] = useState(true)
+  const [config, setConfig] = useState<Record<string, unknown>>({})
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+
+  useEffect(() => {
+    if (!selectedType && availablePlugins.length > 0) {
+      setSelectedType(availablePlugins[0].id)
+    }
+  }, [availablePlugins, selectedType])
+
+  useEffect(() => {
+    setConfig({})
+    setTestResult(null)
+  }, [selectedType])
 
   const { createDatasource, creating } = useCreateDatasource()
   const { testConnection, testing } = useTestConnection()
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      type: DataSourceType.PostgreSQL,
-      description: '',
-      host: 'localhost',
-      port: 5432,
-      database: '',
-      username: '',
-      password: '',
-      isActive: true,
-      tags: '',
-    },
-  })
+  const plugin = datasourceRegistry.get(selectedType)
+  const ConfigComponent = plugin?.configComponent
 
-  const watchedType = form.watch('type')
-
-  React.useEffect(() => {
-    form.setValue('port', DEFAULT_PORTS[watchedType])
-  }, [watchedType, form])
-
-  const handleTestConnection = async () => {
-    const values = form.getValues()
-    setConnectionTestResult(null)
-
+  const handleTest = async () => {
+    if (!selectedType) return
+    setTestResult(null)
     try {
-      const result = await testConnection({
-        type: values.type,
-        host: values.host,
-        port: values.port,
-        database: values.database,
-        username: values.username,
-        password: values.password,
-      })
-      setConnectionTestResult({ success: result.isConnected, message: result.message })
-    } catch (error) {
-      setConnectionTestResult({
+      const result = await testConnection({ type: selectedType, config })
+      setTestResult({ success: result.is_connected, message: result.message })
+    } catch (err) {
+      setTestResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Connection test failed',
+        message: err instanceof Error ? err.message : 'Test failed',
       })
     }
   }
 
-  const onSubmit = async (data: FormData) => {
-    const tags = data.tags ? data.tags.split(',').map((t) => t.trim()).filter(Boolean) : []
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedType) return
     await createDatasource({
-      name: data.name,
-      type: data.type,
-      description: data.description,
-      config: {
-        type: data.type,
-        host: data.host,
-        port: data.port,
-        database: data.database,
-        username: data.username,
-        password: data.password,
-      },
-      isActive: data.isActive,
-      tags,
+      name,
+      type: selectedType,
+      description: description || undefined,
+      tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+      config,
     })
-
     navigate('/datasource')
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create Data Source</CardTitle>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="My Database" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+    <div className="flex flex-col gap-6">
+      {/* Page header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Add Data Source</h1>
+        <p className="text-sm text-muted-foreground">Connect a new database or data service</p>
+      </div>
 
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a database type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={DataSourceType.PostgreSQL}>PostgreSQL</SelectItem>
-                          <SelectItem value={DataSourceType.ClickHouse}>ClickHouse</SelectItem>
-                          <SelectItem value={DataSourceType.SQLite}>SQLite</SelectItem>
-                          <SelectItem value={DataSourceType.OpenSearch}>OpenSearch</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {/* Basic info */}
+        <section className="flex flex-col gap-4 max-w-lg">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">General</h2>
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Optional description" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-2">
+            <Label htmlFor="name">Name *</Label>
+            <Input
+              id="name"
+              placeholder="My Database"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="host"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Host</FormLabel>
-                      <FormControl>
-                        <Input placeholder="localhost" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <div className="space-y-2">
+            <Label htmlFor="type">Type *</Label>
+            <Select value={selectedType} onValueChange={(v) => v !== null && setSelectedType(v)}>
+              <SelectTrigger id="type">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {availablePlugins.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-                <FormField
-                  control={form.control}
-                  name="port"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Port</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              placeholder="Optional"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
 
-                <FormField
-                  control={form.control}
-                  name="database"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Database</FormLabel>
-                      <FormControl>
-                        <Input placeholder="database_name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags</Label>
+            <Input
+              id="tags"
+              placeholder="tag1, tag2"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Comma-separated</p>
+          </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Optional" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <div className="flex items-center gap-3">
+            <Switch checked={isActive} onCheckedChange={setIsActive} id="isActive" />
+            <Label htmlFor="isActive" className="cursor-pointer">Active</Label>
+          </div>
+        </section>
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="Optional" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+        <Separator />
 
-              <FormField
-                control={form.control}
-                name="tags"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tags</FormLabel>
-                    <FormControl>
-                      <Input placeholder="tag1, tag2, tag3" {...field} />
-                    </FormControl>
-                    <FormDescription>Comma-separated tags</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        {/* Extension config */}
+        <section className="flex flex-col gap-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            {plugin ? `${plugin.name} Connection` : 'Connection'}
+          </h2>
 
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active</FormLabel>
-                      <FormDescription>Enable this data source for use</FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+          {ConfigComponent ? (
+            <ConfigComponent config={config} onChange={setConfig} onTest={handleTest} />
+          ) : selectedType ? (
+            <p className="text-sm text-muted-foreground">No configuration UI for "{selectedType}"</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Select a type above to configure the connection.</p>
+          )}
+        </section>
 
-              {connectionTestResult && (
-                <Alert
-                  className={
-                    connectionTestResult.success
-                      ? 'border-green-200 bg-green-50'
-                      : 'border-red-200 bg-red-50'
-                  }
-                >
-                  <div className="flex items-center gap-2">
-                    {connectionTestResult.success ? (
-                      <Check className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <X className="h-4 w-4 text-red-600" />
-                    )}
-                    <AlertDescription
-                      className={connectionTestResult.success ? 'text-green-800' : 'text-red-800'}
-                    >
-                      {connectionTestResult.message}
-                    </AlertDescription>
-                  </div>
-                </Alert>
-              )}
-            </CardContent>
+        {testResult && (
+          <Alert className={testResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+            <div className="flex items-center gap-2">
+              {testResult.success
+                ? <Check className="h-4 w-4 text-green-600" />
+                : <X className="h-4 w-4 text-red-600" />}
+              <AlertDescription className={testResult.success ? 'text-green-800' : 'text-red-800'}>
+                {testResult.message}
+              </AlertDescription>
+            </div>
+          </Alert>
+        )}
 
-            <CardFooter className="flex justify-between">
-              <Button type="button" variant="outline" onClick={handleTestConnection} disabled={testing}>
-                {testing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <TestTube className="mr-2 h-4 w-4" />
-                )}
-                Test Connection
-              </Button>
+        <Separator />
 
-              <div className="flex gap-2">
-                <Button type="button" variant="ghost" onClick={() => navigate('/datasource')}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={creating}>
-                  {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Data Source
-                </Button>
-              </div>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
+        {/* Actions */}
+        <div className="flex items-center justify-between">
+          <Button type="button" variant="outline" onClick={handleTest} disabled={testing || !selectedType}>
+            {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TestTube className="mr-2 h-4 w-4" />}
+            Test Connection
+          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => navigate('/datasource')}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={creating || !selectedType || !name}>
+              {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </Button>
+          </div>
+        </div>
+      </form>
     </div>
   )
 }

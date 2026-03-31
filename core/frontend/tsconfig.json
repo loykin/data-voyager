@@ -17,7 +17,9 @@
     "paths": {
       "@/*": ["./src/*"],
       "@data-voyager/shared-ui": ["../../shared/frontend/src/index.ts"],
-      "@data-voyager/shared-ui/*": ["../../shared/frontend/src/*"]
+      "@data-voyager/shared-ui/*": ["../../shared/frontend/src/*"],
+      "@data-voyager/sdk": ["../../sdk/frontend/src/index.ts"],
+      "@data-voyager/sdk/*": ["../../sdk/frontend/src/*"]
     }
   },
   "include": ["src", "vite.config.ts"],

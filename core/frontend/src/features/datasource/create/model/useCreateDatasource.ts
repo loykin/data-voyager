@@ -1,13 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { datasourceApi, datasourceKeys } from '@/entities/datasource'
-import type { DataSource } from '@/entities/datasource'
+import type { CreateConnectionRequest } from '@/entities/datasource'
 
 export const useCreateDatasource = () => {
   const queryClient = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: (data: Omit<DataSource, 'id' | 'createdAt' | 'updatedAt'>) =>
-      datasourceApi.create(data),
+    mutationFn: (data: CreateConnectionRequest) => datasourceApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all })
     },

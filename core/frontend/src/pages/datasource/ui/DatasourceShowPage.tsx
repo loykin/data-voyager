@@ -41,8 +41,8 @@ export function DatasourceShowPage() {
               <div>
                 <dt className="font-medium text-muted-foreground">Status</dt>
                 <dd>
-                  <Badge variant={datasource.isActive ? 'default' : 'secondary'}>
-                    {datasource.isActive ? 'Active' : 'Inactive'}
+                  <Badge variant={datasource.is_active ? 'default' : 'secondary'}>
+                    {datasource.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </dd>
               </div>

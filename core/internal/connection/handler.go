@@ -187,6 +187,36 @@ func (h *Handler) TestConnection(c *gin.Context, id int64) {
 	})
 }
 
+func (h *Handler) TestConnectionConfig(c *gin.Context) {
+	var body api.TestConnectionRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
+		return
+	}
+	dsType := sdk.DataSourceType(body.Type)
+	configJSON, ok := h.parseAndValidateConfig(c, dsType, body.Config)
+	if !ok {
+		return
+	}
+	plugin, _ := h.registry.Get(dsType)
+	cfg, err := plugin.ParseConfig(configJSON)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to parse config"})
+		return
+	}
+	result, err := plugin.TestConnection(c.Request.Context(), cfg)
+	if err != nil {
+		result = &sdk.ConnectionTestResult{IsConnected: false, Message: err.Error()}
+	}
+	c.JSON(http.StatusOK, api.ConnectionTestResponse{
+		Data: api.ConnectionTestResult{
+			IsConnected: result.IsConnected,
+			Message:     result.Message,
+			LatencyMs:   &result.Latency,
+		},
+	})
+}
+
 func (h *Handler) GetConnectionSchema(c *gin.Context, _ int64) {
 	c.JSON(http.StatusNotImplemented, api.ErrorResponse{Error: "not implemented yet"})
 }

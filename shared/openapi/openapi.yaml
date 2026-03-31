@@ -126,6 +126,29 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /connections/test:
+    post:
+      operationId: testConnectionConfig
+      summary: Test a connection config without saving
+      tags: [connections]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestConnectionRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionTestResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /connections/{id}/test:
     parameters:
       - in: path
@@ -342,6 +365,17 @@ components:
             type: string
         is_active:
           type: boolean
+
+    TestConnectionRequest:
+      type: object
+      required: [type, config]
+      properties:
+        type:
+          type: string
+          minLength: 1
+        config:
+          type: object
+          additionalProperties: true
 
     QueryRequest:
       type: object
