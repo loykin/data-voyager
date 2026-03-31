@@ -66,7 +66,7 @@ export function DatasourceCreateForm() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!selectedType) return
     await createDatasource({

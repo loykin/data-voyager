@@ -34,11 +34,7 @@ export function DatasourceEditPage() {
       setTags((datasource.tags ?? []).join(', '))
       setIsActive(datasource.is_active)
       try {
-        setConfig(
-          typeof datasource.config === 'string'
-            ? JSON.parse(datasource.config)
-            : (datasource.config as Record<string, unknown>) ?? {}
-        )
+        setConfig(datasource.config ?? {})
       } catch {
         setConfig({})
       }
@@ -62,7 +58,7 @@ export function DatasourceEditPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     updateDatasource(
       {
