@@ -23,6 +23,31 @@ func NewHandler(repo Repository, registry *datasource.Registry) *Handler {
 	return &Handler{repo: repo, registry: registry}
 }
 
+// parseAndValidateConfig marshals config map → JSON, parses and validates via plugin.
+// Returns the serialized JSON on success, or writes an error response and returns nil.
+func (h *Handler) parseAndValidateConfig(c *gin.Context, dsType sdk.DataSourceType, rawConfig map[string]interface{}) (json.RawMessage, bool) {
+	plugin, exists := h.registry.Get(dsType)
+	if !exists {
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: "unsupported connection type"})
+		return nil, false
+	}
+	configJSON, err := json.Marshal(rawConfig)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to serialize config"})
+		return nil, false
+	}
+	cfg, err := plugin.ParseConfig(configJSON)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("failed to parse config: %s", err)})
+		return nil, false
+	}
+	if err := plugin.ValidateConfig(cfg); err != nil {
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("invalid config: %s", err)})
+		return nil, false
+	}
+	return configJSON, true
+}
+
 func (h *Handler) ListConnections(c *gin.Context, params api.ListConnectionsParams) {
 	filter := Filter{}
 	if params.Type != nil {
@@ -55,24 +80,8 @@ func (h *Handler) CreateConnection(c *gin.Context) {
 		return
 	}
 
-	plugin, exists := h.registry.Get(sdk.DataSourceType(body.Type))
-	if !exists {
-		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: "unsupported connection type"})
-		return
-	}
-
-	configJSON, err := json.Marshal(body.Config)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to serialize config"})
-		return
-	}
-	cfg, err := plugin.ParseConfig(configJSON)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("failed to parse config: %s", err)})
-		return
-	}
-	if err := plugin.ValidateConfig(cfg); err != nil {
-		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("invalid config: %s", err)})
+	configJSON, ok := h.parseAndValidateConfig(c, sdk.DataSourceType(body.Type), body.Config)
+	if !ok {
 		return
 	}
 
@@ -127,23 +136,8 @@ func (h *Handler) UpdateConnection(c *gin.Context, id int64) {
 		conn.IsActive = *body.IsActive
 	}
 	if body.Config != nil {
-		plugin, exists := h.registry.Get(conn.Type)
-		if !exists {
-			c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: "plugin not found for type"})
-			return
-		}
-		configJSON, err := json.Marshal(body.Config)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to serialize config"})
-			return
-		}
-		cfg, err := plugin.ParseConfig(configJSON)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("failed to parse config: %s", err)})
-			return
-		}
-		if err := plugin.ValidateConfig(cfg); err != nil {
-			c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("invalid config: %s", err)})
+		configJSON, ok := h.parseAndValidateConfig(c, conn.Type, *body.Config)
+		if !ok {
 			return
 		}
 		conn.Config = configJSON
