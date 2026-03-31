@@ -1,0 +1,469 @@
+openapi: 3.0.3
+
+info:
+  title: Data Voyager API
+  version: 0.1.0
+  description: Data Voyager REST API
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: connections
+    description: Data source connection management
+
+paths:
+  /connections:
+    get:
+      operationId: listConnections
+      summary: List all connections
+      tags: [connections]
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+          description: Filter by datasource type
+        - in: query
+          name: is_active
+          schema:
+            type: boolean
+          description: Filter by active status
+        - in: query
+          name: created_by
+          schema:
+            type: string
+          description: Filter by creator
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionListResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createConnection
+      summary: Create a connection
+      tags: [connections]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConnectionRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /connections/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+
+    get:
+      operationId: getConnection
+      summary: Get a connection by ID
+      tags: [connections]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      operationId: updateConnection
+      summary: Update a connection
+      tags: [connections]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConnectionRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      operationId: deleteConnection
+      summary: Delete a connection
+      tags: [connections]
+      responses:
+        "204":
+          description: No Content
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /connections/{id}/test:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+    post:
+      operationId: testConnection
+      summary: Test a connection
+      tags: [connections]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionTestResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /connections/{id}/schema:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      operationId: getConnectionSchema
+      summary: Get datasource schema for a connection
+      tags: [connections]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionSchemaResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+
+  /connections/{id}/query:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+    post:
+      operationId: queryConnection
+      summary: Execute a query through a connection
+      tags: [connections]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+
+  /connection-types:
+    get:
+      operationId: listConnectionTypes
+      summary: List supported connection types
+      tags: [connections]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionTypesResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /connection-stats:
+    get:
+      operationId: getConnectionStats
+      summary: Get connection statistics
+      tags: [connections]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionStatsResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  schemas:
+    Connection:
+      type: object
+      required: [id, name, type, config, is_active, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        type:
+          type: string
+          description: Datasource type identifier (e.g. "postgresql", "clickhouse")
+        config:
+          type: object
+          additionalProperties: true
+          description: Driver-specific connection configuration
+          x-go-type: json.RawMessage
+        description:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    ConnectionTestResult:
+      type: object
+      required: [is_connected, message]
+      properties:
+        is_connected:
+          type: boolean
+        message:
+          type: string
+        latency_ms:
+          type: integer
+          format: int64
+        tested_at:
+          type: string
+          format: date-time
+
+    ConnectionStats:
+      type: object
+      required: [total_count, active_count, count_by_type]
+      properties:
+        total_count:
+          type: integer
+          format: int64
+        active_count:
+          type: integer
+          format: int64
+        count_by_type:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+
+    CreateConnectionRequest:
+      type: object
+      required: [name, type, config]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          minLength: 1
+        config:
+          type: object
+          additionalProperties: true
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_by:
+          type: string
+
+    UpdateConnectionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        config:
+          type: object
+          additionalProperties: true
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        is_active:
+          type: boolean
+
+    QueryRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+        params:
+          type: array
+          items: {}
+        limit:
+          type: integer
+
+    QueryResult:
+      type: object
+      required: [columns, rows]
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnInfo"
+        rows:
+          type: array
+          items:
+            type: array
+            items: {}
+
+    ColumnInfo:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        nullable:
+          type: boolean
+
+    # Response envelopes
+    ConnectionResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Connection"
+
+    ConnectionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Connection"
+
+    ConnectionTestResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectionTestResult"
+
+    ConnectionTypesResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            type: string
+
+    ConnectionStatsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/ConnectionStats"
+
+    ConnectionSchemaResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+
+    QueryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/QueryResult"
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotImplemented:
+      description: Not Implemented
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

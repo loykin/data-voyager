@@ -2,15 +2,17 @@ package connection
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"strconv"
 
+	"data-voyager/core/internal/api"
 	"data-voyager/core/internal/datasource"
 	"data-voyager/sdk"
+
 	"github.com/gin-gonic/gin"
 )
 
-// Handler handles connection API endpoints.
+// Handler implements api.ServerInterface for the connection domain.
 type Handler struct {
 	repo     Repository
 	registry *datasource.Registry
@@ -21,263 +23,251 @@ func NewHandler(repo Repository, registry *datasource.Registry) *Handler {
 	return &Handler{repo: repo, registry: registry}
 }
 
-// RegisterRoutes registers connection routes.
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
-	g := r.Group("/connections")
-	{
-		g.GET("", h.List)
-		g.POST("", h.Create)
-		g.GET("/:id", h.Get)
-		g.PUT("/:id", h.Update)
-		g.DELETE("/:id", h.Delete)
-		g.POST("/:id/test", h.Test)
-		g.GET("/:id/schema", h.Schema)
-		g.POST("/:id/query", h.Query)
-	}
-
-	r.GET("/connection-types", h.SupportedTypes)
-	r.GET("/connection-stats", h.ConnectionStats)
-}
-
-// CreateRequest is the request body for creating a connection.
-type CreateRequest struct {
-	Name        string                 `json:"name" binding:"required"`
-	Type        sdk.DataSourceType     `json:"type" binding:"required"`
-	Config      map[string]interface{} `json:"config" binding:"required"`
-	Description string                 `json:"description"`
-	Tags        []string               `json:"tags"`
-	CreatedBy   string                 `json:"created_by"`
-}
-
-// UpdateRequest is the request body for updating a connection.
-type UpdateRequest struct {
-	Name        *string                `json:"name,omitempty"`
-	Config      map[string]interface{} `json:"config,omitempty"`
-	Description *string                `json:"description,omitempty"`
-	Tags        []string               `json:"tags,omitempty"`
-	IsActive    *bool                  `json:"is_active,omitempty"`
-}
-
-// QueryRequest is the request body for querying via a connection.
-type QueryRequest struct {
-	Query  string        `json:"query" binding:"required"`
-	Params []interface{} `json:"params,omitempty"`
-	Limit  *int          `json:"limit,omitempty"`
-}
-
-func (h *Handler) List(c *gin.Context) {
+func (h *Handler) ListConnections(c *gin.Context, params api.ListConnectionsParams) {
 	filter := Filter{}
-
-	if t := c.Query("type"); t != "" {
-		filter.Type = sdk.DataSourceType(t)
+	if params.Type != nil {
+		filter.Type = sdk.DataSourceType(*params.Type)
 	}
-	if s := c.Query("is_active"); s != "" {
-		if v, err := strconv.ParseBool(s); err == nil {
-			filter.IsActive = &v
-		}
+	if params.IsActive != nil {
+		filter.IsActive = params.IsActive
 	}
-	if v := c.Query("created_by"); v != "" {
-		filter.CreatedBy = v
+	if params.CreatedBy != nil {
+		filter.CreatedBy = *params.CreatedBy
 	}
 
 	conns, err := h.repo.List(c.Request.Context(), filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": conns})
+
+	apiConns := make([]api.Connection, len(conns))
+	for i, conn := range conns {
+		apiConns[i] = toAPIConnection(conn)
+	}
+	c.JSON(http.StatusOK, api.ConnectionListResponse{Data: apiConns})
 }
 
-func (h *Handler) Create(c *gin.Context) {
-	var req CreateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (h *Handler) CreateConnection(c *gin.Context) {
+	var body api.CreateConnectionRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	plugin, exists := h.registry.Get(req.Type)
+	plugin, exists := h.registry.Get(sdk.DataSourceType(body.Type))
 	if !exists {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported connection type"})
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: "unsupported connection type"})
 		return
 	}
 
-	configJSON, err := json.Marshal(req.Config)
+	configJSON, err := json.Marshal(body.Config)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to serialize config"})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to serialize config"})
 		return
 	}
 	cfg, err := plugin.ParseConfig(configJSON)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse config: " + err.Error()})
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("failed to parse config: %s", err)})
 		return
 	}
 	if err := plugin.ValidateConfig(cfg); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid config: " + err.Error()})
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("invalid config: %s", err)})
 		return
 	}
 
 	conn := &Connection{
-		Name:        req.Name,
-		Type:        req.Type,
+		Name:        body.Name,
+		Type:        sdk.DataSourceType(body.Type),
 		Config:      configJSON,
-		Description: req.Description,
-		Tags:        req.Tags,
-		CreatedBy:   req.CreatedBy,
+		Description: strVal(body.Description),
+		Tags:        sliceVal(body.Tags),
+		CreatedBy:   strVal(body.CreatedBy),
 		IsActive:    true,
 	}
 	if err := h.repo.Create(c.Request.Context(), conn); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"data": conn})
+	c.JSON(http.StatusCreated, api.ConnectionResponse{Data: toAPIConnection(conn)})
 }
 
-func (h *Handler) Get(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
+func (h *Handler) GetConnection(c *gin.Context, id int64) {
 	conn, err := h.repo.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": conn})
+	c.JSON(http.StatusOK, api.ConnectionResponse{Data: toAPIConnection(conn)})
 }
 
-func (h *Handler) Update(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-
-	var req UpdateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
+func (h *Handler) UpdateConnection(c *gin.Context, id int64) {
 	conn, err := h.repo.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
 		return
 	}
 
-	if req.Name != nil {
-		conn.Name = *req.Name
+	var body api.UpdateConnectionRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
+		return
 	}
-	if req.Description != nil {
-		conn.Description = *req.Description
+
+	if body.Name != nil {
+		conn.Name = *body.Name
 	}
-	if req.Tags != nil {
-		conn.Tags = req.Tags
+	if body.Description != nil {
+		conn.Description = *body.Description
 	}
-	if req.IsActive != nil {
-		conn.IsActive = *req.IsActive
+	if body.Tags != nil {
+		conn.Tags = *body.Tags
 	}
-	if req.Config != nil {
+	if body.IsActive != nil {
+		conn.IsActive = *body.IsActive
+	}
+	if body.Config != nil {
 		plugin, exists := h.registry.Get(conn.Type)
-		if exists {
-			configJSON, err := json.Marshal(req.Config)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to serialize config"})
-				return
-			}
-			cfg, err := plugin.ParseConfig(configJSON)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse config: " + err.Error()})
-				return
-			}
-			if err := plugin.ValidateConfig(cfg); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid config: " + err.Error()})
-				return
-			}
-			conn.Config = configJSON
+		if !exists {
+			c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: "plugin not found for type"})
+			return
 		}
+		configJSON, err := json.Marshal(body.Config)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to serialize config"})
+			return
+		}
+		cfg, err := plugin.ParseConfig(configJSON)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("failed to parse config: %s", err)})
+			return
+		}
+		if err := plugin.ValidateConfig(cfg); err != nil {
+			c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: fmt.Sprintf("invalid config: %s", err)})
+			return
+		}
+		conn.Config = configJSON
 	}
 
 	if err := h.repo.Update(c.Request.Context(), conn); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": conn})
+	c.JSON(http.StatusOK, api.ConnectionResponse{Data: toAPIConnection(conn)})
 }
 
-func (h *Handler) Delete(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
+func (h *Handler) DeleteConnection(c *gin.Context, id int64) {
 	if err := h.repo.Delete(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusNoContent, nil)
+	c.Status(http.StatusNoContent)
 }
 
-func (h *Handler) Test(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
+func (h *Handler) TestConnection(c *gin.Context, id int64) {
 	conn, err := h.repo.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
 		return
 	}
 	plugin, exists := h.registry.Get(conn.Type)
 	if !exists {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "plugin not found for type"})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "plugin not found for type"})
 		return
 	}
 	cfg, err := plugin.ParseConfig(conn.Config)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to parse config"})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to parse config"})
 		return
 	}
 	result, err := plugin.TestConnection(c.Request.Context(), cfg)
 	if err != nil {
 		result = &sdk.ConnectionTestResult{IsConnected: false, Message: err.Error()}
 	}
-	c.JSON(http.StatusOK, gin.H{"data": result})
+	c.JSON(http.StatusOK, api.ConnectionTestResponse{
+		Data: api.ConnectionTestResult{
+			IsConnected: result.IsConnected,
+			Message:     result.Message,
+			LatencyMs:   &result.Latency,
+		},
+	})
 }
 
-func (h *Handler) Schema(c *gin.Context) {
-	_, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+func (h *Handler) GetConnectionSchema(c *gin.Context, _ int64) {
+	c.JSON(http.StatusNotImplemented, api.ErrorResponse{Error: "not implemented yet"})
+}
+
+func (h *Handler) QueryConnection(c *gin.Context, _ int64) {
+	var body api.QueryRequest
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented yet"})
+	c.JSON(http.StatusNotImplemented, api.ErrorResponse{Error: "not implemented yet"})
 }
 
-func (h *Handler) Query(c *gin.Context) {
-	_, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
+func (h *Handler) ListConnectionTypes(c *gin.Context) {
+	types := h.registry.GetSupportedTypes()
+	strs := make([]string, len(types))
+	for i, t := range types {
+		strs[i] = string(t)
 	}
-	var req QueryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented yet"})
+	c.JSON(http.StatusOK, api.ConnectionTypesResponse{Data: strs})
 }
 
-func (h *Handler) SupportedTypes(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"data": h.registry.GetSupportedTypes()})
-}
-
-func (h *Handler) ConnectionStats(c *gin.Context) {
+func (h *Handler) GetConnectionStats(c *gin.Context) {
 	stats, err := h.repo.Stats(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": stats})
+	countByType := make(map[string]int64, len(stats.CountByType))
+	for k, v := range stats.CountByType {
+		countByType[string(k)] = v
+	}
+	c.JSON(http.StatusOK, api.ConnectionStatsResponse{
+		Data: api.ConnectionStats{
+			TotalCount:  stats.TotalCount,
+			ActiveCount: stats.ActiveCount,
+			CountByType: countByType,
+		},
+	})
+}
+
+// -- helpers --
+
+func toAPIConnection(c *Connection) api.Connection {
+	conn := api.Connection{
+		Id:        c.ID,
+		Name:      c.Name,
+		Type:      string(c.Type),
+		Config:    c.Config,
+		IsActive:  c.IsActive,
+		CreatedAt: c.CreatedAt,
+		UpdatedAt: c.UpdatedAt,
+	}
+	if c.Description != "" {
+		conn.Description = &c.Description
+	}
+	if c.CreatedBy != "" {
+		conn.CreatedBy = &c.CreatedBy
+	}
+	if len(c.Tags) > 0 {
+		conn.Tags = &c.Tags
+	}
+	return conn
+}
+
+func strVal(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func sliceVal(s *[]string) []string {
+	if s == nil {
+		return nil
+	}
+	return *s
 }

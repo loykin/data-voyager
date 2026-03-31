@@ -25,12 +25,22 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
 	@echo ''
 
-generate: ## Generate extension loaders from meta/configs/$(SITE_MODE).json
+generate: generate-api ## Generate extension loaders and API types
 	@echo '$(CYAN)Generating extension loaders (SITE_MODE=$(SITE_MODE))...$(NC)'
 	@SITE_MODE=$(SITE_MODE) go run meta/scripts/generate.go --root .
 	@SITE_MODE=$(SITE_MODE) npx tsx meta/scripts/generate.ts --root .
 	@echo '$(GREEN)✓ Generated core/internal/generated/extensions.go$(NC)'
 	@echo '$(GREEN)✓ Generated core/frontend/src/generated/extension-loader.ts$(NC)'
+
+generate-api: ## Generate Go types and TypeScript client from shared/openapi/openapi.yaml
+	@echo '$(CYAN)Generating API types from OpenAPI spec...$(NC)'
+	@cd core && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest \
+		--config oapi-codegen.yaml \
+		../shared/openapi/openapi.yaml
+	@npx openapi-typescript shared/openapi/openapi.yaml \
+		-o core/frontend/src/generated/api/schema.d.ts
+	@echo '$(GREEN)✓ Generated core/internal/api/api.gen.go$(NC)'
+	@echo '$(GREEN)✓ Generated core/frontend/src/generated/api/schema.d.ts$(NC)'
 
 install: ## Install all dependencies (Go + pnpm)
 	@echo '$(CYAN)Installing dependencies...$(NC)'
