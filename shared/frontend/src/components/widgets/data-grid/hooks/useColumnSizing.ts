@@ -28,6 +28,7 @@ export function useColumnSizing<T extends object>({
   const userResized = useRef(new Set<string>())
   const lastComputed = useRef<ColumnSizingState>({})
   const lastContainerWidth = useRef<number>(0)
+  const lastFlexFixedWidth = useRef<number | null>(null)
   const hasSized = useRef(false)
   const [state, setState] = useState<SizingState>({ sizing: {}, isSized: false })
 
@@ -110,21 +111,28 @@ export function useColumnSizing<T extends object>({
       const containerWidthChanged = Math.abs(containerWidth - prevContainerWidth) > 1
       const anyUserResized = flexCols.some((col) => userResized.current.has(getColId(col)))
 
+      const freeCols = flexCols.filter((col) => !userResized.current.has(getColId(col)))
+      const totalFlex = freeCols.reduce((sum, col) => sum + col.meta!.flex!, 0)
+      const fixedWidth = cols
+        .filter((col) => col.meta?.flex == null)
+        .reduce((sum, col) => {
+          const colId = getColId(col)
+          const colDefSize = typeof col.size === 'number' ? col.size : 150
+          return sum + (newSizing[colId] ?? currentSizing[colId] ?? colDefSize)
+        }, 0)
+      const userResizedFlexWidth = flexCols
+        .filter((col) => userResized.current.has(getColId(col)))
+        .reduce((sum, col) => sum + (currentSizing[getColId(col)] ?? 0), 0)
+      const fixedWidthChanged = lastFlexFixedWidth.current !== null && lastFlexFixedWidth.current !== fixedWidth
+
       if (anyUserResized && !containerWidthChanged) {
         // User manually resized a flex column and container unchanged: freeze flex sizes.
-      } else if (!containerWidthChanged && hasSized.current) {
-        // Container unchanged after initial sizing: skip redistribution.
+      } else if (!containerWidthChanged && hasSized.current && !fixedWidthChanged) {
+        // Container unchanged and fixed column sizes stable: skip redistribution.
       } else {
-        const totalFlex = flexCols.reduce((sum, col) => sum + col.meta!.flex!, 0)
-        const fixedWidth = cols
-          .filter((col) => col.meta?.flex == null)
-          .reduce((sum, col) => {
-            const colId = getColId(col)
-            return sum + (newSizing[colId] ?? currentSizing[colId] ?? 150)
-          }, 0)
-        const availableWidth = Math.max(0, containerWidth - fixedWidth)
+        lastFlexFixedWidth.current = fixedWidth
+        const availableWidth = Math.max(0, containerWidth - fixedWidth - userResizedFlexWidth)
         let distributed = 0
-        const freeCols = flexCols.filter((col) => !userResized.current.has(getColId(col)))
         for (let i = 0; i < freeCols.length; i++) {
           const col = freeCols[i]!
           const colId = getColId(col)
@@ -181,6 +189,7 @@ export function useColumnSizing<T extends object>({
     userResized.current.clear()
     lastComputed.current = {}
     lastContainerWidth.current = 0
+    lastFlexFixedWidth.current = null
     hasSized.current = false
     setState({ sizing: {}, isSized: false })
     measure()

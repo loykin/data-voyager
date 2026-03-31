@@ -476,7 +476,7 @@ function DataGridFlexBody<T extends object>({
         {Array.from({ length: 6 }).map((_, i) => (
           <TableRow key={i} className="flex w-full">
             {visibleLeafColumns.map((col) => (
-              <TableCell key={col.id} className={cn('px-3 py-2', bordered && 'border-r border-border')} style={colStyle(col)}>
+              <TableCell key={col.id} data-col-id={col.id} className={cn('px-3 py-2', bordered && 'border-r border-border')} style={colStyle(col)}>
                 <div className="h-4 animate-pulse rounded bg-muted" />
               </TableCell>
             ))}
