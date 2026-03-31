@@ -15,7 +15,7 @@ import { datasourceApi } from '@/entities/datasource'
 import { useCreateDatasource } from '../model/useCreateDatasource'
 import { useTestConnection } from '@/features/datasource/test-connection'
 
-export function DataSourceCreateForm() {
+export function DatasourceCreateForm() {
   const navigate = useNavigate()
 
   const { data: backendTypes = [] } = useQuery({
@@ -83,7 +83,7 @@ export function DataSourceCreateForm() {
     <div className="flex flex-col gap-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Add Data Source</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Add Datasource</h1>
         <p className="text-sm text-muted-foreground">Connect a new database or data service</p>
       </div>
 

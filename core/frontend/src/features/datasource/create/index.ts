@@ -1,2 +1,2 @@
-export { DataSourceCreateForm } from './ui/DataSourceCreateForm'
+export { DatasourceCreateForm } from './ui/DatasourceCreateForm'
 export { useCreateDatasource } from './model/useCreateDatasource'

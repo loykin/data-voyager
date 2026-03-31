@@ -11,7 +11,7 @@ interface Props {
   typeFilter?: string
 }
 
-export function DataSourceList({ typeFilter }: Props) {
+export function DatasourceList({ typeFilter }: Props) {
   const navigate = useNavigate()
   const { data, isLoading, error } = useDatasources(typeFilter)
   const { mutate: deleteDatasource } = useDeleteDatasource()
@@ -29,7 +29,7 @@ export function DataSourceList({ typeFilter }: Props) {
       <div className="flex justify-end">
         <Button onClick={() => navigate('/datasource/create')}>
           <Plus />
-          Add Data Source
+          Add Datasource
         </Button>
       </div>
 
@@ -51,7 +51,7 @@ export function DataSourceList({ typeFilter }: Props) {
             />
           </div>
         )}
-        emptyMessage="No data sources yet. Add your first one."
+        emptyMessage="No datasources yet. Add your first one."
         pageSizes={[10, 25, 50]}
       />
     </div>

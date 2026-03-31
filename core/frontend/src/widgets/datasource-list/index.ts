@@ -1,1 +1,1 @@
-export { DataSourceList } from './ui/DataSourceList'
+export { DatasourceList } from './ui/DatasourceList'

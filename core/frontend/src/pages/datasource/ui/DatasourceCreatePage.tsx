@@ -1,5 +1,5 @@
-import { DataSourceCreateForm } from '@/features/datasource/create'
+import { DatasourceCreateForm } from '@/features/datasource/create'
 
 export function DatasourceCreatePage() {
-  return <DataSourceCreateForm />
+  return <DatasourceCreateForm />
 }

@@ -25,7 +25,7 @@ export function DatasourceShowPage() {
   return (
     <Card>
         <CardHeader>
-          <CardTitle>Data Source Details {id ? `#${id}` : ''}</CardTitle>
+          <CardTitle>Datasource Details {id ? `#${id}` : ''}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {datasource ? (
