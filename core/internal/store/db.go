@@ -35,9 +35,14 @@ type Repos struct {
 
 // Open opens a sqlx.DB connection and optionally runs goose migrations.
 func Open(cfg config.DBConfig) (*sqlx.DB, error) {
-	driver := normalizeDriver(cfg.Driver)
+	driver := cfg.Driver()
 
-	db, err := sqlx.Open(driver, cfg.DSN)
+	dsn, err := cfg.DSN()
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := sqlx.Open(driver, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open db (%s): %w", driver, err)
 	}
@@ -45,8 +50,8 @@ func Open(cfg config.DBConfig) (*sqlx.DB, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("ping db (%s): %w", driver, err)
 	}
-	if cfg.Migrate {
-		if err := runMigrations(db, cfg.Driver); err != nil {
+	if cfg.MigrateOnStart {
+		if err := runMigrations(db, cfg.Type); err != nil {
 			_ = db.Close()
 			return nil, fmt.Errorf("migrate (%s): %w", driver, err)
 		}
@@ -56,39 +61,26 @@ func Open(cfg config.DBConfig) (*sqlx.DB, error) {
 
 // NewRepos returns all repositories wired to the given driver.
 // Callers depend only on Repos — driver selection is fully encapsulated here.
-func NewRepos(db *sqlx.DB, driver string) (*Repos, error) {
-	switch driver {
+func NewRepos(db *sqlx.DB, cfg config.DBConfig) (*Repos, error) {
+	switch cfg.Type {
 	case "postgres", "postgresql":
-		return &Repos{
-			Connection: stpostgres.NewConnectionRepo(db),
-		}, nil
+		return &Repos{Connection: stpostgres.NewConnectionRepo(db)}, nil
 	case "sqlite", "sqlite3":
-		return &Repos{
-			Connection: stsqlite.NewConnectionRepo(db),
-		}, nil
+		return &Repos{Connection: stsqlite.NewConnectionRepo(db)}, nil
 	case "mysql":
-		return &Repos{
-			Connection: stmysql.NewConnectionRepo(db),
-		}, nil
+		return &Repos{Connection: stmysql.NewConnectionRepo(db)}, nil
 	default:
-		return nil, fmt.Errorf("unsupported driver: %s", driver)
+		return nil, fmt.Errorf("unsupported metadata_store.type: %s", cfg.Type)
 	}
 }
 
-func normalizeDriver(driver string) string {
-	if driver == "postgresql" {
-		return "postgres"
-	}
-	return driver
-}
-
-func runMigrations(db *sqlx.DB, driver string) error {
+func runMigrations(db *sqlx.DB, dbType string) error {
 	var (
 		fs      embed.FS
 		dir     string
 		dialect string
 	)
-	switch driver {
+	switch dbType {
 	case "postgres", "postgresql":
 		fs, dir, dialect = postgresMigrations, "migrations/postgres", "postgres"
 	case "sqlite", "sqlite3":
@@ -96,7 +88,7 @@ func runMigrations(db *sqlx.DB, driver string) error {
 	case "mysql":
 		fs, dir, dialect = mysqlMigrations, "migrations/mysql", "mysql"
 	default:
-		return fmt.Errorf("unsupported driver: %s", driver)
+		return fmt.Errorf("unsupported metadata_store.type: %s", dbType)
 	}
 
 	goose.SetBaseFS(fs)

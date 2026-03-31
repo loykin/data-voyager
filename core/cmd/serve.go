@@ -73,7 +73,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 	defer func() { _ = db.Close() }()
 
-	repos, err := store.NewRepos(db, cfg.MetadataStore.Driver)
+	repos, err := store.NewRepos(db, cfg.MetadataStore)
 	if err != nil {
 		return fmt.Errorf("failed to initialize repositories: %w", err)
 	}

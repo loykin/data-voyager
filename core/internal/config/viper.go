@@ -62,9 +62,12 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.write_timeout", 30)
 	v.SetDefault("server.max_body_size", 10*1024*1024)
 
-	v.SetDefault("metadata_store.driver", "sqlite")
-	v.SetDefault("metadata_store.dsn", "./data/voyager.db")
+	v.SetDefault("metadata_store.type", "sqlite")
 	v.SetDefault("metadata_store.migrate_on_start", true)
+	v.SetDefault("metadata_store.sqlite.path", "./data/voyager.db")
+	v.SetDefault("metadata_store.postgresql.port", 5432)
+	v.SetDefault("metadata_store.postgresql.ssl_mode", "disable")
+	v.SetDefault("metadata_store.mysql.port", 3306)
 
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "text")
@@ -81,34 +84,17 @@ func setDefaults(v *viper.Viper) {
 
 // Validate validates the Viper configuration.
 func (c *ViperConfig) Validate() error {
-	if c.Server.Port <= 0 || c.Server.Port > 65535 {
-		return fmt.Errorf("invalid server port: %d", c.Server.Port)
-	}
+	return c.Config().Validate()
+}
 
-	if c.MetadataStore.Driver == "" {
-		return fmt.Errorf("metadata_store.driver is required")
+// Config converts ViperConfig to Config.
+func (c *ViperConfig) Config() *Config {
+	return &Config{
+		Server:        c.Server,
+		MetadataStore: c.MetadataStore,
+		Logging:       c.Logging,
+		Security:      c.Security,
 	}
-	validDrivers := map[string]bool{
-		"sqlite": true, "postgres": true, "postgresql": true, "mysql": true,
-	}
-	if !validDrivers[c.MetadataStore.Driver] {
-		return fmt.Errorf("unsupported metadata_store.driver: %s", c.MetadataStore.Driver)
-	}
-	if c.MetadataStore.DSN == "" {
-		return fmt.Errorf("metadata_store.dsn is required")
-	}
-
-	validLevels := map[string]bool{"debug": true, "info": true, "warn": true, "error": true}
-	if !validLevels[c.Logging.Level] {
-		return fmt.Errorf("invalid log level: %s", c.Logging.Level)
-	}
-
-	validFormats := map[string]bool{"json": true, "text": true}
-	if !validFormats[c.Logging.Format] {
-		return fmt.Errorf("invalid log format: %s", c.Logging.Format)
-	}
-
-	return nil
 }
 
 // WriteDefaultConfig writes a default configuration file.

@@ -70,9 +70,23 @@ var showConfigCmd = &cobra.Command{
 		fmt.Printf("    Max Body Size: %d bytes\n", cfg.Server.MaxBodySize)
 
 		fmt.Printf("  Metadata Store:\n")
-		fmt.Printf("    Driver: %s\n", cfg.MetadataStore.Driver)
-		fmt.Printf("    DSN: %s\n", cfg.MetadataStore.DSN)
-		fmt.Printf("    Migrate on Start: %t\n", cfg.MetadataStore.Migrate)
+		fmt.Printf("    Type: %s\n", cfg.MetadataStore.Type)
+		fmt.Printf("    Migrate on Start: %t\n", cfg.MetadataStore.MigrateOnStart)
+		switch cfg.MetadataStore.Type {
+		case "sqlite", "sqlite3":
+			fmt.Printf("    Path: %s\n", cfg.MetadataStore.SQLite.Path)
+		case "postgres", "postgresql":
+			pg := cfg.MetadataStore.PostgreSQL
+			fmt.Printf("    Host: %s:%d\n", pg.Host, pg.Port)
+			fmt.Printf("    Database: %s\n", pg.Database)
+			fmt.Printf("    User: %s\n", pg.User)
+			fmt.Printf("    SSL Mode: %s\n", pg.SSLMode)
+		case "mysql":
+			my := cfg.MetadataStore.MySQL
+			fmt.Printf("    Host: %s:%d\n", my.Host, my.Port)
+			fmt.Printf("    Database: %s\n", my.Database)
+			fmt.Printf("    User: %s\n", my.User)
+		}
 
 		fmt.Printf("  Logging:\n")
 		fmt.Printf("    Level: %s\n", cfg.Logging.Level)
