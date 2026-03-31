@@ -70,9 +70,9 @@ var showConfigCmd = &cobra.Command{
 		fmt.Printf("    Max Body Size: %d bytes\n", cfg.Server.MaxBodySize)
 
 		fmt.Printf("  Metadata Store:\n")
-		fmt.Printf("    Type: %s\n", cfg.MetadataStore.Type)
-		fmt.Printf("    Connection URL: %s\n", cfg.MetadataStore.ConnectionURL)
-		fmt.Printf("    Migrate on Start: %t\n", cfg.MetadataStore.MigrateOnStart)
+		fmt.Printf("    Driver: %s\n", cfg.MetadataStore.Driver)
+		fmt.Printf("    DSN: %s\n", cfg.MetadataStore.DSN)
+		fmt.Printf("    Migrate on Start: %t\n", cfg.MetadataStore.Migrate)
 
 		fmt.Printf("  Logging:\n")
 		fmt.Printf("    Level: %s\n", cfg.Logging.Level)
