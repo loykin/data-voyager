@@ -365,7 +365,7 @@ function DataGridBodyRow<T extends object>({
             // data-col-id: used by useColumnSizing DOM measurement
             data-col-id={cell.column.id}
             className={cn(
-              'px-3 py-2 overflow-hidden bg-background',
+              'flex items-center px-3 py-1 overflow-hidden bg-background',
               meta?.align === 'right' && 'text-right',
               meta?.align === 'center' && 'text-center',
               bordered && 'border-r border-border',
@@ -476,7 +476,7 @@ function DataGridFlexBody<T extends object>({
         {Array.from({ length: 6 }).map((_, i) => (
           <TableRow key={i} className="flex w-full">
             {visibleLeafColumns.map((col) => (
-              <TableCell key={col.id} data-col-id={col.id} className={cn('px-3 py-2', bordered && 'border-r border-border')} style={colStyle(col)}>
+              <TableCell key={col.id} data-col-id={col.id} className={cn('flex items-center px-3 py-1', bordered && 'border-r border-border')} style={colStyle(col)}>
                 <div className="h-4 animate-pulse rounded bg-muted" />
               </TableCell>
             ))}
@@ -532,7 +532,7 @@ export function DataGridTableView<T extends object>({
   enableColumnResizing = true,
   enableColumnFilters = false,
   tableHeight,
-  estimateRowHeight = 37,
+  estimateRowHeight = 33,
   overscan = 10,
   loadMoreRef,
   isFetchingNextPage,
