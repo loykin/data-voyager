@@ -213,10 +213,11 @@ export function DatetimeSegmentInput({
               aria-valuemax={seg.max}
               tabIndex={disabled ? -1 : 0}
               className={cn(
-                'outline-none rounded-sm px-1 h-6 grid place-items-center leading-none cursor-default select-none',
+                'outline-none rounded-sm px-1 cursor-default select-none',
                 'focus:bg-primary focus:text-primary-foreground',
                 isFocused && 'bg-primary/20',
               )}
+              style={{ height: '24px', lineHeight: '24px' }}
               onKeyDown={(e) => handleKeyDown(e, seg)}
               onBlur={() => handleBlur(seg.key)}
             >
