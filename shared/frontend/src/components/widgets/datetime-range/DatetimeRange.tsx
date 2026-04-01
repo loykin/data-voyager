@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import * as chrono from 'chrono-node';
 import { CalendarDays } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { Button } from '../../ui/button';
@@ -10,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from '../../ui/switch';
 import { Separator } from '../../ui/separator';
 import { DateTimePanel } from './DatetimePanel';
+import { DatetimeSegmentInput } from './DatetimeSegmentInput';
 import {
   DateTimeRangeValue,
   DateTimeRelativeFormat,
@@ -137,49 +137,17 @@ interface SidePanelProps {
   onChange: (value: DateTimeRangeValue) => void;
 }
 
-function pad2(v: number): string {
-  return String(v).padStart(2, '0');
-}
-
-function formatAbsoluteInput(date: Date): string {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
-}
-
-function parseAbsoluteInput(raw: string): Date | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const direct = chrono.parseDate(trimmed);
-  if (direct && !Number.isNaN(direct.getTime())) return direct;
-  const m = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6] ?? '0'));
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
 function SidePanel({ title, value, compareValue, onChange }: SidePanelProps) {
   const compareDate = compareValue ? toDate(compareValue) : undefined;
-  const [absoluteInput, setAbsoluteInput] = useState<string>(() =>
-    formatAbsoluteInput(value.type === 'absolute' ? toDate(value) : new Date()),
-  );
-  const [absoluteInputError, setAbsoluteInputError] = useState<boolean>(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
 
+  const absoluteDate_ = value.type === 'absolute' ? toDate(value) : new Date();
+
   useEffect(() => {
-    if (value.type === 'absolute') {
-      setAbsoluteInput(formatAbsoluteInput(toDate(value)));
-      setAbsoluteInputError(false);
-    } else {
+    if (value.type !== 'absolute') {
       setCalendarVisible(false);
     }
-  }, [value]);
-
-  const commitAbsoluteInput = () => {
-    const parsed = parseAbsoluteInput(absoluteInput);
-    if (!parsed) { setAbsoluteInputError(true); return; }
-    setAbsoluteInputError(false);
-    setAbsoluteInput(formatAbsoluteInput(parsed));
-    onChange(absoluteDate(parsed));
-  };
+  }, [value.type]);
 
   return (
     <div className="flex flex-col w-[268px]">
@@ -193,7 +161,7 @@ function SidePanel({ title, value, compareValue, onChange }: SidePanelProps) {
         onValueChange={(t: string) => {
           setCalendarVisible(false);
           if (t === 'absolute') {
-            onChange(absoluteDate(toDate(value)));
+            onChange(absoluteDate(absoluteDate_));
           } else {
             onChange({ type: 'relative', relativeValue: '5', relativeFormat: 'Minutes ago' });
           }
@@ -208,18 +176,10 @@ function SidePanel({ title, value, compareValue, onChange }: SidePanelProps) {
         <TabsContent value="absolute">
           <div className="flex flex-col gap-1.5 mt-3">
             <div className="flex items-center gap-1.5">
-              <Input
-                value={absoluteInput}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  setAbsoluteInput(e.target.value);
-                  if (absoluteInputError) setAbsoluteInputError(false);
-                }}
-                onBlur={commitAbsoluteInput}
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === 'Enter') { e.preventDefault(); commitAbsoluteInput(); }
-                }}
-                placeholder="YYYY-MM-DD HH:mm:ss"
-                className={cn('h-8 text-xs font-mono', absoluteInputError && 'border-destructive')}
+              <DatetimeSegmentInput
+                value={absoluteDate_}
+                onChange={(d) => onChange(absoluteDate(d))}
+                className="flex-1"
               />
               <Button
                 type="button"
@@ -232,9 +192,6 @@ function SidePanel({ title, value, compareValue, onChange }: SidePanelProps) {
                 <CalendarDays size={14} />
               </Button>
             </div>
-            {absoluteInputError && (
-              <p className="text-xs text-destructive">Valid format: 2026-04-02 14:30:00</p>
-            )}
             {/* Calendar inline — same DOM tree as outer popover, no focus/click interception issues */}
             {calendarVisible && (
               <div className="border-t pt-2 mt-1">
@@ -243,11 +200,9 @@ function SidePanel({ title, value, compareValue, onChange }: SidePanelProps) {
                   compareValue={compareDate}
                   title={title}
                   immediate
-                  onChangeAction={(date) => {
-                    if (!date) return;
-                    onChange(absoluteDate(date));
-                    setAbsoluteInput(formatAbsoluteInput(date));
-                    setAbsoluteInputError(false);
+                  onChangeAction={(d) => {
+                    if (!d) return;
+                    onChange(absoluteDate(d));
                   }}
                 />
               </div>
