@@ -38,6 +38,7 @@ export function DatasourceList({ typeFilter }: Props) {
         columns={cols}
         isLoading={isLoading}
         error={error}
+        bordered={true}
         enableSorting
         searchableColumns={['name', 'type', 'description']}
         leftFilters={(table) => (

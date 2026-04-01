@@ -93,7 +93,7 @@ function DataGridHeaderRow<T extends object>({
   return (
     <TableRow
       className="hover:bg-transparent"
-      style={{ display: 'flex', width: '100%' }}
+      style={{ display: 'flex', width: '100%', height: '36px' }}
     >
       {headerGroup.headers.map((header) => {
         const edge = isPinnedEdge(header.column, table)
@@ -104,7 +104,7 @@ function DataGridHeaderRow<T extends object>({
           // data-col-id: used by useColumnSizing DOM measurement
           data-col-id={header.column.id}
           className={cn(
-            'relative px-3 py-2 text-xs font-medium h-auto bg-background',
+            'relative px-3 text-xs font-medium h-9 bg-muted/40',
             'text-muted-foreground whitespace-normal',
             'select-none group',
             header.column.getCanSort() && 'cursor-pointer',
@@ -157,7 +157,7 @@ function DataGridHeaderRow<T extends object>({
         </TableHead>
         )
       })}
-      {!virtual && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} className="bg-background" />}
+      {!virtual && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} className="bg-muted/40" />}
     </TableRow>
   )
 }
@@ -251,7 +251,7 @@ function DataGridFilterRow<T extends object>({
   return (
     <TableRow
       className="border-b bg-muted/50 hover:bg-muted/50"
-      style={{ display: 'flex', width: '100%' }}
+      style={{ display: 'flex', width: '100%', height: '36px' }}
     >
       {visibleLeafColumns.map((col) => {
         const ft = col.columnDef.meta?.filterType
@@ -624,7 +624,7 @@ export function DataGridTableView<T extends object>({
           }
         >
           <TableHeader
-            className="sticky top-0 z-10 bg-background [&_tr]:border-b"
+            className="sticky top-0 z-10 bg-muted/40 [&_tr]:border-b"
             style={{ display: 'block', transform: 'translateZ(0)', willChange: 'transform' }}
           >
             {headerGroups.map((headerGroup) => (
