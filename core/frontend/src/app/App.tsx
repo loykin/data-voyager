@@ -25,6 +25,9 @@ const ChartDemoPage = React.lazy(() =>
 const HistogramDemoPage = React.lazy(() =>
   import('@/pages/histogram-demo').then((m) => ({ default: m.HistogramDemoPage }))
 )
+const DatetimeDemoPage = React.lazy(() =>
+  import('@/pages/datetime-demo').then((m) => ({ default: m.DatetimeDemoPage }))
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,9 +63,10 @@ export function App() {
               <Route path="/datasource/create" element={<DatasourceCreatePage />} />
               <Route path="/datasource/edit" element={<DatasourceEditPage />} />
               <Route path="/datasource/show" element={<DatasourceShowPage />} />
-              <Route path="/demo"       element={<DataGridDemoPage />} />
-              <Route path="/demo/chart"      element={<ChartDemoPage />} />
-              <Route path="/demo/histogram"  element={<HistogramDemoPage />} />
+              <Route path="/demo" element={<DataGridDemoPage />} />
+              <Route path="/demo/chart" element={<ChartDemoPage />} />
+              <Route path="/demo/histogram" element={<HistogramDemoPage />} />
+              <Route path="/demo/datetime" element={<DatetimeDemoPage />} />
             </Route>
           </Routes>
         </React.Suspense>

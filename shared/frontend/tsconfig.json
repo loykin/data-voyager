@@ -6,15 +6,17 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "declaration": true,
-    "declarationMap": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {}
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src"]
 }
