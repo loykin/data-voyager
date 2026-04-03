@@ -17,7 +17,7 @@ import { Button } from '../../ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover'
 import { ScrollTable } from './ScrollTable'
-import type { TableViewConfig } from './types'
+import type { TableViewConfig, TableWidthMode } from './types'
 import { VIRTUAL_THRESHOLD } from './hooks/useColumnSizing'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,6 +81,7 @@ interface DataGridHeaderRowProps<T extends object>
   headerGroup: HeaderGroup<T>
   table: Table<T>
   virtual: boolean
+  tableWidthMode?: TableWidthMode
 }
 
 function DataGridHeaderRow<T extends object>({
@@ -89,14 +90,18 @@ function DataGridHeaderRow<T extends object>({
   enableColumnResizing,
   virtual,
   bordered,
+  tableWidthMode = 'spacer',
 }: DataGridHeaderRowProps<T>) {
+  const headers = headerGroup.headers
   return (
     <TableRow
       className="hover:bg-transparent"
       style={{ display: 'flex', width: '100%', height: '36px' }}
     >
-      {headerGroup.headers.map((header) => {
+      {headers.map((header, idx) => {
         const edge = isPinnedEdge(header.column, table)
+        const isLast = idx === headers.length - 1
+        const isFillLast = tableWidthMode === 'fill-last' && isLast
         return (
         <TableHead
           key={header.id}
@@ -114,8 +119,8 @@ function DataGridHeaderRow<T extends object>({
           )}
           style={
             virtual
-              ? { display: 'flex', alignItems: 'center', width: header.getSize() }
-              : { ...colStyle(header.column), display: 'flex', alignItems: 'center', overflow: 'hidden' }
+              ? { display: 'flex', alignItems: 'center', width: isFillLast ? undefined : header.getSize(), ...(isFillLast && { flex: 1, minWidth: header.getSize() }) }
+              : { ...colStyle(header.column), display: 'flex', alignItems: 'center', overflow: 'hidden', ...(isFillLast && { flex: 1, width: 'auto' }) }
           }
           onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
         >
@@ -157,7 +162,7 @@ function DataGridHeaderRow<T extends object>({
         </TableHead>
         )
       })}
-      {!virtual && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} className="bg-muted/40" />}
+      {!virtual && tableWidthMode === 'spacer' && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} className="bg-muted/40" />}
     </TableRow>
   )
 }
@@ -240,6 +245,7 @@ interface DataGridFilterRowProps<T extends object>
   visibleLeafColumns: Column<T>[]
   selectOptions: Record<string, string[]>
   virtual: boolean
+  tableWidthMode?: TableWidthMode
 }
 
 function DataGridFilterRow<T extends object>({
@@ -247,6 +253,7 @@ function DataGridFilterRow<T extends object>({
   selectOptions,
   virtual,
   bordered,
+  tableWidthMode = 'spacer',
 }: DataGridFilterRowProps<T>) {
   return (
     <TableRow
@@ -313,7 +320,7 @@ function DataGridFilterRow<T extends object>({
           </TableHead>
         )
       })}
-      {!virtual && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} />}
+      {!virtual && tableWidthMode === 'spacer' && <TableHead style={{ flex: 1, minWidth: 0, padding: 0 }} />}
     </TableRow>
   )
 }
@@ -330,6 +337,8 @@ interface DataGridBodyRowProps<T extends object>
   dataIndex?: number
   measureRef?: (node: Element | null) => void
   showSpacer?: boolean
+  fillLast?: boolean
+  bordered?: boolean
   onActionTrigger?: (row: T, el: HTMLElement) => void
 }
 
@@ -342,9 +351,11 @@ function DataGridBodyRow<T extends object>({
   dataIndex,
   measureRef,
   showSpacer = false,
+  fillLast = false,
   bordered = false,
   onActionTrigger,
 }: DataGridBodyRowProps<T>) {
+  const visibleCells = row.getVisibleCells()
   return (
     <TableRow
       data-index={dataIndex}
@@ -356,9 +367,11 @@ function DataGridBodyRow<T extends object>({
       )}
       style={style}
     >
-      {row.getVisibleCells().map((cell) => {
+      {visibleCells.map((cell, idx) => {
         const meta = cell.column.columnDef.meta
         const edge = isPinnedEdge(cell.column, table)
+        const isLast = idx === visibleCells.length - 1
+        const isFillCell = fillLast && isLast
         return (
           <TableCell
             key={cell.id}
@@ -372,7 +385,7 @@ function DataGridBodyRow<T extends object>({
               edge === 'left-edge' && 'shadow-[1px_0_0_0_hsl(var(--border))]',
               edge === 'right-edge' && 'shadow-[-1px_0_0_0_hsl(var(--border))]',
             )}
-            style={colStyle(cell.column)}
+            style={{ ...colStyle(cell.column), ...(isFillCell && { flex: 1, width: 'auto' }) }}
           >
             {meta?.actions != null ? (
               <Button
@@ -409,6 +422,7 @@ interface DataGridVirtualBodyProps<T extends object>
   table: Table<T>
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>
   onActionTrigger?: (row: T, el: HTMLElement) => void
+  tableWidthMode?: TableWidthMode
 }
 
 function DataGridVirtualBody<T extends object>({
@@ -419,6 +433,7 @@ function DataGridVirtualBody<T extends object>({
   rowCursor,
   bordered,
   onActionTrigger,
+  tableWidthMode = 'spacer',
 }: DataGridVirtualBodyProps<T>) {
   const virtualItems = rowVirtualizer.getVirtualItems()
   const totalSize = rowVirtualizer.getTotalSize()
@@ -439,6 +454,7 @@ function DataGridVirtualBody<T extends object>({
             measureRef={rowVirtualizer.measureElement}
             style={{ position: 'absolute', width: '100%', transform: `translateY(${virtualRow.start}px)` }}
             onActionTrigger={onActionTrigger}
+            fillLast={tableWidthMode === 'fill-last'}
           />
         )
       })}
@@ -456,6 +472,7 @@ interface DataGridFlexBodyProps<T extends object>
   table: Table<T>
   visibleLeafColumns: Column<T>[]
   onActionTrigger?: (row: T, el: HTMLElement) => void
+  tableWidthMode?: TableWidthMode
 }
 
 function DataGridFlexBody<T extends object>({
@@ -468,19 +485,25 @@ function DataGridFlexBody<T extends object>({
   rowCursor,
   bordered,
   onActionTrigger,
+  tableWidthMode = 'spacer',
 }: DataGridFlexBodyProps<T>) {
+  const showSpacer = tableWidthMode === 'spacer'
+  const fillLast = tableWidthMode === 'fill-last'
 
   if (isLoading) {
     return (
       <TableBody style={{ display: 'block' }}>
         {Array.from({ length: 6 }).map((_, i) => (
           <TableRow key={i} className="flex w-full">
-            {visibleLeafColumns.map((col) => (
-              <TableCell key={col.id} data-col-id={col.id} className={cn('flex items-center px-3 py-1', bordered && 'border-r border-border')} style={colStyle(col)}>
-                <div className="h-4 animate-pulse rounded bg-muted" />
-              </TableCell>
-            ))}
-            <TableCell style={{ flex: 1, minWidth: 0, padding: 0 }} />
+            {visibleLeafColumns.map((col, colIdx) => {
+              const isLast = colIdx === visibleLeafColumns.length - 1
+              return (
+                <TableCell key={col.id} data-col-id={col.id} className={cn('flex items-center px-3 py-1', bordered && 'border-r border-border')} style={{ ...colStyle(col), ...(fillLast && isLast && { flex: 1, width: 'auto' }) }}>
+                  <div className="h-4 animate-pulse rounded bg-muted" />
+                </TableCell>
+              )
+            })}
+            {showSpacer && <TableCell style={{ flex: 1, minWidth: 0, padding: 0 }} />}
           </TableRow>
         ))}
       </TableBody>
@@ -509,7 +532,8 @@ function DataGridFlexBody<T extends object>({
           onRowClick={onRowClick}
           rowCursor={rowCursor}
           bordered={bordered}
-          showSpacer
+          showSpacer={showSpacer}
+          fillLast={fillLast}
           onActionTrigger={onActionTrigger}
         />
       ))}
@@ -532,6 +556,7 @@ export function DataGridTableView<T extends object>({
   enableColumnResizing = true,
   enableColumnFilters = false,
   tableHeight,
+  tableWidthMode = 'spacer',
   estimateRowHeight = 33,
   overscan = 10,
   loadMoreRef,
@@ -604,7 +629,6 @@ export function DataGridTableView<T extends object>({
     position: 'relative',
     width: '100%',
     minWidth: 0,
-    scrollbarGutter: 'stable',
     isolation: 'isolate',
     ...(virtual
       ? { height: tableHeight as string | number }
@@ -615,11 +639,11 @@ export function DataGridTableView<T extends object>({
 
   return (
     <>
-      <div ref={containerRef} style={containerStyle}>
+      <div ref={containerRef} style={containerStyle} className="dg-scroll rounded-md">
         <ScrollTable
           style={
             virtual
-              ? { display: 'grid', width: table.getTotalSize() }
+              ? { display: 'grid', width: table.getTotalSize(), minWidth: '100%' }
               : { display: 'block', width: table.getTotalSize(), minWidth: '100%' }
           }
         >
@@ -635,6 +659,7 @@ export function DataGridTableView<T extends object>({
                 enableColumnResizing={enableColumnResizing}
                 virtual={virtual}
                 bordered={bordered}
+                tableWidthMode={tableWidthMode}
               />
             ))}
             {enableColumnFilters && (
@@ -643,6 +668,7 @@ export function DataGridTableView<T extends object>({
                 selectOptions={selectOptions}
                 virtual={virtual}
                 bordered={bordered}
+                tableWidthMode={tableWidthMode}
               />
             )}
           </TableHeader>
@@ -656,6 +682,7 @@ export function DataGridTableView<T extends object>({
               rowCursor={rowCursor}
               bordered={bordered}
               onActionTrigger={actionCol ? handleActionTrigger : undefined}
+              tableWidthMode={tableWidthMode}
             />
           ) : (
             <DataGridFlexBody
@@ -668,6 +695,7 @@ export function DataGridTableView<T extends object>({
               rowCursor={rowCursor}
               bordered={bordered}
               onActionTrigger={actionCol ? handleActionTrigger : undefined}
+              tableWidthMode={tableWidthMode}
             />
           )}
         </ScrollTable>

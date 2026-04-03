@@ -9,5 +9,6 @@ export type {
   DataGridBaseProps,
   TableViewConfig,
   ColumnSizingMode,
+  TableWidthMode,
   CheckboxConfig,
 } from './types'

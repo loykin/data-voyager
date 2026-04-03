@@ -56,6 +56,14 @@ export type DataGridColumnDef<T extends object> = ColumnDef<T, unknown>
 
 export type ColumnSizingMode = 'auto' | 'flex' | 'fixed'
 
+/**
+ * Table width handling strategy:
+ * - 'spacer': Each column independent px + spacer cell fills remaining space (default)
+ * - 'fill-last': Last visible column stretches to fill remaining space
+ * - 'independent': Each column independent px, no fill — right gap when columns are narrow
+ */
+export type TableWidthMode = 'spacer' | 'fill-last' | 'independent'
+
 export interface CheckboxConfig<T extends object> {
   getRowId: (row: T) => string
   selectedIds: Set<string>
@@ -79,6 +87,13 @@ export interface TableViewConfig<T extends object> {
   tableHeight?: string | number | 'auto'
   /** Show vertical dividers between columns */
   bordered?: boolean
+  /**
+   * Table width handling strategy:
+   * - 'spacer': Each column independent px + spacer cell fills remaining space (default)
+   * - 'fill-last': Last visible column stretches to fill remaining space
+   * - 'independent': Each column independent px, no fill — right gap when columns are narrow
+   */
+  tableWidthMode?: TableWidthMode
   /**
    * Estimated row height in px for the virtualizer (default: 37).
    * The virtualizer auto-enables when tableHeight is set and rows >= 100.

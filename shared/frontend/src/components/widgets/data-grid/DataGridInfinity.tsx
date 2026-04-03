@@ -16,6 +16,7 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
     onRowClick,
     rowCursor,
     tableHeight,
+    tableWidthMode,
     emptyMessage,
     bordered,
     estimateRowHeight,
@@ -55,10 +56,12 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
 
       <div
         className={cn(
-          'rounded-md border overflow-hidden min-w-0',
+          'relative rounded-md min-w-0',
           !isSized && 'invisible'
         )}
       >
+        {/* Visual border — absolute overlay so it doesn't affect layout/scroll */}
+        <div className="absolute inset-0 rounded-md border pointer-events-none z-20" />
         <DataGridTableView
           table={table}
           rows={rows}
@@ -70,6 +73,7 @@ export function DataGridInfinity<T extends object>(props: DataGridInfinityProps<
           enableColumnResizing={enableColumnResizing}
           enableColumnFilters={enableColumnFilters}
           tableHeight={tableHeight}
+          tableWidthMode={tableWidthMode}
           bordered={bordered}
           estimateRowHeight={estimateRowHeight}
           overscan={overscan}
