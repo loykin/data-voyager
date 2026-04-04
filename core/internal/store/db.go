@@ -9,6 +9,7 @@ import (
 
 	"data-voyager/core/internal/config"
 	"data-voyager/core/internal/connection"
+	"data-voyager/core/internal/settings"
 	stmysql "data-voyager/core/internal/store/mysql"
 	stpostgres "data-voyager/core/internal/store/postgres"
 	stsqlite "data-voyager/core/internal/store/sqlite"
@@ -31,6 +32,7 @@ var mysqlMigrations embed.FS
 // New service repositories are added here as fields.
 type Repos struct {
 	Connection connection.Repository
+	Settings   settings.Repository
 }
 
 // Open opens a sqlx.DB connection and optionally runs goose migrations.
@@ -64,11 +66,20 @@ func Open(cfg config.DBConfig) (*sqlx.DB, error) {
 func NewRepos(db *sqlx.DB, cfg config.DBConfig) (*Repos, error) {
 	switch cfg.Type {
 	case "postgres", "postgresql":
-		return &Repos{Connection: stpostgres.NewConnectionRepo(db)}, nil
+		return &Repos{
+			Connection: stpostgres.NewConnectionRepo(db),
+			Settings:   stpostgres.NewSettingsRepo(db),
+		}, nil
 	case "sqlite", "sqlite3":
-		return &Repos{Connection: stsqlite.NewConnectionRepo(db)}, nil
+		return &Repos{
+			Connection: stsqlite.NewConnectionRepo(db),
+			Settings:   stsqlite.NewSettingsRepo(db),
+		}, nil
 	case "mysql":
-		return &Repos{Connection: stmysql.NewConnectionRepo(db)}, nil
+		return &Repos{
+			Connection: stmysql.NewConnectionRepo(db),
+			Settings:   stmysql.NewSettingsRepo(db),
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported metadata_store.type: %s", cfg.Type)
 	}

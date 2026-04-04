@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS data_sources (
-    id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id          VARCHAR(36)  NOT NULL PRIMARY KEY,
     name        VARCHAR(255) NOT NULL,
     type        VARCHAR(64)  NOT NULL,
     config      TEXT         NOT NULL,

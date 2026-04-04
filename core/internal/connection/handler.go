@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"data-voyager/core/internal/api"
 	"data-voyager/core/internal/datasource"
 	qb "data-voyager/core/internal/query_builder"
 	"data-voyager/sdk"
-
-	"github.com/gin-gonic/gin"
 )
 
 // Handler implements api.ServerInterface for the connection domain.
@@ -103,8 +105,8 @@ func (h *Handler) CreateConnection(c *gin.Context) {
 	c.JSON(http.StatusCreated, api.ConnectionResponse{Data: toAPIConnection(conn)})
 }
 
-func (h *Handler) GetConnection(c *gin.Context, id int64) {
-	conn, err := h.repo.GetByID(c.Request.Context(), id)
+func (h *Handler) GetConnection(c *gin.Context, id openapi_types.UUID) {
+	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
 		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
 		return
@@ -112,8 +114,8 @@ func (h *Handler) GetConnection(c *gin.Context, id int64) {
 	c.JSON(http.StatusOK, api.ConnectionResponse{Data: toAPIConnection(conn)})
 }
 
-func (h *Handler) UpdateConnection(c *gin.Context, id int64) {
-	conn, err := h.repo.GetByID(c.Request.Context(), id)
+func (h *Handler) UpdateConnection(c *gin.Context, id openapi_types.UUID) {
+	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
 		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
 		return
@@ -152,16 +154,16 @@ func (h *Handler) UpdateConnection(c *gin.Context, id int64) {
 	c.JSON(http.StatusOK, api.ConnectionResponse{Data: toAPIConnection(conn)})
 }
 
-func (h *Handler) DeleteConnection(c *gin.Context, id int64) {
-	if err := h.repo.Delete(c.Request.Context(), id); err != nil {
+func (h *Handler) DeleteConnection(c *gin.Context, id openapi_types.UUID) {
+	if err := h.repo.Delete(c.Request.Context(), id.String()); err != nil {
 		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-func (h *Handler) TestConnection(c *gin.Context, id int64) {
-	conn, err := h.repo.GetByID(c.Request.Context(), id)
+func (h *Handler) TestConnection(c *gin.Context, id openapi_types.UUID) {
+	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
 		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
 		return
@@ -219,11 +221,11 @@ func (h *Handler) TestConnectionConfig(c *gin.Context) {
 	})
 }
 
-func (h *Handler) GetConnectionSchema(c *gin.Context, _ int64) {
+func (h *Handler) GetConnectionSchema(c *gin.Context, _ openapi_types.UUID) {
 	c.JSON(http.StatusNotImplemented, api.ErrorResponse{Error: "not implemented yet"})
 }
 
-func (h *Handler) QueryConnection(c *gin.Context, id int64) {
+func (h *Handler) QueryConnection(c *gin.Context, id openapi_types.UUID) {
 	var body api.QueryRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
@@ -231,7 +233,7 @@ func (h *Handler) QueryConnection(c *gin.Context, id int64) {
 	}
 
 	// 1. Load the stored connection.
-	conn, err := h.repo.GetByID(c.Request.Context(), id)
+	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
 		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
 		return
@@ -324,7 +326,7 @@ func (h *Handler) QueryConnection(c *gin.Context, id int64) {
 	})
 }
 
-func (h *Handler) BatchQueryConnection(c *gin.Context, id int64) {
+func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
 	var body api.BatchQueryRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
@@ -336,7 +338,7 @@ func (h *Handler) BatchQueryConnection(c *gin.Context, id int64) {
 	}
 
 	// Resolve connection + plugin once for all queries.
-	conn, err := h.repo.GetByID(c.Request.Context(), id)
+	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
 		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
 		return
@@ -465,7 +467,7 @@ func (h *Handler) GetConnectionStats(c *gin.Context) {
 
 func toAPIConnection(c *Connection) api.Connection {
 	conn := api.Connection{
-		Id:        c.ID,
+		Id:        uuid.MustParse(c.ID),
 		Name:      c.Name,
 		Type:      string(c.Type),
 		Config:    c.Config,

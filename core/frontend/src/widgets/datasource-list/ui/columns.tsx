@@ -3,8 +3,8 @@ import { Badge } from '@data-voyager/shared-ui/components/ui/badge'
 import type { Connection } from '@/entities/datasource'
 
 export function getColumns(
-  onEdit: (id: number) => void,
-  onDelete: (id: number) => void,
+  onEdit: (id: string) => void,
+  onDelete: (id: string) => void,
 ): DataGridColumnDef<Connection>[] {
   return [
     {

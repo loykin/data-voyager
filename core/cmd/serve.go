@@ -17,6 +17,7 @@ import (
 	"data-voyager/core/internal/datasource"
 	_ "data-voyager/core/internal/generated" // load extension init() registrations
 	"data-voyager/core/internal/logger"
+	"data-voyager/core/internal/settings"
 	"data-voyager/core/internal/store"
 
 	"github.com/gin-gonic/gin"
@@ -87,8 +88,13 @@ func runServe(_ *cobra.Command, _ []string) error {
 	registry := datasource.NewRegistry()
 
 	// Register all service loaders. Add new domains here as the app grows.
+	settingsSvc, err := settings.BuildService(repos.Settings)
+	if err != nil {
+		return fmt.Errorf("failed to initialize settings service: %w", err)
+	}
+
 	loaders := []app.Loader{
-		connection.NewLoader(repos.Connection, registry, cfg),
+		connection.NewLoader(repos.Connection, registry, cfg, settingsSvc),
 	}
 	for _, l := range loaders {
 		if err := l.Load(); err != nil {

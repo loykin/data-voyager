@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS data_sources (
-    id          INTEGER  PRIMARY KEY AUTOINCREMENT,
+    id          TEXT     PRIMARY KEY,
     name        TEXT     NOT NULL UNIQUE,
     type        TEXT     NOT NULL,
     config      TEXT     NOT NULL DEFAULT '{}',

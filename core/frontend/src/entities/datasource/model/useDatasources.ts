@@ -5,7 +5,7 @@ import type { UpdateConnectionRequest } from './datasource.types'
 export const datasourceKeys = {
   all: ['connections'] as const,
   filtered: (type?: string) => ['connections', { type }] as const,
-  one: (id: number) => ['connections', id] as const,
+  one: (id: string) => ['connections', id] as const,
 }
 
 export const useDatasources = (type?: string) => {
@@ -15,7 +15,7 @@ export const useDatasources = (type?: string) => {
   })
 }
 
-export const useDatasource = (id: number) => {
+export const useDatasource = (id: string) => {
   return useQuery({
     queryKey: datasourceKeys.one(id),
     queryFn: () => datasourceApi.getOne(id),
@@ -26,7 +26,7 @@ export const useDatasource = (id: number) => {
 export const useDeleteDatasource = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => datasourceApi.remove(id),
+    mutationFn: (id: string) => datasourceApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all })
     },
@@ -36,7 +36,7 @@ export const useDeleteDatasource = () => {
 export const useUpdateDatasource = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateConnectionRequest }) =>
+    mutationFn: ({ id, data }: { id: string; data: UpdateConnectionRequest }) =>
       datasourceApi.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all })

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 
 	"data-voyager/core/internal/connection"
@@ -36,13 +37,19 @@ func (r *connectionRepo) Create(ctx context.Context, c *connection.Connection) e
 		isActive = 1
 	}
 
+	newID, err := uuid.NewV7()
+	if err != nil {
+		return fmt.Errorf("generate uuid: %w", err)
+	}
+	c.ID = newID.String()
+
 	const q = `
 		INSERT INTO data_sources
-			(name, type, config, description, tags, is_active, created_at, updated_at, created_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			(id, name, type, config, description, tags, is_active, created_at, updated_at, created_by)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	res, err := r.db.ExecContext(ctx, q,
-		c.Name, string(c.Type), string(c.Config),
+	_, err = r.db.ExecContext(ctx, q,
+		c.ID, c.Name, string(c.Type), string(c.Config),
 		c.Description, marshalTags(c.Tags),
 		isActive,
 		c.CreatedAt.Format(time.RFC3339),
@@ -52,19 +59,14 @@ func (r *connectionRepo) Create(ctx context.Context, c *connection.Connection) e
 	if err != nil {
 		return fmt.Errorf("create connection: %w", err)
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		return fmt.Errorf("last insert id: %w", err)
-	}
-	c.ID = id
 	return nil
 }
 
-func (r *connectionRepo) GetByID(ctx context.Context, id int64) (*connection.Connection, error) {
+func (r *connectionRepo) GetByID(ctx context.Context, id string) (*connection.Connection, error) {
 	var row row
 	err := r.db.GetContext(ctx, &row, `SELECT * FROM data_sources WHERE id = ?`, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("connection %d not found", id)
+		return nil, fmt.Errorf("connection %s not found", id)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get connection: %w", err)
@@ -149,7 +151,7 @@ func (r *connectionRepo) Update(ctx context.Context, c *connection.Connection) e
 	return nil
 }
 
-func (r *connectionRepo) Delete(ctx context.Context, id int64) error {
+func (r *connectionRepo) Delete(ctx context.Context, id string) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM data_sources WHERE id = ?`, id)
 	if err != nil {
 		return fmt.Errorf("delete connection: %w", err)
@@ -185,7 +187,7 @@ func (r *connectionRepo) Stats(ctx context.Context) (*connection.Stats, error) {
 
 // row is the sqlx scan target for SQLite.
 type row struct {
-	ID          int64  `db:"id"`
+	ID          string `db:"id"`
 	Name        string `db:"name"`
 	Type        string `db:"type"`
 	Config      string `db:"config"`

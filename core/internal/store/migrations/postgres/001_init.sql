@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS data_sources (
-    id          BIGSERIAL    PRIMARY KEY,
+    id          TEXT         PRIMARY KEY,
     name        VARCHAR(255) NOT NULL,
     type        VARCHAR(64)  NOT NULL,
     config      TEXT         NOT NULL DEFAULT '{}',

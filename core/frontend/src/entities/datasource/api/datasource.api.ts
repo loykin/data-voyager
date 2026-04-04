@@ -20,7 +20,7 @@ export const datasourceApi = {
     return data.data
   },
 
-  getOne: async (id: number): Promise<Connection> => {
+  getOne: async (id: string): Promise<Connection> => {
     const { data, error } = await apiClient.GET('/connections/{id}', {
       params: { path: { id } },
     })
@@ -34,7 +34,7 @@ export const datasourceApi = {
     return data.data
   },
 
-  update: async (id: number, body: UpdateConnectionRequest): Promise<Connection> => {
+  update: async (id: string, body: UpdateConnectionRequest): Promise<Connection> => {
     const { data, error } = await apiClient.PUT('/connections/{id}', {
       params: { path: { id } },
       body,
@@ -43,14 +43,14 @@ export const datasourceApi = {
     return data.data
   },
 
-  remove: async (id: number): Promise<void> => {
+  remove: async (id: string): Promise<void> => {
     const { error } = await apiClient.DELETE('/connections/{id}', {
       params: { path: { id } },
     })
     if (error) throw new Error((error as { error?: string }).error ?? 'Failed to delete connection')
   },
 
-  testById: async (id: number): Promise<ConnectionTestResult> => {
+  testById: async (id: string): Promise<ConnectionTestResult> => {
     const { data, error } = await apiClient.POST('/connections/{id}/test', {
       params: { path: { id } },
     })
@@ -74,7 +74,7 @@ export const datasourceApi = {
     return data.data
   },
 
-  query: async (id: number, body: QueryRequest): Promise<QueryResponse> => {
+  query: async (id: string, body: QueryRequest): Promise<QueryResponse> => {
     const { data, error } = await apiClient.POST('/connections/{id}/query', {
       params: { path: { id } },
       body,
@@ -83,7 +83,7 @@ export const datasourceApi = {
     return data
   },
 
-  batchQuery: async (id: number, body: BatchQueryRequest): Promise<BatchQueryResponse> => {
+  batchQuery: async (id: string, body: BatchQueryRequest): Promise<BatchQueryResponse> => {
     const { data, error } = await apiClient.POST('/connections/{id}/query/batch', {
       params: { path: { id } },
       body,

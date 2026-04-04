@@ -9,7 +9,7 @@ export type QueryParams = {
   limit?: number
 }
 
-export const useQueryExecution = (connectionId: number) => {
+export const useQueryExecution = (connectionId: string) => {
   const mutation = useMutation({
     mutationFn: (params: QueryParams): Promise<QueryResponse> =>
       datasourceApi.query(connectionId, {

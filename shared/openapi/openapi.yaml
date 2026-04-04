@@ -12,6 +12,8 @@ servers:
 tags:
   - name: connections
     description: Data source connection management
+  - name: settings
+    description: Application settings management
 
 paths:
   /connections:
@@ -73,8 +75,8 @@ paths:
         name: id
         required: true
         schema:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
 
     get:
       operationId: getConnection
@@ -155,8 +157,8 @@ paths:
         name: id
         required: true
         schema:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
     post:
       operationId: testConnection
       summary: Test a connection
@@ -179,8 +181,8 @@ paths:
         name: id
         required: true
         schema:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
     get:
       operationId: getConnectionSchema
       summary: Get datasource schema for a connection
@@ -203,8 +205,8 @@ paths:
         name: id
         required: true
         schema:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
     post:
       operationId: queryConnection
       summary: Execute a query through a connection
@@ -237,8 +239,8 @@ paths:
         name: id
         required: true
         schema:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
     post:
       operationId: batchQueryConnection
       summary: Execute multiple queries through a connection and return all results
@@ -295,6 +297,39 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /settings/ai:
+    get:
+      operationId: getAISettings
+      summary: Get current AI settings (no secret values)
+      tags: [settings]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AISettingsData"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      operationId: updateAISettings
+      summary: Save AI settings (empty api_key keeps existing value)
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAISettingsRequest"
+      responses:
+        "204":
+          description: No Content
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   schemas:
     Connection:
@@ -302,8 +337,8 @@ components:
       required: [id, name, type, config, is_active, created_at, updated_at]
       properties:
         id:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
         name:
           type: string
         type:
@@ -631,6 +666,126 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BatchQueryResultItem"
+
+    # AI settings schemas
+    ClaudeSettingsResponse:
+      type: object
+      properties:
+        api_key_set:
+          type: boolean
+        model:
+          type: string
+        base_url:
+          type: string
+
+    OpenAISettingsResponse:
+      type: object
+      properties:
+        api_key_set:
+          type: boolean
+        model:
+          type: string
+        base_url:
+          type: string
+
+    CopilotSettingsResponse:
+      type: object
+      properties:
+        api_key_set:
+          type: boolean
+        model:
+          type: string
+        base_url:
+          type: string
+
+    OllamaSettingsResponse:
+      type: object
+      properties:
+        model:
+          type: string
+        base_url:
+          type: string
+
+    AISettingsData:
+      type: object
+      required: [enabled, provider]
+      properties:
+        enabled:
+          type: boolean
+        provider:
+          type: string
+        claude:
+          $ref: "#/components/schemas/ClaudeSettingsResponse"
+        openai:
+          $ref: "#/components/schemas/OpenAISettingsResponse"
+        copilot:
+          $ref: "#/components/schemas/CopilotSettingsResponse"
+        ollama:
+          $ref: "#/components/schemas/OllamaSettingsResponse"
+
+    AISettingsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/AISettingsData"
+
+    ClaudeSettingsInput:
+      type: object
+      properties:
+        api_key:
+          type: string
+          description: Empty string keeps the existing key
+        model:
+          type: string
+        base_url:
+          type: string
+
+    OpenAISettingsInput:
+      type: object
+      properties:
+        api_key:
+          type: string
+          description: Empty string keeps the existing key
+        model:
+          type: string
+        base_url:
+          type: string
+
+    CopilotSettingsInput:
+      type: object
+      properties:
+        api_key:
+          type: string
+          description: Empty string keeps the existing key
+        model:
+          type: string
+        base_url:
+          type: string
+
+    OllamaSettingsInput:
+      type: object
+      properties:
+        model:
+          type: string
+        base_url:
+          type: string
+
+    UpdateAISettingsRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        provider:
+          type: string
+        claude:
+          $ref: "#/components/schemas/ClaudeSettingsInput"
+        openai:
+          $ref: "#/components/schemas/OpenAISettingsInput"
+        copilot:
+          $ref: "#/components/schemas/CopilotSettingsInput"
+        ollama:
+          $ref: "#/components/schemas/OllamaSettingsInput"
 
     ErrorResponse:
       type: object

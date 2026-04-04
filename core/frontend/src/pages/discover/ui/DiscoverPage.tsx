@@ -9,7 +9,7 @@ import {
 } from '@data-voyager/shared-ui/components/ui/select'
 import { Alert, AlertDescription } from '@data-voyager/shared-ui/components/ui/alert'
 import { Button } from '@data-voyager/shared-ui/components/ui/button'
-import { Play, Plus, X, ChevronDown, ChevronRight, Table2, LineChart } from 'lucide-react'
+import { Play, Plus, X, ChevronDown, ChevronRight, Table2, LineChart, Bot } from 'lucide-react'
 import { DatetimeRange } from '@data-voyager/shared-ui/components/widgets/datetime-range/DatetimeRange'
 import { DataGrid, TimeSeriesChart } from '@data-voyager/shared-ui'
 import type { DataGridColumnDef } from '@data-voyager/shared-ui'
@@ -25,6 +25,7 @@ import { useBatchQueryExecution } from '@/features/explore/query-editor'
 import { useVariables, VariableBar } from '@/features/explore/variable-editor'
 import { usePluginContext } from '@/shared/lib/usePluginContext'
 import { frameToAlignedData, canRenderAsChart } from '../lib/frameToChart'
+import { AIChatPanel } from '@/widgets/ai-chat'
 
 // ─── time conversion ────────────────────────────────────────────────────────
 function toBackendTimeString(v: DateTimeRangeValue): string {
@@ -190,15 +191,16 @@ function ResultPanel({ item }: { item: BatchQueryResultItem }) {
 export function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const connIdParam = searchParams.get('connection')
-  const selectedId = connIdParam ? parseInt(connIdParam, 10) : null
+  const selectedId = connIdParam ?? null
 
   const [queries, setQueries] = useState<QueryItem[]>([{ refId: 'A', text: 'SELECT 1', collapsed: false }])
   const [startTime, setStartTime] = useState<DateTimeRangeValue>(relativeAgo(1, 'Hours ago'))
   const [endTime, setEndTime] = useState<DateTimeRangeValue>(relativeNow())
+  const [aiOpen, setAiOpen] = useState(false)
 
   const { data: datasources = [] } = useDatasources()
   const { variables, setVariable, removeVariable, addVariable, toQueryVars } = useVariables()
-  const { execute, results, running, error, reset } = useBatchQueryExecution(selectedId ?? 0)
+  const { execute, results, running, error, reset } = useBatchQueryExecution(selectedId ?? '')
   const pluginCtx = usePluginContext()
 
   const selectedDatasource = datasources.find((ds) => ds.id === selectedId)
@@ -245,7 +247,9 @@ export function DiscoverPage() {
   }, [results])
 
   return (
-    <div className="flex h-full flex-col gap-3 p-4">
+    <div className="flex h-full overflow-hidden">
+      {/* ── main content ── */}
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold">Discover</h1>
@@ -298,6 +302,16 @@ export function DiscoverPage() {
           >
             <Play className="h-3 w-3" />
             {running ? 'Running…' : 'Run'}
+          </Button>
+          <Button
+            variant={aiOpen ? 'default' : 'outline'}
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            onClick={() => setAiOpen((v) => !v)}
+            title="AI Assistant"
+          >
+            <Bot className="h-3 w-3" />
+            AI
           </Button>
         </div>
       </div>
@@ -399,6 +413,12 @@ export function DiscoverPage() {
             {selectedId ? 'Run a query to see results.' : 'Select a connection to get started.'}
           </p>
         </div>
+      )}
+      </div>{/* end main content */}
+
+      {/* ── AI chat panel ── */}
+      {aiOpen && (
+        <AIChatPanel connectionId={selectedId} onClose={() => setAiOpen(false)} />
       )}
     </div>
   )

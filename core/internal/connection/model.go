@@ -9,7 +9,7 @@ import (
 
 // Connection is a stored datasource connection configuration.
 type Connection struct {
-	ID          int64              `json:"id"          db:"id"`
+	ID          string             `json:"id"          db:"id"`
 	Name        string             `json:"name"        db:"name"`
 	Type        sdk.DataSourceType `json:"type"        db:"type"`
 	Config      json.RawMessage    `json:"config"      db:"config"`

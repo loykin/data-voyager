@@ -10,7 +10,7 @@ export type BatchQueryItem = {
   limit?: number
 }
 
-export const useBatchQueryExecution = (connectionId: number) => {
+export const useBatchQueryExecution = (connectionId: string) => {
   const mutation = useMutation({
     mutationFn: (items: BatchQueryItem[]): Promise<BatchQueryResultItem[]> =>
       datasourceApi

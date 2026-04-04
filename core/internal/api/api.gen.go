@@ -18,6 +18,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for FieldKind.
@@ -65,6 +66,16 @@ func (e FrameType) Valid() bool {
 	}
 }
 
+// AISettingsData defines model for AISettingsData.
+type AISettingsData struct {
+	Claude   *ClaudeSettingsResponse  `json:"claude,omitempty"`
+	Copilot  *CopilotSettingsResponse `json:"copilot,omitempty"`
+	Enabled  bool                     `json:"enabled"`
+	Ollama   *OllamaSettingsResponse  `json:"ollama,omitempty"`
+	Openai   *OpenAISettingsResponse  `json:"openai,omitempty"`
+	Provider string                   `json:"provider"`
+}
+
 // BatchQueryItem defines model for BatchQueryItem.
 type BatchQueryItem struct {
 	// RefId Query identifier (e.g. "A", "B"). Returned in results.
@@ -93,17 +104,32 @@ type BatchQueryResultItem struct {
 	Stats   *QueryStats   `json:"stats,omitempty"`
 }
 
+// ClaudeSettingsInput defines model for ClaudeSettingsInput.
+type ClaudeSettingsInput struct {
+	// ApiKey Empty string keeps the existing key
+	ApiKey  *string `json:"api_key,omitempty"`
+	BaseUrl *string `json:"base_url,omitempty"`
+	Model   *string `json:"model,omitempty"`
+}
+
+// ClaudeSettingsResponse defines model for ClaudeSettingsResponse.
+type ClaudeSettingsResponse struct {
+	ApiKeySet *bool   `json:"api_key_set,omitempty"`
+	BaseUrl   *string `json:"base_url,omitempty"`
+	Model     *string `json:"model,omitempty"`
+}
+
 // Connection defines model for Connection.
 type Connection struct {
 	// Config Driver-specific connection configuration
-	Config      json.RawMessage `json:"config"`
-	CreatedAt   time.Time       `json:"created_at"`
-	CreatedBy   *string         `json:"created_by,omitempty"`
-	Description *string         `json:"description,omitempty"`
-	Id          int64           `json:"id"`
-	IsActive    bool            `json:"is_active"`
-	Name        string          `json:"name"`
-	Tags        *[]string       `json:"tags,omitempty"`
+	Config      json.RawMessage    `json:"config"`
+	CreatedAt   time.Time          `json:"created_at"`
+	CreatedBy   *string            `json:"created_by,omitempty"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	IsActive    bool               `json:"is_active"`
+	Name        string             `json:"name"`
+	Tags        *[]string          `json:"tags,omitempty"`
 
 	// Type Datasource type identifier (e.g. "postgresql", "clickhouse")
 	Type      string    `json:"type"`
@@ -155,6 +181,21 @@ type ConnectionTypesResponse struct {
 	Data []string `json:"data"`
 }
 
+// CopilotSettingsInput defines model for CopilotSettingsInput.
+type CopilotSettingsInput struct {
+	// ApiKey Empty string keeps the existing key
+	ApiKey  *string `json:"api_key,omitempty"`
+	BaseUrl *string `json:"base_url,omitempty"`
+	Model   *string `json:"model,omitempty"`
+}
+
+// CopilotSettingsResponse defines model for CopilotSettingsResponse.
+type CopilotSettingsResponse struct {
+	ApiKeySet *bool   `json:"api_key_set,omitempty"`
+	BaseUrl   *string `json:"base_url,omitempty"`
+	Model     *string `json:"model,omitempty"`
+}
+
 // CreateConnectionRequest defines model for CreateConnectionRequest.
 type CreateConnectionRequest struct {
 	Config      map[string]interface{} `json:"config"`
@@ -198,6 +239,33 @@ type FieldKind string
 
 // FrameType Hint for how the DataFrame should be visualized.
 type FrameType string
+
+// OllamaSettingsInput defines model for OllamaSettingsInput.
+type OllamaSettingsInput struct {
+	BaseUrl *string `json:"base_url,omitempty"`
+	Model   *string `json:"model,omitempty"`
+}
+
+// OllamaSettingsResponse defines model for OllamaSettingsResponse.
+type OllamaSettingsResponse struct {
+	BaseUrl *string `json:"base_url,omitempty"`
+	Model   *string `json:"model,omitempty"`
+}
+
+// OpenAISettingsInput defines model for OpenAISettingsInput.
+type OpenAISettingsInput struct {
+	// ApiKey Empty string keeps the existing key
+	ApiKey  *string `json:"api_key,omitempty"`
+	BaseUrl *string `json:"base_url,omitempty"`
+	Model   *string `json:"model,omitempty"`
+}
+
+// OpenAISettingsResponse defines model for OpenAISettingsResponse.
+type OpenAISettingsResponse struct {
+	ApiKeySet *bool   `json:"api_key_set,omitempty"`
+	BaseUrl   *string `json:"base_url,omitempty"`
+	Model     *string `json:"model,omitempty"`
+}
 
 // QueryInspect defines model for QueryInspect.
 type QueryInspect struct {
@@ -257,6 +325,16 @@ type TimeRange struct {
 	To *string `json:"to,omitempty"`
 }
 
+// UpdateAISettingsRequest defines model for UpdateAISettingsRequest.
+type UpdateAISettingsRequest struct {
+	Claude   *ClaudeSettingsInput  `json:"claude,omitempty"`
+	Copilot  *CopilotSettingsInput `json:"copilot,omitempty"`
+	Enabled  *bool                 `json:"enabled,omitempty"`
+	Ollama   *OllamaSettingsInput  `json:"ollama,omitempty"`
+	Openai   *OpenAISettingsInput  `json:"openai,omitempty"`
+	Provider *string               `json:"provider,omitempty"`
+}
+
 // UpdateConnectionRequest defines model for UpdateConnectionRequest.
 type UpdateConnectionRequest struct {
 	Config      *map[string]interface{} `json:"config,omitempty"`
@@ -308,6 +386,9 @@ type QueryConnectionJSONRequestBody = QueryRequest
 // BatchQueryConnectionJSONRequestBody defines body for BatchQueryConnection for application/json ContentType.
 type BatchQueryConnectionJSONRequestBody = BatchQueryRequest
 
+// UpdateAISettingsJSONRequestBody defines body for UpdateAISettings for application/json ContentType.
+type UpdateAISettingsJSONRequestBody = UpdateAISettingsRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Get connection statistics
@@ -327,25 +408,31 @@ type ServerInterface interface {
 	TestConnectionConfig(c *gin.Context)
 	// Delete a connection
 	// (DELETE /connections/{id})
-	DeleteConnection(c *gin.Context, id int64)
+	DeleteConnection(c *gin.Context, id openapi_types.UUID)
 	// Get a connection by ID
 	// (GET /connections/{id})
-	GetConnection(c *gin.Context, id int64)
+	GetConnection(c *gin.Context, id openapi_types.UUID)
 	// Update a connection
 	// (PUT /connections/{id})
-	UpdateConnection(c *gin.Context, id int64)
+	UpdateConnection(c *gin.Context, id openapi_types.UUID)
 	// Execute a query through a connection
 	// (POST /connections/{id}/query)
-	QueryConnection(c *gin.Context, id int64)
+	QueryConnection(c *gin.Context, id openapi_types.UUID)
 	// Execute multiple queries through a connection and return all results
 	// (POST /connections/{id}/query/batch)
-	BatchQueryConnection(c *gin.Context, id int64)
+	BatchQueryConnection(c *gin.Context, id openapi_types.UUID)
 	// Get datasource schema for a connection
 	// (GET /connections/{id}/schema)
-	GetConnectionSchema(c *gin.Context, id int64)
+	GetConnectionSchema(c *gin.Context, id openapi_types.UUID)
 	// Test a connection
 	// (POST /connections/{id}/test)
-	TestConnection(c *gin.Context, id int64)
+	TestConnection(c *gin.Context, id openapi_types.UUID)
+	// Get current AI settings (no secret values)
+	// (GET /settings/ai)
+	GetAISettings(c *gin.Context)
+	// Save AI settings (empty api_key keeps existing value)
+	// (PUT /settings/ai)
+	UpdateAISettings(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -457,9 +544,9 @@ func (siw *ServerInterfaceWrapper) DeleteConnection(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int64
+	var id openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "integer", Format: "int64"})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: "uuid"})
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
 		return
@@ -481,9 +568,9 @@ func (siw *ServerInterfaceWrapper) GetConnection(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int64
+	var id openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "integer", Format: "int64"})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: "uuid"})
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
 		return
@@ -505,9 +592,9 @@ func (siw *ServerInterfaceWrapper) UpdateConnection(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int64
+	var id openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "integer", Format: "int64"})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: "uuid"})
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
 		return
@@ -529,9 +616,9 @@ func (siw *ServerInterfaceWrapper) QueryConnection(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int64
+	var id openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "integer", Format: "int64"})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: "uuid"})
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
 		return
@@ -553,9 +640,9 @@ func (siw *ServerInterfaceWrapper) BatchQueryConnection(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int64
+	var id openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "integer", Format: "int64"})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: "uuid"})
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
 		return
@@ -577,9 +664,9 @@ func (siw *ServerInterfaceWrapper) GetConnectionSchema(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int64
+	var id openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "integer", Format: "int64"})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: "uuid"})
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
 		return
@@ -601,9 +688,9 @@ func (siw *ServerInterfaceWrapper) TestConnection(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int64
+	var id openapi_types.UUID
 
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "integer", Format: "int64"})
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: "uuid"})
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
 		return
@@ -617,6 +704,32 @@ func (siw *ServerInterfaceWrapper) TestConnection(c *gin.Context) {
 	}
 
 	siw.Handler.TestConnection(c, id)
+}
+
+// GetAISettings operation middleware
+func (siw *ServerInterfaceWrapper) GetAISettings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAISettings(c)
+}
+
+// UpdateAISettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAISettings(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateAISettings(c)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -658,52 +771,59 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/connections/:id/query/batch", wrapper.BatchQueryConnection)
 	router.GET(options.BaseURL+"/connections/:id/schema", wrapper.GetConnectionSchema)
 	router.POST(options.BaseURL+"/connections/:id/test", wrapper.TestConnection)
+	router.GET(options.BaseURL+"/settings/ai", wrapper.GetAISettings)
+	router.PUT(options.BaseURL+"/settings/ai", wrapper.UpdateAISettings)
 }
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"ATkRNQAA",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

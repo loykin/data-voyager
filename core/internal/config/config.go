@@ -73,6 +73,37 @@ type Config struct {
 	MetadataStore DBConfig       `toml:"metadata_store"`
 	Logging       LoggingConfig  `toml:"logging"`
 	Security      SecurityConfig `toml:"security"`
+	AI            AIConfig       `toml:"ai"`
+}
+
+// AIConfig holds AI provider configuration.
+type AIConfig struct {
+	Enabled  bool         `toml:"enabled"   mapstructure:"enabled"`
+	Provider string       `toml:"provider"  mapstructure:"provider"` // claude | openai | copilot | ollama
+	Claude   ClaudeConfig `toml:"claude"    mapstructure:"claude"`
+	OpenAI   OpenAIConfig `toml:"openai"    mapstructure:"openai"`
+	Copilot  OpenAIConfig `toml:"copilot"   mapstructure:"copilot"`
+	Ollama   OllamaConfig `toml:"ollama"    mapstructure:"ollama"`
+}
+
+// ClaudeConfig holds Anthropic Claude settings.
+type ClaudeConfig struct {
+	APIKey  string `toml:"api_key"  mapstructure:"api_key"`
+	Model   string `toml:"model"    mapstructure:"model"`
+	BaseURL string `toml:"base_url" mapstructure:"base_url"`
+}
+
+// OpenAIConfig holds OpenAI-compatible settings (OpenAI, Copilot, LM Studio).
+type OpenAIConfig struct {
+	APIKey  string `toml:"api_key"  mapstructure:"api_key"`
+	Model   string `toml:"model"    mapstructure:"model"`
+	BaseURL string `toml:"base_url" mapstructure:"base_url"`
+}
+
+// OllamaConfig holds Ollama (local) settings.
+type OllamaConfig struct {
+	BaseURL string `toml:"base_url" mapstructure:"base_url"`
+	Model   string `toml:"model"    mapstructure:"model"`
 }
 
 // ServerConfig represents server configuration.

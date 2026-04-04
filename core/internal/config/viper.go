@@ -14,6 +14,7 @@ type ViperConfig struct {
 	MetadataStore DBConfig       `mapstructure:"metadata_store"`
 	Logging       LoggingConfig  `mapstructure:"logging"`
 	Security      SecurityConfig `mapstructure:"security"`
+	AI            AIConfig       `mapstructure:"ai"`
 }
 
 // InitViper initializes Viper configuration.

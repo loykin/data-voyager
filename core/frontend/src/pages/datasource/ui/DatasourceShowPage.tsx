@@ -8,7 +8,7 @@ import { useDatasource } from '@/entities/datasource'
 export function DatasourceShowPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const id = Number(searchParams.get('id'))
+  const id = searchParams.get('id') ?? ''
 
   const { data: datasource, isLoading } = useDatasource(id)
 
