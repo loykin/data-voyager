@@ -228,6 +228,42 @@ paths:
           $ref: "#/components/responses/NotFound"
         "501":
           $ref: "#/components/responses/NotImplemented"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+
+  /connections/{id}/query/batch:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int64
+    post:
+      operationId: batchQueryConnection
+      summary: Execute multiple queries through a connection and return all results
+      tags: [connections]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchQueryRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchQueryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+        "502":
+          $ref: "#/components/responses/BadGateway"
 
   /connection-types:
     get:
@@ -377,42 +413,120 @@ components:
           type: object
           additionalProperties: true
 
+    TimeRange:
+      type: object
+      properties:
+        from:
+          type: string
+          description: >
+            Start of the time range. Accepts ISO 8601 ("2024-04-01T00:00:00Z"),
+            Unix ms as a numeric string ("1712160000000"),
+            or a relative expression ("1 Hours ago").
+        to:
+          type: string
+          description: >
+            End of the time range. Accepts the same formats as "from", plus "Now".
+
     QueryRequest:
       type: object
       required: [query]
       properties:
         query:
           type: string
-        params:
-          type: array
-          items: {}
+          description: >
+            Raw query template. Server-side {{ variable }} substitution is
+            applied before execution. Built-in variables (__ prefix) are
+            injected automatically from time_range.
+        variables:
+          type: object
+          additionalProperties: true
+          description: User-defined variables for {{ }} template substitution.
+        time_range:
+          $ref: "#/components/schemas/TimeRange"
         limit:
           type: integer
+          default: 10000
 
-    QueryResult:
+    QueryStats:
       type: object
-      required: [columns, rows]
+      required: [execution_time_ms, rows_returned]
       properties:
-        columns:
-          type: array
-          items:
-            $ref: "#/components/schemas/ColumnInfo"
-        rows:
-          type: array
-          items:
-            type: array
-            items: {}
+        execution_time_ms:
+          type: integer
+          format: int64
+        rows_returned:
+          type: integer
+          format: int64
+        bytes_read:
+          type: integer
+          format: int64
 
-    ColumnInfo:
+    QueryInspect:
       type: object
-      required: [name, type]
+      required: [raw_query, executed_query]
+      properties:
+        raw_query:
+          type: string
+          description: Original template before variable substitution.
+        executed_query:
+          type: string
+          description: Final query after all variable substitution.
+        variables:
+          type: object
+          additionalProperties: true
+          description: Full context used for substitution (including built-in __ variables).
+
+    FieldKind:
+      type: string
+      description: Semantic type of a field, used for rendering (axis selection, formatting).
+      enum: [time, number, string, boolean]
+
+    FrameType:
+      type: string
+      description: Hint for how the DataFrame should be visualized.
+      enum: [table, time_series, logs]
+
+    Field:
+      type: object
+      required: [name, kind, values]
       properties:
         name:
           type: string
+        kind:
+          $ref: "#/components/schemas/FieldKind"
         type:
           type: string
-        nullable:
-          type: boolean
+          description: Native database type string (display only).
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+          description: Key-value labels attached to the field (e.g. Prometheus metric labels).
+        values:
+          type: array
+          items: {}
+
+    DataFrame:
+      type: object
+      required: [frame_type, fields]
+      properties:
+        name:
+          type: string
+        frame_type:
+          $ref: "#/components/schemas/FrameType"
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/Field"
+
+    QueryResult:
+      type: object
+      required: [frames]
+      properties:
+        frames:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataFrame"
 
     # Response envelopes
     ConnectionResponse:
@@ -468,6 +582,55 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/QueryResult"
+        stats:
+          $ref: "#/components/schemas/QueryStats"
+        inspect:
+          $ref: "#/components/schemas/QueryInspect"
+
+    BatchQueryItem:
+      type: object
+      required: [ref_id, request]
+      properties:
+        ref_id:
+          type: string
+          description: Query identifier (e.g. "A", "B"). Returned in results.
+        request:
+          $ref: "#/components/schemas/QueryRequest"
+
+    BatchQueryRequest:
+      type: object
+      required: [queries]
+      properties:
+        queries:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatchQueryItem"
+          minItems: 1
+
+    BatchQueryResultItem:
+      type: object
+      required: [ref_id]
+      properties:
+        ref_id:
+          type: string
+        data:
+          $ref: "#/components/schemas/QueryResult"
+        stats:
+          $ref: "#/components/schemas/QueryStats"
+        inspect:
+          $ref: "#/components/schemas/QueryInspect"
+        error:
+          type: string
+          description: Per-query error message if this query failed.
+
+    BatchQueryResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/BatchQueryResultItem"
 
     ErrorResponse:
       type: object
@@ -497,6 +660,12 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     NotImplemented:
       description: Not Implemented
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    BadGateway:
+      description: Bad Gateway — upstream datasource connection or query failed
       content:
         application/json:
           schema:

@@ -78,9 +78,10 @@ func TestClickHousePlugin(t *testing.T) {
 		result, err := conn.Query(ctx, "SELECT * FROM test_table ORDER BY id")
 		require.NoError(t, err)
 
-		assert.Len(t, result.Columns, 3)
-		assert.Equal(t, "id", result.Columns[0].Name)
-		assert.Len(t, result.Rows, 2)
+		require.Len(t, result.Frames, 1)
+		assert.Len(t, result.Frames[0].Fields, 3)
+		assert.Equal(t, "id", result.Frames[0].Fields[0].Name)
+		assert.Len(t, result.Frames[0].Fields[0].Values, 2)
 		assert.Equal(t, int64(2), result.Stats.RowsReturned)
 		assert.Greater(t, result.Stats.ExecutionTime, time.Duration(0))
 

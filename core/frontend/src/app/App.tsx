@@ -28,6 +28,9 @@ const HistogramDemoPage = React.lazy(() =>
 const DatetimeDemoPage = React.lazy(() =>
   import('@/pages/datetime-demo').then((m) => ({ default: m.DatetimeDemoPage }))
 )
+const DiscoverPage = React.lazy(() =>
+  import('@/pages/discover').then((m) => ({ default: m.DiscoverPage }))
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +70,7 @@ export function App() {
               <Route path="/demo/chart" element={<ChartDemoPage />} />
               <Route path="/demo/histogram" element={<HistogramDemoPage />} />
               <Route path="/demo/datetime" element={<DatetimeDemoPage />} />
+              <Route path="/discover" element={<DiscoverPage />} />
             </Route>
           </Routes>
         </React.Suspense>

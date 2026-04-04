@@ -20,11 +20,77 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// ColumnInfo defines model for ColumnInfo.
-type ColumnInfo struct {
-	Name     string `json:"name"`
-	Nullable *bool  `json:"nullable,omitempty"`
-	Type     string `json:"type"`
+// Defines values for FieldKind.
+const (
+	Boolean FieldKind = "boolean"
+	Number  FieldKind = "number"
+	String  FieldKind = "string"
+	Time    FieldKind = "time"
+)
+
+// Valid indicates whether the value is a known member of the FieldKind enum.
+func (e FieldKind) Valid() bool {
+	switch e {
+	case Boolean:
+		return true
+	case Number:
+		return true
+	case String:
+		return true
+	case Time:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FrameType.
+const (
+	Logs       FrameType = "logs"
+	Table      FrameType = "table"
+	TimeSeries FrameType = "time_series"
+)
+
+// Valid indicates whether the value is a known member of the FrameType enum.
+func (e FrameType) Valid() bool {
+	switch e {
+	case Logs:
+		return true
+	case Table:
+		return true
+	case TimeSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// BatchQueryItem defines model for BatchQueryItem.
+type BatchQueryItem struct {
+	// RefId Query identifier (e.g. "A", "B"). Returned in results.
+	RefId   string       `json:"ref_id"`
+	Request QueryRequest `json:"request"`
+}
+
+// BatchQueryRequest defines model for BatchQueryRequest.
+type BatchQueryRequest struct {
+	Queries []BatchQueryItem `json:"queries"`
+}
+
+// BatchQueryResponse defines model for BatchQueryResponse.
+type BatchQueryResponse struct {
+	Results []BatchQueryResultItem `json:"results"`
+}
+
+// BatchQueryResultItem defines model for BatchQueryResultItem.
+type BatchQueryResultItem struct {
+	Data *QueryResult `json:"data,omitempty"`
+
+	// Error Per-query error message if this query failed.
+	Error   *string       `json:"error,omitempty"`
+	Inspect *QueryInspect `json:"inspect,omitempty"`
+	RefId   string        `json:"ref_id"`
+	Stats   *QueryStats   `json:"stats,omitempty"`
 }
 
 // Connection defines model for Connection.
@@ -99,33 +165,96 @@ type CreateConnectionRequest struct {
 	Type        string                 `json:"type"`
 }
 
+// DataFrame defines model for DataFrame.
+type DataFrame struct {
+	Fields []Field `json:"fields"`
+
+	// FrameType Hint for how the DataFrame should be visualized.
+	FrameType FrameType `json:"frame_type"`
+	Name      *string   `json:"name,omitempty"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// Field defines model for Field.
+type Field struct {
+	// Kind Semantic type of a field, used for rendering (axis selection, formatting).
+	Kind FieldKind `json:"kind"`
+
+	// Labels Key-value labels attached to the field (e.g. Prometheus metric labels).
+	Labels *map[string]string `json:"labels,omitempty"`
+	Name   string             `json:"name"`
+
+	// Type Native database type string (display only).
+	Type   *string       `json:"type,omitempty"`
+	Values []interface{} `json:"values"`
+}
+
+// FieldKind Semantic type of a field, used for rendering (axis selection, formatting).
+type FieldKind string
+
+// FrameType Hint for how the DataFrame should be visualized.
+type FrameType string
+
+// QueryInspect defines model for QueryInspect.
+type QueryInspect struct {
+	// ExecutedQuery Final query after all variable substitution.
+	ExecutedQuery string `json:"executed_query"`
+
+	// RawQuery Original template before variable substitution.
+	RawQuery string `json:"raw_query"`
+
+	// Variables Full context used for substitution (including built-in __ variables).
+	Variables *map[string]interface{} `json:"variables,omitempty"`
+}
+
 // QueryRequest defines model for QueryRequest.
 type QueryRequest struct {
-	Limit  *int           `json:"limit,omitempty"`
-	Params *[]interface{} `json:"params,omitempty"`
-	Query  string         `json:"query"`
+	Limit *int `json:"limit,omitempty"`
+
+	// Query Raw query template. Server-side {{ variable }} substitution is applied before execution. Built-in variables (__ prefix) are injected automatically from time_range.
+	Query     string     `json:"query"`
+	TimeRange *TimeRange `json:"time_range,omitempty"`
+
+	// Variables User-defined variables for {{ }} template substitution.
+	Variables *map[string]interface{} `json:"variables,omitempty"`
 }
 
 // QueryResponse defines model for QueryResponse.
 type QueryResponse struct {
-	Data QueryResult `json:"data"`
+	Data    QueryResult   `json:"data"`
+	Inspect *QueryInspect `json:"inspect,omitempty"`
+	Stats   *QueryStats   `json:"stats,omitempty"`
 }
 
 // QueryResult defines model for QueryResult.
 type QueryResult struct {
-	Columns []ColumnInfo    `json:"columns"`
-	Rows    [][]interface{} `json:"rows"`
+	Frames []DataFrame `json:"frames"`
+}
+
+// QueryStats defines model for QueryStats.
+type QueryStats struct {
+	BytesRead       *int64 `json:"bytes_read,omitempty"`
+	ExecutionTimeMs int64  `json:"execution_time_ms"`
+	RowsReturned    int64  `json:"rows_returned"`
 }
 
 // TestConnectionRequest defines model for TestConnectionRequest.
 type TestConnectionRequest struct {
 	Config map[string]interface{} `json:"config"`
 	Type   string                 `json:"type"`
+}
+
+// TimeRange defines model for TimeRange.
+type TimeRange struct {
+	// From Start of the time range. Accepts ISO 8601 ("2024-04-01T00:00:00Z"), Unix ms as a numeric string ("1712160000000"), or a relative expression ("1 Hours ago").
+	From *string `json:"from,omitempty"`
+
+	// To End of the time range. Accepts the same formats as "from", plus "Now".
+	To *string `json:"to,omitempty"`
 }
 
 // UpdateConnectionRequest defines model for UpdateConnectionRequest.
@@ -136,6 +265,9 @@ type UpdateConnectionRequest struct {
 	Name        *string                 `json:"name,omitempty"`
 	Tags        *[]string               `json:"tags,omitempty"`
 }
+
+// BadGateway defines model for BadGateway.
+type BadGateway = ErrorResponse
 
 // BadRequest defines model for BadRequest.
 type BadRequest = ErrorResponse
@@ -173,6 +305,9 @@ type UpdateConnectionJSONRequestBody = UpdateConnectionRequest
 // QueryConnectionJSONRequestBody defines body for QueryConnection for application/json ContentType.
 type QueryConnectionJSONRequestBody = QueryRequest
 
+// BatchQueryConnectionJSONRequestBody defines body for BatchQueryConnection for application/json ContentType.
+type BatchQueryConnectionJSONRequestBody = BatchQueryRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Get connection statistics
@@ -202,6 +337,9 @@ type ServerInterface interface {
 	// Execute a query through a connection
 	// (POST /connections/{id}/query)
 	QueryConnection(c *gin.Context, id int64)
+	// Execute multiple queries through a connection and return all results
+	// (POST /connections/{id}/query/batch)
+	BatchQueryConnection(c *gin.Context, id int64)
 	// Get datasource schema for a connection
 	// (GET /connections/{id}/schema)
 	GetConnectionSchema(c *gin.Context, id int64)
@@ -409,6 +547,30 @@ func (siw *ServerInterfaceWrapper) QueryConnection(c *gin.Context) {
 	siw.Handler.QueryConnection(c, id)
 }
 
+// BatchQueryConnection operation middleware
+func (siw *ServerInterfaceWrapper) BatchQueryConnection(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int64
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "integer", Format: "int64"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.BatchQueryConnection(c, id)
+}
+
 // GetConnectionSchema operation middleware
 func (siw *ServerInterfaceWrapper) GetConnectionSchema(c *gin.Context) {
 
@@ -493,6 +655,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/connections/:id", wrapper.GetConnection)
 	router.PUT(options.BaseURL+"/connections/:id", wrapper.UpdateConnection)
 	router.POST(options.BaseURL+"/connections/:id/query", wrapper.QueryConnection)
+	router.POST(options.BaseURL+"/connections/:id/query/batch", wrapper.BatchQueryConnection)
 	router.GET(options.BaseURL+"/connections/:id/schema", wrapper.GetConnectionSchema)
 	router.POST(options.BaseURL+"/connections/:id/test", wrapper.TestConnection)
 }
@@ -500,31 +663,47 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"CSOxiXrnLsExZP2w/i8AAP//do+mueYkAAA=",
+	"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",
+	"ATkRNQAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

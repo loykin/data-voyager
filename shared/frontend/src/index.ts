@@ -26,6 +26,12 @@ export * from "./components/widgets/data-grid";
 // SidePanel
 export * from "./components/widgets/side-panel";
 
+// DatetimeRange
+export * from "./components/widgets/datetime-range";
+
+// SqlQueryEditor
+export * from "./components/widgets/sql-query-editor";
+
 // TimeSeriesChart
 export * from "./components/widgets/charts/time-series";
 

@@ -6,6 +6,10 @@ type CreateConnectionRequest = components['schemas']['CreateConnectionRequest']
 type UpdateConnectionRequest = components['schemas']['UpdateConnectionRequest']
 type ConnectionTestResult = components['schemas']['ConnectionTestResult']
 type TestConnectionRequest = components['schemas']['TestConnectionRequest']
+type QueryRequest = components['schemas']['QueryRequest']
+type QueryResponse = components['schemas']['QueryResponse']
+type BatchQueryRequest = components['schemas']['BatchQueryRequest']
+type BatchQueryResponse = components['schemas']['BatchQueryResponse']
 
 export const datasourceApi = {
   getList: async (type?: string): Promise<Connection[]> => {
@@ -68,5 +72,23 @@ export const datasourceApi = {
     const { data, error } = await apiClient.GET('/connection-types')
     if (error) throw new Error((error as { error?: string }).error ?? 'Failed to fetch types')
     return data.data
+  },
+
+  query: async (id: number, body: QueryRequest): Promise<QueryResponse> => {
+    const { data, error } = await apiClient.POST('/connections/{id}/query', {
+      params: { path: { id } },
+      body,
+    })
+    if (error) throw new Error((error as { error?: string }).error ?? 'Query failed')
+    return data
+  },
+
+  batchQuery: async (id: number, body: BatchQueryRequest): Promise<BatchQueryResponse> => {
+    const { data, error } = await apiClient.POST('/connections/{id}/query/batch', {
+      params: { path: { id } },
+      body,
+    })
+    if (error) throw new Error((error as { error?: string }).error ?? 'Batch query failed')
+    return data
   },
 }

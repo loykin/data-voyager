@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
 	"time"
 
 	"data-voyager/sdk"
@@ -116,12 +118,87 @@ type Connection struct {
 	config *Config
 }
 
-func (c *Connection) Query(ctx context.Context, query string, params ...any) (*sdk.QueryResult, error) {
-	start := time.Now()
+// splitStatements splits a SQL string on `;` delimiters, respecting
+// single-quoted strings and -- / # line comments.
+func splitStatements(query string) []string {
+	var parts []string
+	var cur strings.Builder
+	inString := false
+	i := 0
+	for i < len(query) {
+		ch := query[i]
+		switch {
+		case !inString && ch == '-' && i+1 < len(query) && query[i+1] == '-':
+			// line comment: skip to end of line
+			for i < len(query) && query[i] != '\n' {
+				i++
+			}
+			continue
+		case !inString && ch == '#':
+			// hash comment: skip to end of line
+			for i < len(query) && query[i] != '\n' {
+				i++
+			}
+			continue
+		case ch == '\'' && !inString:
+			inString = true
+			cur.WriteByte(ch)
+		case ch == '\'':
+			cur.WriteByte(ch)
+			// handle escaped single-quote ''
+			if i+1 < len(query) && query[i+1] == '\'' {
+				i++
+				cur.WriteByte(query[i])
+			} else {
+				inString = false
+			}
+		case ch == ';' && !inString:
+			if part := strings.TrimSpace(cur.String()); part != "" {
+				parts = append(parts, part)
+			}
+			cur.Reset()
+		default:
+			cur.WriteByte(ch)
+		}
+		i++
+	}
+	if part := strings.TrimSpace(cur.String()); part != "" {
+		parts = append(parts, part)
+	}
+	return parts
+}
 
+func (c *Connection) Query(ctx context.Context, query string, _ ...any) (*sdk.QueryResult, error) {
+	start := time.Now()
+	stmts := splitStatements(query)
+	if len(stmts) == 0 {
+		return &sdk.QueryResult{Frames: []*sdk.DataFrame{}}, nil
+	}
+
+	// Execute all statements; keep the last result that has fields (SELECT-like).
+	// DDL/DML statements (CREATE, INSERT, …) return no fields and are skipped.
+	last := &sdk.QueryResult{Frames: []*sdk.DataFrame{}}
+	for _, stmt := range stmts {
+		result, err := c.execOne(ctx, stmt)
+		if err != nil {
+			return nil, err
+		}
+		if len(result.Frames) > 0 && len(result.Frames[0].Fields) > 0 {
+			last = result
+		}
+	}
+
+	// Accumulate total execution time in Stats.
+	last.Stats.ExecutionTime = time.Since(start)
+	return last, nil
+}
+
+// queryRaw executes a single statement and returns column metadata + raw rows.
+// Used internally by execOne (for building DataFrames) and schema helpers.
+func (c *Connection) queryRaw(ctx context.Context, query string, params ...any) ([]sdk.ColumnInfo, [][]any, error) {
 	rows, err := c.conn.Query(ctx, query, params...)
 	if err != nil {
-		return nil, fmt.Errorf("query execution failed: %w", err)
+		return nil, nil, fmt.Errorf("query execution failed: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -133,23 +210,52 @@ func (c *Connection) Query(ctx context.Context, query string, params ...any) (*s
 
 	var resultRows [][]any
 	for rows.Next() {
-		values := make([]any, len(columnTypes))
 		valuePtrs := make([]any, len(columnTypes))
-		for i := range values {
-			valuePtrs[i] = &values[i]
+		for i, ct := range columnTypes {
+			valuePtrs[i] = reflect.New(ct.ScanType()).Interface()
 		}
 		if err := rows.Scan(valuePtrs...); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		values := make([]any, len(columnTypes))
+		for i, ptr := range valuePtrs {
+			values[i] = reflect.ValueOf(ptr).Elem().Interface()
 		}
 		resultRows = append(resultRows, values)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration error: %w", err)
+		return nil, nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+	return columns, resultRows, nil
+}
+
+func (c *Connection) execOne(ctx context.Context, query string) (*sdk.QueryResult, error) {
+	start := time.Now()
+	columns, resultRows, err := c.queryRaw(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	// Transpose row-oriented data into column-oriented Fields.
+	fields := make([]sdk.Field, len(columns))
+	for i, col := range columns {
+		values := make([]any, len(resultRows))
+		for j, row := range resultRows {
+			values[j] = row[i]
+		}
+		fields[i] = sdk.Field{
+			Name:   col.Name,
+			Kind:   sdk.InferFieldKind(col.Type),
+			Type:   col.Type,
+			Values: values,
+		}
 	}
 
 	return &sdk.QueryResult{
-		Columns: columns,
-		Rows:    resultRows,
+		Frames: []*sdk.DataFrame{{
+			FrameType: sdk.FrameTypeTable,
+			Fields:    fields,
+		}},
 		Stats: sdk.QueryStats{
 			ExecutionTime: time.Since(start),
 			RowsReturned:  int64(len(resultRows)),
@@ -172,13 +278,13 @@ func (c *Connection) GetTables(ctx context.Context, database string) ([]sdk.Tabl
 		WHERE database = ?
 		ORDER BY name
 	`
-	result, err := c.Query(ctx, query, database)
+	_, rows, err := c.queryRaw(ctx, query, database)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tables: %w", err)
 	}
 
-	tables := make([]sdk.TableInfo, 0, len(result.Rows))
-	for _, row := range result.Rows {
+	tables := make([]sdk.TableInfo, 0, len(rows))
+	for _, row := range rows {
 		name, _ := row[0].(string)
 		tableType, _ := row[1].(string)
 
@@ -197,6 +303,22 @@ func (c *Connection) GetTables(ctx context.Context, database string) ([]sdk.Tabl
 	return tables, nil
 }
 
+func (c *Connection) getDatabases(ctx context.Context) ([]sdk.DatabaseInfo, error) {
+	_, rows, err := c.queryRaw(ctx, "SELECT name FROM system.databases ORDER BY name")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get databases: %w", err)
+	}
+
+	databases := make([]sdk.DatabaseInfo, 0, len(rows))
+	for _, row := range rows {
+		if dbName, ok := row[0].(string); ok {
+			tables, _ := c.GetTables(ctx, dbName)
+			databases = append(databases, sdk.DatabaseInfo{Name: dbName, Tables: tables})
+		}
+	}
+	return databases, nil
+}
+
 func (c *Connection) Close() error {
 	if c.conn != nil {
 		return c.conn.Close()
@@ -211,20 +333,4 @@ func (c *Connection) GetMetrics() sdk.ConnectionMetrics {
 		OpenConnections: 1,
 		LastActivity:    time.Now(),
 	}
-}
-
-func (c *Connection) getDatabases(ctx context.Context) ([]sdk.DatabaseInfo, error) {
-	result, err := c.Query(ctx, "SELECT name FROM system.databases ORDER BY name")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get databases: %w", err)
-	}
-
-	databases := make([]sdk.DatabaseInfo, 0, len(result.Rows))
-	for _, row := range result.Rows {
-		if dbName, ok := row[0].(string); ok {
-			tables, _ := c.GetTables(ctx, dbName)
-			databases = append(databases, sdk.DatabaseInfo{Name: dbName, Tables: tables})
-		}
-	}
-	return databases, nil
 }

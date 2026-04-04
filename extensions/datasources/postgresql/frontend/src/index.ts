@@ -1,12 +1,14 @@
 import type { DatasourcePlugin } from '@data-voyager/sdk';
 import { datasourceRegistry } from '@data-voyager/sdk';
 import { PostgreSQLConfigForm } from './ConfigForm';
+import { PostgreSQLQueryEditor } from './QueryEditorWidget';
 
 const plugin: DatasourcePlugin = {
   id: 'postgresql',
   name: 'PostgreSQL',
   description: 'Connect to PostgreSQL databases',
   configComponent: PostgreSQLConfigForm,
+  queryEditorComponent: PostgreSQLQueryEditor,
 };
 
 datasourceRegistry.register(plugin);

@@ -104,16 +104,50 @@ type Connection struct {
 
 func (c *Connection) Query(ctx context.Context, query string, params ...any) (*sdk.QueryResult, error) {
 	start := time.Now()
+	columns, resultRows, err := c.queryRaw(ctx, query, params...)
+	if err != nil {
+		return nil, err
+	}
 
+	// Transpose row-oriented data into column-oriented Fields.
+	fields := make([]sdk.Field, len(columns))
+	for i, col := range columns {
+		values := make([]any, len(resultRows))
+		for j, row := range resultRows {
+			values[j] = row[i]
+		}
+		fields[i] = sdk.Field{
+			Name:   col.Name,
+			Kind:   sdk.InferFieldKind(col.Type),
+			Type:   col.Type,
+			Values: values,
+		}
+	}
+
+	return &sdk.QueryResult{
+		Frames: []*sdk.DataFrame{{
+			FrameType: sdk.FrameTypeTable,
+			Fields:    fields,
+		}},
+		Stats: sdk.QueryStats{
+			ExecutionTime: time.Since(start),
+			RowsReturned:  int64(len(resultRows)),
+		},
+	}, nil
+}
+
+// queryRaw executes a query and returns column metadata + raw rows.
+// Used internally by Query (for building DataFrames) and schema helpers.
+func (c *Connection) queryRaw(ctx context.Context, query string, params ...any) ([]sdk.ColumnInfo, [][]any, error) {
 	rows, err := c.db.QueryContext(ctx, query, params...)
 	if err != nil {
-		return nil, fmt.Errorf("query execution failed: %w", err)
+		return nil, nil, fmt.Errorf("query execution failed: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
 	columnTypes, err := rows.ColumnTypes()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get column types: %w", err)
+		return nil, nil, fmt.Errorf("failed to get column types: %w", err)
 	}
 
 	columns := make([]sdk.ColumnInfo, len(columnTypes))
@@ -130,7 +164,7 @@ func (c *Connection) Query(ctx context.Context, query string, params ...any) (*s
 			valuePtrs[i] = &values[i]
 		}
 		if err := rows.Scan(valuePtrs...); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		for i, v := range values {
 			if b, ok := v.([]byte); ok {
@@ -140,17 +174,9 @@ func (c *Connection) Query(ctx context.Context, query string, params ...any) (*s
 		resultRows = append(resultRows, values)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration error: %w", err)
+		return nil, nil, fmt.Errorf("rows iteration error: %w", err)
 	}
-
-	return &sdk.QueryResult{
-		Columns: columns,
-		Rows:    resultRows,
-		Stats: sdk.QueryStats{
-			ExecutionTime: time.Since(start),
-			RowsReturned:  int64(len(resultRows)),
-		},
-	}, nil
+	return columns, resultRows, nil
 }
 
 func (c *Connection) GetSchema(ctx context.Context) (*sdk.SchemaInfo, error) {
@@ -180,13 +206,13 @@ func (c *Connection) GetTables(ctx context.Context, schemaName string) ([]sdk.Ta
 		ORDER BY t.table_name
 	`
 
-	result, err := c.Query(ctx, query, schemaName)
+	_, rows, err := c.queryRaw(ctx, query, schemaName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tables: %w", err)
 	}
 
-	tables := make([]sdk.TableInfo, 0, len(result.Rows))
-	for _, row := range result.Rows {
+	tables := make([]sdk.TableInfo, 0, len(rows))
+	for _, row := range rows {
 		name, _ := row[0].(string)
 		tableType, _ := row[1].(string)
 
@@ -238,13 +264,13 @@ func (c *Connection) getDatabases(ctx context.Context) ([]sdk.DatabaseInfo, erro
 		WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
 		ORDER BY schema_name
 	`
-	result, err := c.Query(ctx, query)
+	_, rows, err := c.queryRaw(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schemas: %w", err)
 	}
 
-	databases := make([]sdk.DatabaseInfo, 0, len(result.Rows))
-	for _, row := range result.Rows {
+	databases := make([]sdk.DatabaseInfo, 0, len(rows))
+	for _, row := range rows {
 		if schemaName, ok := row[0].(string); ok {
 			tables, _ := c.GetTables(ctx, schemaName)
 			databases = append(databases, sdk.DatabaseInfo{Name: schemaName, Tables: tables})
@@ -260,13 +286,13 @@ func (c *Connection) getTableColumns(ctx context.Context, schemaName, tableName 
 		WHERE table_schema = $1 AND table_name = $2
 		ORDER BY ordinal_position
 	`
-	result, err := c.Query(ctx, query, schemaName, tableName)
+	_, rows, err := c.queryRaw(ctx, query, schemaName, tableName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get columns: %w", err)
 	}
 
-	columns := make([]sdk.ColumnInfo, 0, len(result.Rows))
-	for _, row := range result.Rows {
+	columns := make([]sdk.ColumnInfo, 0, len(rows))
+	for _, row := range rows {
 		name, _ := row[0].(string)
 		dataType, _ := row[1].(string)
 		isNullable, _ := row[2].(string)

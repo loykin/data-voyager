@@ -6,6 +6,19 @@ export type {
   CreateConnectionRequest,
   UpdateConnectionRequest,
   TestConnectionRequest,
+  QueryRequest,
+  QueryResponse,
+  QueryResult,
+  QueryStats,
+  QueryInspect,
+  TimeRange,
+  DataFrame,
+  DataField,
+  FieldKind,
+  FrameType,
+  BatchQueryRequest,
+  BatchQueryResponse,
+  BatchQueryResultItem,
 } from './model/datasource.types'
 export { datasourceApi } from './api/datasource.api'
 export {

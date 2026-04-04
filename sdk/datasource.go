@@ -3,6 +3,7 @@ package sdk
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -55,18 +56,81 @@ type Connection interface {
 	GetMetrics() ConnectionMetrics
 }
 
-// QueryResult holds the output of a datasource query.
-type QueryResult struct {
-	Columns []ColumnInfo `json:"columns"`
-	Rows    [][]any      `json:"rows"`
-	Stats   QueryStats   `json:"stats"`
+// FieldKind is the semantic type of a Field, used for rendering decisions.
+type FieldKind string
+
+const (
+	FieldKindTime    FieldKind = "time"
+	FieldKindNumber  FieldKind = "number"
+	FieldKindString  FieldKind = "string"
+	FieldKindBoolean FieldKind = "boolean"
+)
+
+// FrameType hints how a DataFrame should be visualized.
+type FrameType string
+
+const (
+	FrameTypeTable FrameType = "table"
+	//FrameTypeTimeSeries FrameType = "time_series"
+	//FrameTypeLogs       FrameType = "logs"
+)
+
+// Field is one column of a DataFrame, stored in column-oriented format.
+type Field struct {
+	Name   string            `json:"name"`
+	Kind   FieldKind         `json:"kind"`
+	Type   string            `json:"type,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
+	Values []any             `json:"values"`
 }
 
-// ColumnInfo describes a single column in a QueryResult.
+// DataFrame is a column-oriented data container returned by all datasources.
+// SQL queries produce one DataFrame (FrameType="table").
+// Prometheus range queries produce one DataFrame per time-series (FrameType="time_series").
+type DataFrame struct {
+	Name      string    `json:"name,omitempty"`
+	FrameType FrameType `json:"frame_type"`
+	Fields    []Field   `json:"fields"`
+}
+
+// QueryResult holds the normalized output of any datasource query.
+type QueryResult struct {
+	Frames []*DataFrame `json:"frames"`
+	Stats  QueryStats   `json:"stats"`
+}
+
+// ColumnInfo describes a column for schema introspection (GetSchema/GetTables).
 type ColumnInfo struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
 	Nullable bool   `json:"nullable"`
+}
+
+// InferFieldKind infers a semantic FieldKind from a native database type string.
+// Handles ClickHouse types (UInt64, DateTime64, Nullable(X)) and
+// PostgreSQL types (INT4, TIMESTAMPTZ, VARCHAR) and generic SQL types.
+func InferFieldKind(dbType string) FieldKind {
+	t := strings.ToUpper(strings.TrimSpace(dbType))
+	// Strip Nullable wrapper: NULLABLE(DATETIME64(3)) → DATETIME64(3)
+	if strings.HasPrefix(t, "NULLABLE(") && strings.HasSuffix(t, ")") {
+		t = t[9 : len(t)-1]
+	}
+	// Strip precision/length suffix: VARCHAR(255) → VARCHAR, DECIMAL(10,2) → DECIMAL
+	if idx := strings.IndexByte(t, '('); idx != -1 {
+		t = t[:idx]
+	}
+	switch {
+	case t == "BOOL" || t == "BOOLEAN":
+		return FieldKindBoolean
+	case strings.HasPrefix(t, "DATE") || strings.HasPrefix(t, "TIME") ||
+		t == "TIMESTAMP" || t == "TIMESTAMPTZ":
+		return FieldKindTime
+	case strings.Contains(t, "INT") || strings.Contains(t, "FLOAT") ||
+		strings.Contains(t, "DECIMAL") || t == "NUMERIC" || t == "DOUBLE" ||
+		t == "REAL" || t == "MONEY" || t == "NUMBER":
+		return FieldKindNumber
+	}
+	return FieldKindString
 }
 
 // QueryStats holds execution metrics.
