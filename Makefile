@@ -13,11 +13,11 @@ BUILD_DIR=build
 DATA_DIR=data
 
 # Colors for output
-CYAN=\033[0;36m
-GREEN=\033[0;32m
-YELLOW=\033[0;33m
-RED=\033[0;31m
-NC=\033[0m # No Color
+CYAN=$(shell tput setaf 6 2>/dev/null || true)
+GREEN=$(shell tput setaf 2 2>/dev/null || true)
+YELLOW=$(shell tput setaf 3 2>/dev/null || true)
+RED=$(shell tput setaf 1 2>/dev/null || true)
+NC=$(shell tput sgr0 2>/dev/null || true)
 
 help: ## Show this help message
 	@echo '$(CYAN)Data Voyager - Available commands:$(NC)'
