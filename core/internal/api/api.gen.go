@@ -45,6 +45,51 @@ func (e AIConfigProvider) Valid() bool {
 	}
 }
 
+// Defines values for AIConfigHistoryAction.
+const (
+	AIConfigHistoryActionActivated AIConfigHistoryAction = "activated"
+	AIConfigHistoryActionCreated   AIConfigHistoryAction = "created"
+	AIConfigHistoryActionDeleted   AIConfigHistoryAction = "deleted"
+	AIConfigHistoryActionUpdated   AIConfigHistoryAction = "updated"
+)
+
+// Valid indicates whether the value is a known member of the AIConfigHistoryAction enum.
+func (e AIConfigHistoryAction) Valid() bool {
+	switch e {
+	case AIConfigHistoryActionActivated:
+		return true
+	case AIConfigHistoryActionCreated:
+		return true
+	case AIConfigHistoryActionDeleted:
+		return true
+	case AIConfigHistoryActionUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectionHistoryAction.
+const (
+	ConnectionHistoryActionCreated ConnectionHistoryAction = "created"
+	ConnectionHistoryActionDeleted ConnectionHistoryAction = "deleted"
+	ConnectionHistoryActionUpdated ConnectionHistoryAction = "updated"
+)
+
+// Valid indicates whether the value is a known member of the ConnectionHistoryAction enum.
+func (e ConnectionHistoryAction) Valid() bool {
+	switch e {
+	case ConnectionHistoryActionCreated:
+		return true
+	case ConnectionHistoryActionDeleted:
+		return true
+	case ConnectionHistoryActionUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateAIConfigRequestProvider.
 const (
 	CreateAIConfigRequestProviderClaude  CreateAIConfigRequestProvider = "claude"
@@ -155,6 +200,24 @@ type AIConfig struct {
 // AIConfigProvider defines model for AIConfig.Provider.
 type AIConfigProvider string
 
+// AIConfigHistory defines model for AIConfigHistory.
+type AIConfigHistory struct {
+	Action     AIConfigHistoryAction `json:"action"`
+	ChangedAt  time.Time             `json:"changed_at"`
+	ConfigId   string                `json:"config_id"`
+	ConfigName string                `json:"config_name"`
+	Id         string                `json:"id"`
+	Provider   string                `json:"provider"`
+}
+
+// AIConfigHistoryAction defines model for AIConfigHistory.Action.
+type AIConfigHistoryAction string
+
+// AIConfigHistoryListResponse defines model for AIConfigHistoryListResponse.
+type AIConfigHistoryListResponse struct {
+	Data []AIConfigHistory `json:"data"`
+}
+
 // AIConfigListResponse defines model for AIConfigListResponse.
 type AIConfigListResponse struct {
 	Data []AIConfig `json:"data"`
@@ -233,6 +296,24 @@ type Connection struct {
 	// Type Datasource type identifier (e.g. "postgresql", "clickhouse")
 	Type      string    `json:"type"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ConnectionHistory defines model for ConnectionHistory.
+type ConnectionHistory struct {
+	Action         ConnectionHistoryAction `json:"action"`
+	ChangedAt      time.Time               `json:"changed_at"`
+	ConnectionId   string                  `json:"connection_id"`
+	ConnectionName string                  `json:"connection_name"`
+	ConnectionType string                  `json:"connection_type"`
+	Id             string                  `json:"id"`
+}
+
+// ConnectionHistoryAction defines model for ConnectionHistory.Action.
+type ConnectionHistoryAction string
+
+// ConnectionHistoryListResponse defines model for ConnectionHistoryListResponse.
+type ConnectionHistoryListResponse struct {
+	Data []ConnectionHistory `json:"data"`
 }
 
 // ConnectionListResponse defines model for ConnectionListResponse.
@@ -483,6 +564,18 @@ type NotFound = ErrorResponse
 // NotImplemented defines model for NotImplemented.
 type NotImplemented = ErrorResponse
 
+// ListAIConfigHistoryParams defines parameters for ListAIConfigHistory.
+type ListAIConfigHistoryParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListAIConfigHistoryByConfigParams defines parameters for ListAIConfigHistoryByConfig.
+type ListAIConfigHistoryByConfigParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // ListConnectionsParams defines parameters for ListConnections.
 type ListConnectionsParams struct {
 	// Type Filter by datasource type
@@ -493,6 +586,18 @@ type ListConnectionsParams struct {
 
 	// CreatedBy Filter by creator
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty"`
+}
+
+// ListConnectionHistoryParams defines parameters for ListConnectionHistory.
+type ListConnectionHistoryParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// ListConnectionHistoryByConnectionParams defines parameters for ListConnectionHistoryByConnection.
+type ListConnectionHistoryByConnectionParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // CreateAIConfigJSONRequestBody defines body for CreateAIConfig for application/json ContentType.
@@ -527,6 +632,9 @@ type ServerInterface interface {
 	// Create an AI provider config
 	// (POST /ai-configs)
 	CreateAIConfig(c *gin.Context)
+	// List all AI config change history (requires statistics_store)
+	// (GET /ai-configs/history)
+	ListAIConfigHistory(c *gin.Context, params ListAIConfigHistoryParams)
 	// Delete an AI config
 	// (DELETE /ai-configs/{id})
 	DeleteAIConfig(c *gin.Context, id string)
@@ -539,6 +647,9 @@ type ServerInterface interface {
 	// Set the active AI config (clears others)
 	// (POST /ai-configs/{id}/activate)
 	ActivateAIConfig(c *gin.Context, id string)
+	// List change history for a specific AI config
+	// (GET /ai-configs/{id}/history)
+	ListAIConfigHistoryByConfig(c *gin.Context, id string, params ListAIConfigHistoryByConfigParams)
 	// Get connection statistics
 	// (GET /connection-stats)
 	GetConnectionStats(c *gin.Context)
@@ -551,6 +662,9 @@ type ServerInterface interface {
 	// Create a connection
 	// (POST /connections)
 	CreateConnection(c *gin.Context)
+	// List all datasource change history (requires statistics_store)
+	// (GET /connections/history)
+	ListConnectionHistory(c *gin.Context, params ListConnectionHistoryParams)
 	// Test a connection config without saving
 	// (POST /connections/test)
 	TestConnectionConfig(c *gin.Context)
@@ -563,6 +677,9 @@ type ServerInterface interface {
 	// Update a connection
 	// (PUT /connections/{id})
 	UpdateConnection(c *gin.Context, id openapi_types.UUID)
+	// List change history for a specific datasource
+	// (GET /connections/{id}/history)
+	ListConnectionHistoryByConnection(c *gin.Context, id openapi_types.UUID, params ListConnectionHistoryByConnectionParams)
 	// Execute a query through a connection
 	// (POST /connections/{id}/query)
 	QueryConnection(c *gin.Context, id openapi_types.UUID)
@@ -616,6 +733,40 @@ func (siw *ServerInterfaceWrapper) CreateAIConfig(c *gin.Context) {
 	}
 
 	siw.Handler.CreateAIConfig(c)
+}
+
+// ListAIConfigHistory operation middleware
+func (siw *ServerInterfaceWrapper) ListAIConfigHistory(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAIConfigHistoryParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", c.Request.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAIConfigHistory(c, params)
 }
 
 // DeleteAIConfig operation middleware
@@ -714,6 +865,49 @@ func (siw *ServerInterfaceWrapper) ActivateAIConfig(c *gin.Context) {
 	siw.Handler.ActivateAIConfig(c, id)
 }
 
+// ListAIConfigHistoryByConfig operation middleware
+func (siw *ServerInterfaceWrapper) ListAIConfigHistoryByConfig(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAIConfigHistoryByConfigParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", c.Request.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAIConfigHistoryByConfig(c, id, params)
+}
+
 // GetConnectionStats operation middleware
 func (siw *ServerInterfaceWrapper) GetConnectionStats(c *gin.Context) {
 
@@ -793,6 +987,40 @@ func (siw *ServerInterfaceWrapper) CreateConnection(c *gin.Context) {
 	}
 
 	siw.Handler.CreateConnection(c)
+}
+
+// ListConnectionHistory operation middleware
+func (siw *ServerInterfaceWrapper) ListConnectionHistory(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConnectionHistoryParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", c.Request.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListConnectionHistory(c, params)
 }
 
 // TestConnectionConfig operation middleware
@@ -878,6 +1106,49 @@ func (siw *ServerInterfaceWrapper) UpdateConnection(c *gin.Context) {
 	}
 
 	siw.Handler.UpdateConnection(c, id)
+}
+
+// ListConnectionHistoryByConnection operation middleware
+func (siw *ServerInterfaceWrapper) ListConnectionHistoryByConnection(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConnectionHistoryByConnectionParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", c.Request.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", c.Request.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListConnectionHistoryByConnection(c, id, params)
 }
 
 // QueryConnection operation middleware
@@ -1031,18 +1302,22 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 
 	router.GET(options.BaseURL+"/ai-configs", wrapper.ListAIConfigs)
 	router.POST(options.BaseURL+"/ai-configs", wrapper.CreateAIConfig)
+	router.GET(options.BaseURL+"/ai-configs/history", wrapper.ListAIConfigHistory)
 	router.DELETE(options.BaseURL+"/ai-configs/:id", wrapper.DeleteAIConfig)
 	router.GET(options.BaseURL+"/ai-configs/:id", wrapper.GetAIConfig)
 	router.PUT(options.BaseURL+"/ai-configs/:id", wrapper.UpdateAIConfig)
 	router.POST(options.BaseURL+"/ai-configs/:id/activate", wrapper.ActivateAIConfig)
+	router.GET(options.BaseURL+"/ai-configs/:id/history", wrapper.ListAIConfigHistoryByConfig)
 	router.GET(options.BaseURL+"/connection-stats", wrapper.GetConnectionStats)
 	router.GET(options.BaseURL+"/connection-types", wrapper.ListConnectionTypes)
 	router.GET(options.BaseURL+"/connections", wrapper.ListConnections)
 	router.POST(options.BaseURL+"/connections", wrapper.CreateConnection)
+	router.GET(options.BaseURL+"/connections/history", wrapper.ListConnectionHistory)
 	router.POST(options.BaseURL+"/connections/test", wrapper.TestConnectionConfig)
 	router.DELETE(options.BaseURL+"/connections/:id", wrapper.DeleteConnection)
 	router.GET(options.BaseURL+"/connections/:id", wrapper.GetConnection)
 	router.PUT(options.BaseURL+"/connections/:id", wrapper.UpdateConnection)
+	router.GET(options.BaseURL+"/connections/:id/history", wrapper.ListConnectionHistoryByConnection)
 	router.POST(options.BaseURL+"/connections/:id/query", wrapper.QueryConnection)
 	router.POST(options.BaseURL+"/connections/:id/query/batch", wrapper.BatchQueryConnection)
 	router.GET(options.BaseURL+"/connections/:id/schema", wrapper.GetConnectionSchema)
@@ -1054,58 +1329,63 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"oe59aV5Clev71e3q3wEAAP//P6M4KqdcAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

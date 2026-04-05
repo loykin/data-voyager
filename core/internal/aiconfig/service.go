@@ -9,20 +9,27 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 // Service manages AI config CRUD with encryption for API keys.
 type Service struct {
-	repo       Repository
-	encryptKey []byte // 32 bytes; nil means store plaintext
+	repo        Repository
+	encryptKey  []byte            // 32 bytes; nil means store plaintext
+	historyRepo HistoryRepository // noop when statistics_store is not configured
 }
 
 // NewService creates a Service. encryptKey must be 32 bytes or nil.
-func NewService(repo Repository, encryptKey []byte) (*Service, error) {
+func NewService(repo Repository, encryptKey []byte, historyRepo HistoryRepository) (*Service, error) {
 	if encryptKey != nil && len(encryptKey) != 32 {
 		return nil, fmt.Errorf("encryption key must be 32 bytes, got %d", len(encryptKey))
 	}
-	return &Service{repo: repo, encryptKey: encryptKey}, nil
+	if historyRepo == nil {
+		historyRepo = NoopHistoryRepository{}
+	}
+	return &Service{repo: repo, encryptKey: encryptKey, historyRepo: historyRepo}, nil
 }
 
 // List returns all configs without exposing API keys.
@@ -57,7 +64,11 @@ func (s *Service) Create(ctx context.Context, cfg *AIConfig) error {
 		}
 		cfg.APIKey = enc
 	}
-	return s.repo.Create(ctx, cfg)
+	if err := s.repo.Create(ctx, cfg); err != nil {
+		return err
+	}
+	s.recordHistory(ctx, cfg.ID, cfg.Name, cfg.Provider, "created")
+	return nil
 }
 
 // Update modifies an existing config.
@@ -84,17 +95,51 @@ func (s *Service) Update(ctx context.Context, id string, input *AIConfig) error 
 	}
 	// input.APIKey == "" → keep existing.APIKey unchanged
 
-	return s.repo.Update(ctx, existing)
+	if err := s.repo.Update(ctx, existing); err != nil {
+		return err
+	}
+	s.recordHistory(ctx, existing.ID, existing.Name, existing.Provider, "updated")
+	return nil
 }
 
 // Delete removes a config by ID.
 func (s *Service) Delete(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+	// Snapshot name/provider before deletion for history record.
+	existing, _ := s.repo.GetByID(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+	if existing != nil {
+		s.recordHistory(ctx, existing.ID, existing.Name, existing.Provider, "deleted")
+	}
+	return nil
 }
 
 // SetActive marks one config as active, clears all others.
 func (s *Service) SetActive(ctx context.Context, id string) error {
-	return s.repo.SetActive(ctx, id)
+	existing, _ := s.repo.GetByID(ctx, id)
+	if err := s.repo.SetActive(ctx, id); err != nil {
+		return err
+	}
+	if existing != nil {
+		s.recordHistory(ctx, existing.ID, existing.Name, existing.Provider, "activated")
+	}
+	return nil
+}
+
+func (s *Service) recordHistory(ctx context.Context, configID, name, provider, action string) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return
+	}
+	_ = s.historyRepo.Record(ctx, &AIConfigHistory{
+		ID:         id.String(),
+		ConfigID:   configID,
+		ConfigName: name,
+		Provider:   provider,
+		Action:     action,
+		ChangedAt:  time.Now().UTC(),
+	})
 }
 
 // GetActive returns the active config with the API key decrypted.

@@ -15,6 +15,8 @@ import (
 	"data-voyager/sdk"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,12 +32,12 @@ type mockRepo struct {
 	err  error
 }
 
-func (m *mockRepo) GetByID(_ context.Context, _ int64) (*Connection, error)    { return m.conn, m.err }
+func (m *mockRepo) GetByID(_ context.Context, _ string) (*Connection, error)   { return m.conn, m.err }
 func (m *mockRepo) Create(_ context.Context, _ *Connection) error              { return nil }
 func (m *mockRepo) GetByName(_ context.Context, _ string) (*Connection, error) { return nil, nil }
 func (m *mockRepo) List(_ context.Context, _ Filter) ([]*Connection, error)    { return nil, nil }
 func (m *mockRepo) Update(_ context.Context, _ *Connection) error              { return nil }
-func (m *mockRepo) Delete(_ context.Context, _ int64) error                    { return nil }
+func (m *mockRepo) Delete(_ context.Context, _ string) error                   { return nil }
 func (m *mockRepo) Stats(_ context.Context) (*Stats, error)                    { return nil, nil }
 func (m *mockRepo) Health(_ context.Context) error                             { return nil }
 
@@ -84,9 +86,11 @@ func (m *mockConn) GetMetrics() sdk.ConnectionMetrics { return sdk.ConnectionMet
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const testConnID = "00000000-0000-0000-0000-000000000001"
+
 func storedConn() *Connection {
 	cfg, _ := json.Marshal(map[string]string{"host": "localhost"})
-	return &Connection{ID: 1, Name: "test", Type: "mock", Config: cfg}
+	return &Connection{ID: testConnID, Name: "test", Type: "mock", Config: cfg}
 }
 
 func newHandler(repo Repository, plugin sdk.DatasourcePlugin) *Handler {
@@ -102,8 +106,8 @@ func post(h *Handler, body any) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
-	c.Params = gin.Params{{Key: "id", Value: "1"}}
-	h.QueryConnection(c, 1)
+	c.Params = gin.Params{{Key: "id", Value: testConnID}}
+	h.QueryConnection(c, uuid.MustParse(testConnID))
 	return w
 }
 
@@ -205,8 +209,8 @@ func TestQueryConnection_BadJSON(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
-	c.Params = gin.Params{{Key: "id", Value: "1"}}
-	h.QueryConnection(c, 1)
+	c.Params = gin.Params{{Key: "id", Value: testConnID}}
+	h.QueryConnection(c, uuid.MustParse(testConnID))
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 

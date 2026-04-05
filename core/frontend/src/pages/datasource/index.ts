@@ -1,4 +1,2 @@
-export { DatasourcePage } from './ui/DatasourcePage'
-export { DatasourceCreatePage } from './ui/DatasourceCreatePage'
-export { DatasourceEditPage } from './ui/DatasourceEditPage'
-export { DatasourceShowPage } from './ui/DatasourceShowPage'
+export { DatasourcePage, DatasourceEditPage, DatasourceShowPage } from '@/features/datasource'
+export { DatasourceCreateForm as DatasourceCreatePage } from '@/features/datasource'

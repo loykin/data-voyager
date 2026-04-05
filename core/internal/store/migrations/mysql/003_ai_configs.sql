@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS ai_configs (
     id          VARCHAR(36)  NOT NULL PRIMARY KEY,
     name        VARCHAR(255) NOT NULL,
     provider    VARCHAR(50)  NOT NULL,
-    api_key     TEXT         NOT NULL DEFAULT '',
+    api_key     VARCHAR(2048) NOT NULL DEFAULT '',
     model       VARCHAR(255) NOT NULL DEFAULT '',
     base_url    VARCHAR(500) NOT NULL DEFAULT '',
     is_active   TINYINT(1)   NOT NULL DEFAULT 0,

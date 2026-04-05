@@ -299,6 +299,72 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /connections/history:
+    get:
+      operationId: listConnectionHistory
+      summary: List all datasource change history (requires statistics_store)
+      tags: [connections]
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 500
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionHistoryListResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /connections/{id}/history:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: listConnectionHistoryByConnection
+      summary: List change history for a specific datasource
+      tags: [connections]
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 500
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionHistoryListResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /ai-configs:
     get:
       operationId: listAIConfigs
@@ -411,6 +477,71 @@ paths:
           description: No Content
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai-configs/history:
+    get:
+      operationId: listAIConfigHistory
+      summary: List all AI config change history (requires statistics_store)
+      tags: [ai-configs]
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 500
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConfigHistoryListResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai-configs/{id}/history:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listAIConfigHistoryByConfig
+      summary: List change history for a specific AI config
+      tags: [ai-configs]
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 500
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConfigHistoryListResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -720,6 +851,34 @@ components:
         data:
           $ref: "#/components/schemas/ConnectionStats"
 
+    ConnectionHistory:
+      type: object
+      required: [id, connection_id, connection_name, connection_type, action, changed_at]
+      properties:
+        id:
+          type: string
+        connection_id:
+          type: string
+        connection_name:
+          type: string
+        connection_type:
+          type: string
+        action:
+          type: string
+          enum: [created, updated, deleted]
+        changed_at:
+          type: string
+          format: date-time
+
+    ConnectionHistoryListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConnectionHistory"
+
     ConnectionSchemaResponse:
       type: object
       required: [data]
@@ -899,6 +1058,34 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AIConfig"
+
+    AIConfigHistory:
+      type: object
+      required: [id, config_id, config_name, provider, action, changed_at]
+      properties:
+        id:
+          type: string
+        config_id:
+          type: string
+        config_name:
+          type: string
+        provider:
+          type: string
+        action:
+          type: string
+          enum: [created, updated, deleted, activated]
+        changed_at:
+          type: string
+          format: date-time
+
+    AIConfigHistoryListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIConfigHistory"
 
     AISettingsData:
       type: object

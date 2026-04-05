@@ -12,6 +12,35 @@ migrate_on_start = true
 [metadata_store.sqlite]
 path = "./data/data-voyager.db"
 
+ [statistics_store]
+ type = "sqlite"                  # sqlite | postgresql | mysql | clickhouse  (leave empty to disable)
+ migrate_on_start = true
+
+ [statistics_store.sqlite]
+ path = "./data/statistics.db"
+#
+# [statistics_store.postgresql]
+# host     = "localhost"
+# port     = 5432
+# database = "voyager_stats"
+# user     = "postgres"
+# password = ""
+# ssl_mode = "disable"
+#
+# [statistics_store.mysql]
+# host     = "localhost"
+# port     = 3306
+# database = "voyager_stats"
+# user     = "root"
+# password = ""
+#
+# [statistics_store.clickhouse]
+# host     = "localhost"
+# tcp_port = 9000
+# database = "voyager_stats"
+# username = "default"
+# password = ""
+
 [logging]
 level = "info"
 format = "text"

@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,13 +19,20 @@ import (
 
 // Handler implements api.ServerInterface for the connection domain.
 type Handler struct {
-	repo     Repository
-	registry *datasource.Registry
+	repo        Repository
+	registry    *datasource.Registry
+	historyRepo HistoryRepository
 }
 
 // NewHandler creates a new Handler.
 func NewHandler(repo Repository, registry *datasource.Registry) *Handler {
-	return &Handler{repo: repo, registry: registry}
+	return &Handler{repo: repo, registry: registry, historyRepo: NoopHistoryRepository{}}
+}
+
+// WithHistoryRepo attaches a HistoryRepository for audit logging.
+func (h *Handler) WithHistoryRepo(r HistoryRepository) *Handler {
+	h.historyRepo = r
+	return h
 }
 
 // parseAndValidateConfig marshals config map → JSON, parses and validates via plugin.
@@ -102,6 +110,7 @@ func (h *Handler) CreateConnection(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
+	h.recordHistory(c.Request.Context(), conn.ID, conn.Name, string(conn.Type), "created")
 	c.JSON(http.StatusCreated, api.ConnectionResponse{Data: toAPIConnection(conn)})
 }
 
@@ -151,15 +160,35 @@ func (h *Handler) UpdateConnection(c *gin.Context, id openapi_types.UUID) {
 		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
+	h.recordHistory(c.Request.Context(), conn.ID, conn.Name, string(conn.Type), "updated")
 	c.JSON(http.StatusOK, api.ConnectionResponse{Data: toAPIConnection(conn)})
 }
 
 func (h *Handler) DeleteConnection(c *gin.Context, id openapi_types.UUID) {
+	existing, _ := h.repo.GetByID(c.Request.Context(), id.String())
 	if err := h.repo.Delete(c.Request.Context(), id.String()); err != nil {
 		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
 		return
 	}
+	if existing != nil {
+		h.recordHistory(c.Request.Context(), existing.ID, existing.Name, string(existing.Type), "deleted")
+	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) recordHistory(ctx context.Context, connID, name, connType, action string) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return
+	}
+	_ = h.historyRepo.Record(ctx, &ConnectionHistory{
+		ID:             id.String(),
+		ConnectionID:   connID,
+		ConnectionName: name,
+		ConnectionType: connType,
+		Action:         action,
+		ChangedAt:      time.Now().UTC(),
+	})
 }
 
 func (h *Handler) TestConnection(c *gin.Context, id openapi_types.UUID) {
@@ -499,6 +528,58 @@ func sliceVal(s *[]string) []string {
 		return nil
 	}
 	return *s
+}
+
+// ListConnectionHistory handles GET /connections/history
+func (h *Handler) ListConnectionHistory(c *gin.Context, params api.ListConnectionHistoryParams) {
+	limit, offset := historyPage(params.Limit, params.Offset)
+	records, err := h.historyRepo.List(c.Request.Context(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to list connection history"})
+		return
+	}
+	resp := make([]api.ConnectionHistory, len(records))
+	for i, r := range records {
+		resp[i] = toAPIConnectionHistory(r)
+	}
+	c.JSON(http.StatusOK, api.ConnectionHistoryListResponse{Data: resp})
+}
+
+// ListConnectionHistoryByConnection handles GET /connections/:id/history
+func (h *Handler) ListConnectionHistoryByConnection(c *gin.Context, id openapi_types.UUID, params api.ListConnectionHistoryByConnectionParams) {
+	limit, offset := historyPage(params.Limit, params.Offset)
+	records, err := h.historyRepo.ListByConnection(c.Request.Context(), id.String(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to list connection history"})
+		return
+	}
+	resp := make([]api.ConnectionHistory, len(records))
+	for i, r := range records {
+		resp[i] = toAPIConnectionHistory(r)
+	}
+	c.JSON(http.StatusOK, api.ConnectionHistoryListResponse{Data: resp})
+}
+
+func toAPIConnectionHistory(h *ConnectionHistory) api.ConnectionHistory {
+	return api.ConnectionHistory{
+		Id:             h.ID,
+		ConnectionId:   h.ConnectionID,
+		ConnectionName: h.ConnectionName,
+		ConnectionType: h.ConnectionType,
+		Action:         api.ConnectionHistoryAction(h.Action),
+		ChangedAt:      h.ChangedAt,
+	}
+}
+
+func historyPage(limit, offset *int) (int, int) {
+	l, o := 50, 0
+	if limit != nil && *limit > 0 && *limit <= 500 {
+		l = *limit
+	}
+	if offset != nil && *offset >= 0 {
+		o = *offset
+	}
+	return l, o
 }
 
 // sdkResultToAPI converts a sdk.QueryResult (DataFrame-based) to the API type.

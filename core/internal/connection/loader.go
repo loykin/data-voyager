@@ -64,6 +64,20 @@ func (h *combinedHandler) GetAIConfig(c *gin.Context, _ string)      { h.aiconfi
 func (h *combinedHandler) UpdateAIConfig(c *gin.Context, _ string)   { h.aiconfigHandler.Update(c) }
 func (h *combinedHandler) DeleteAIConfig(c *gin.Context, _ string)   { h.aiconfigHandler.Delete(c) }
 func (h *combinedHandler) ActivateAIConfig(c *gin.Context, _ string) { h.aiconfigHandler.Activate(c) }
+func (h *combinedHandler) ListAIConfigHistory(c *gin.Context, _ api.ListAIConfigHistoryParams) {
+	if h.aiconfigHandler == nil {
+		c.JSON(503, gin.H{"error": "AI config service not available"})
+		return
+	}
+	h.aiconfigHandler.ListHistory(c)
+}
+func (h *combinedHandler) ListAIConfigHistoryByConfig(c *gin.Context, _ string, _ api.ListAIConfigHistoryByConfigParams) {
+	if h.aiconfigHandler == nil {
+		c.JSON(503, gin.H{"error": "AI config service not available"})
+		return
+	}
+	h.aiconfigHandler.ListHistoryByConfig(c)
+}
 
 // loader wires Service and Handler together and satisfies app.Loader.
 type loader struct {
@@ -73,11 +87,10 @@ type loader struct {
 	aiconfigHandler *aiconfig.Handler
 }
 
-// NewLoader returns a loader for the connection domain.
-// settingsSvc and aiConfigSvc may be nil if not yet configured.
-func NewLoader(repo Repository, registry *datasource.Registry, cfg *config.ViperConfig, settingsSvc *settings.Service, aiConfigSvc *aiconfig.Service) apploader.Loader {
+// NewLoaderWithHistory creates a loader with a connection HistoryRepository for audit logging.
+func NewLoaderWithHistory(repo Repository, registry *datasource.Registry, cfg *config.ViperConfig, settingsSvc *settings.Service, aiConfigSvc *aiconfig.Service, connHistoryRepo HistoryRepository) apploader.Loader {
 	svc := NewService(repo, registry)
-	connHandler := NewHandler(repo, registry)
+	connHandler := NewHandler(repo, registry).WithHistoryRepo(connHistoryRepo)
 	settingsHandler := settings.NewHandler(settingsSvc, &cfg.AI)
 	aiHandler := ai.NewHandler(&aiRepoAdapter{inner: repo}, registry, &cfg.AI)
 

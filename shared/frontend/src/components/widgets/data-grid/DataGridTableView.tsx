@@ -391,7 +391,7 @@ function DataGridBodyRow<T extends object>({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="h-7 w-7"
+                className="h-6 w-6"
                 onClick={(e) => {
                   e.stopPropagation()
                   onActionTrigger?.(row.original, e.currentTarget as HTMLElement)

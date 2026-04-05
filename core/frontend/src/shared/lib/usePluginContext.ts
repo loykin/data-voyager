@@ -1,7 +1,17 @@
 import { useNavigate } from 'react-router-dom'
 import { useMemo } from 'react'
 import type { PluginContext } from '@data-voyager/sdk'
-import { http } from '@/shared/api/http'
+
+const BASE = '/api/v1'
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    ...init,
+  })
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  return res.json() as Promise<T>
+}
 
 /**
  * Constructs a PluginContext that can be passed to plugin-registered components
@@ -17,11 +27,11 @@ export function usePluginContext(): PluginContext {
           const url = params
             ? `${path}?${new URLSearchParams(params).toString()}`
             : path
-          return http.get(url)
+          return apiFetch(url)
         },
-        post: (path, body) => http.post(path, body),
-        put: (path, body) => http.put(path, body),
-        delete: (path) => http.delete(path),
+        post: (path, body) => apiFetch(path, { method: 'POST', body: JSON.stringify(body) }),
+        put: (path, body) => apiFetch(path, { method: 'PUT', body: JSON.stringify(body) }),
+        delete: (path) => apiFetch(path, { method: 'DELETE' }),
       },
       auth: {
         hasPermission: () => true,

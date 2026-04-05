@@ -10,11 +10,12 @@ import (
 
 // ViperConfig mirrors Config but uses mapstructure tags for Viper unmarshaling.
 type ViperConfig struct {
-	Server        ServerConfig   `mapstructure:"server"`
-	MetadataStore DBConfig       `mapstructure:"metadata_store"`
-	Logging       LoggingConfig  `mapstructure:"logging"`
-	Security      SecurityConfig `mapstructure:"security"`
-	AI            AIConfig       `mapstructure:"ai"`
+	Server          ServerConfig          `mapstructure:"server"`
+	MetadataStore   DBConfig              `mapstructure:"metadata_store"`
+	StatisticsStore StatisticsStoreConfig `mapstructure:"statistics_store"`
+	Logging         LoggingConfig         `mapstructure:"logging"`
+	Security        SecurityConfig        `mapstructure:"security"`
+	AI              AIConfig              `mapstructure:"ai"`
 }
 
 // InitViper initializes Viper configuration.
@@ -92,10 +93,11 @@ func (c *ViperConfig) Validate() error {
 // Config converts ViperConfig to Config.
 func (c *ViperConfig) Config() *Config {
 	return &Config{
-		Server:        c.Server,
-		MetadataStore: c.MetadataStore,
-		Logging:       c.Logging,
-		Security:      c.Security,
+		Server:          c.Server,
+		MetadataStore:   c.MetadataStore,
+		StatisticsStore: c.StatisticsStore,
+		Logging:         c.Logging,
+		Security:        c.Security,
 	}
 }
 

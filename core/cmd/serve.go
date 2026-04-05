@@ -20,6 +20,7 @@ import (
 	_ "data-voyager/core/internal/generated" // load extension init() registrations
 	"data-voyager/core/internal/logger"
 	"data-voyager/core/internal/settings"
+	"data-voyager/core/internal/statsstore"
 	"data-voyager/core/internal/store"
 
 	"github.com/gin-gonic/gin"
@@ -109,13 +110,30 @@ func runServe(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to initialize settings service: %w", err)
 	}
 
-	aiConfigSvc, err := aiconfig.BuildService(repos.AIConfigs, encryptKey)
+	// Open statistics store (optional — noop when type is empty).
+	var aiHistoryRepo aiconfig.HistoryRepository = aiconfig.NoopHistoryRepository{}
+	var connHistoryRepo connection.HistoryRepository = connection.NoopHistoryRepository{}
+	if cfg.StatisticsStore.Type != "" {
+		statsDB, err := statsstore.Open(cfg.StatisticsStore)
+		if err != nil {
+			return fmt.Errorf("failed to open statistics store: %w", err)
+		}
+		defer func() { _ = statsDB.Close() }()
+		statsRepos, err := statsstore.NewRepos(statsDB, cfg.StatisticsStore)
+		if err != nil {
+			return fmt.Errorf("failed to initialize statistics repositories: %w", err)
+		}
+		aiHistoryRepo = statsRepos.AIConfigHistory
+		connHistoryRepo = statsRepos.ConnectionHistory
+	}
+
+	aiConfigSvc, err := aiconfig.BuildService(repos.AIConfigs, encryptKey, aiHistoryRepo)
 	if err != nil {
 		return fmt.Errorf("failed to initialize aiconfig service: %w", err)
 	}
 
 	loaders := []app.Loader{
-		connection.NewLoader(repos.Connection, registry, cfg, settingsSvc, aiConfigSvc),
+		connection.NewLoaderWithHistory(repos.Connection, registry, cfg, settingsSvc, aiConfigSvc, connHistoryRepo),
 	}
 	for _, l := range loaders {
 		if err := l.Load(); err != nil {

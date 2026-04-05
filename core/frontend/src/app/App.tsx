@@ -20,13 +20,13 @@ const DataGridDemoPage = React.lazy(() =>
   import('@/pages/demo').then((m) => ({ default: m.DataGridDemoPage }))
 )
 const ChartDemoPage = React.lazy(() =>
-  import('@/pages/chart-demo').then((m) => ({ default: m.ChartDemoPage }))
+  import('@/pages/demo').then((m) => ({ default: m.ChartDemoPage }))
 )
 const HistogramDemoPage = React.lazy(() =>
-  import('@/pages/histogram-demo').then((m) => ({ default: m.HistogramDemoPage }))
+  import('@/pages/demo').then((m) => ({ default: m.HistogramDemoPage }))
 )
 const DatetimeDemoPage = React.lazy(() =>
-  import('@/pages/datetime-demo').then((m) => ({ default: m.DatetimeDemoPage }))
+  import('@/pages/demo').then((m) => ({ default: m.DatetimeDemoPage }))
 )
 const DiscoverPage = React.lazy(() =>
   import('@/pages/discover').then((m) => ({ default: m.DiscoverPage }))

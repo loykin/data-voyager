@@ -4,7 +4,7 @@ import { Bot, Send, X, Trash2, Square, ChevronDown, ChevronRight, Loader2, Setti
 import { Button, Textarea } from '@data-voyager/shared-ui'
 import { useQuery } from '@tanstack/react-query'
 import { useAgentChat, type ChatMessage } from '../hooks/useAgentChat'
-import { settingsApi } from '@/entities/settings'
+import { aiConfigApi } from '@/features/aiconfig'
 
 // ── tool call pill ────────────────────────────────────────────────────────────
 function ToolCallBadge({ name, args, result }: { name: string; args?: unknown; result?: unknown }) {
@@ -92,22 +92,13 @@ export function AIChatPanel({ connectionId, onClose }: AIChatPanelProps) {
   const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const { data: aiSettings } = useQuery({
-    queryKey: ['ai-settings'],
-    queryFn: () => settingsApi.getAI(),
+  const { data: aiConfigs } = useQuery({
+    queryKey: ['ai-configs'],
+    queryFn: () => aiConfigApi.list(),
     staleTime: 30_000,
   })
 
-  const aiReady =
-    aiSettings?.enabled === true &&
-    (() => {
-      const p = aiSettings?.provider
-      if (p === 'ollama') return true
-      if (p === 'claude') return aiSettings?.claude?.api_key_set === true
-      if (p === 'openai') return aiSettings?.openai?.api_key_set === true
-      if (p === 'copilot') return aiSettings?.copilot?.api_key_set === true
-      return false
-    })()
+  const aiReady = (aiConfigs ?? []).some((c) => c.is_active)
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -211,7 +202,7 @@ export function AIChatPanel({ connectionId, onClose }: AIChatPanelProps) {
                   : 'Select a connection first'
             }
             disabled={!connectionId || running || !aiReady}
-            className="min-h-[60px] resize-none text-sm"
+            className="min-h-15 resize-none text-sm"
             rows={2}
           />
           {running ? (

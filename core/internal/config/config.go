@@ -67,13 +67,74 @@ func (c *DBConfig) DSN() (string, error) {
 	}
 }
 
+// ClickHouseConfig holds ClickHouse-specific settings.
+type ClickHouseConfig struct {
+	Host     string `toml:"host"     mapstructure:"host"`
+	TCPPort  int    `toml:"tcp_port" mapstructure:"tcp_port"`
+	Database string `toml:"database" mapstructure:"database"`
+	Username string `toml:"username" mapstructure:"username"`
+	Password string `toml:"password" mapstructure:"password"`
+}
+
+// StatisticsStoreConfig configures the optional statistics/history database.
+// Leave Type empty to disable the statistics store entirely (noop mode).
+type StatisticsStoreConfig struct {
+	Type           string           `toml:"type"             mapstructure:"type"`
+	MigrateOnStart bool             `toml:"migrate_on_start" mapstructure:"migrate_on_start"`
+	SQLite         SQLiteConfig     `toml:"sqlite"           mapstructure:"sqlite"`
+	PostgreSQL     PostgreSQLConfig `toml:"postgresql"       mapstructure:"postgresql"`
+	MySQL          MySQLConfig      `toml:"mysql"            mapstructure:"mysql"`
+	ClickHouse     ClickHouseConfig `toml:"clickhouse"       mapstructure:"clickhouse"`
+}
+
+// Driver returns the normalised driver name for the statistics store.
+func (c *StatisticsStoreConfig) Driver() string {
+	switch c.Type {
+	case "postgresql":
+		return "postgres"
+	case "clickhouse":
+		return "clickhouse"
+	default:
+		return c.Type
+	}
+}
+
+// DSN builds the connection string for the statistics store active driver.
+func (c *StatisticsStoreConfig) DSN() (string, error) {
+	switch c.Type {
+	case "sqlite", "sqlite3":
+		return c.SQLite.Path, nil
+	case "postgres", "postgresql":
+		pg := c.PostgreSQL
+		return fmt.Sprintf(
+			"host=%s port=%d dbname=%s user=%s password=%s sslmode=%s",
+			pg.Host, pg.Port, pg.Database, pg.User, pg.Password, pg.SSLMode,
+		), nil
+	case "mysql":
+		my := c.MySQL
+		return fmt.Sprintf(
+			"%s:%s@tcp(%s:%d)/%s?parseTime=true",
+			my.User, my.Password, my.Host, my.Port, my.Database,
+		), nil
+	case "clickhouse":
+		ch := c.ClickHouse
+		return fmt.Sprintf(
+			"clickhouse://%s:%s@%s:%d/%s",
+			ch.Username, ch.Password, ch.Host, ch.TCPPort, ch.Database,
+		), nil
+	default:
+		return "", fmt.Errorf("unsupported statistics_store.type: %s", c.Type)
+	}
+}
+
 // Config represents the application configuration.
 type Config struct {
-	Server        ServerConfig   `toml:"server"`
-	MetadataStore DBConfig       `toml:"metadata_store"`
-	Logging       LoggingConfig  `toml:"logging"`
-	Security      SecurityConfig `toml:"security"`
-	AI            AIConfig       `toml:"ai"`
+	Server          ServerConfig          `toml:"server"`
+	MetadataStore   DBConfig              `toml:"metadata_store"`
+	StatisticsStore StatisticsStoreConfig `toml:"statistics_store"`
+	Logging         LoggingConfig         `toml:"logging"`
+	Security        SecurityConfig        `toml:"security"`
+	AI              AIConfig              `toml:"ai"`
 }
 
 // AIConfig holds AI provider configuration.

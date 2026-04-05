@@ -1,1 +1,1 @@
-export { DiscoverPage } from './ui/DiscoverPage'
+export { DiscoverPage } from '@/features/discover'

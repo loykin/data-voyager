@@ -2,6 +2,7 @@ package aiconfig
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -200,4 +201,73 @@ func validProvider(p string) bool {
 		return true
 	}
 	return false
+}
+
+// ─── history response type ─────────────────────────────────────────────────────
+
+type aiConfigHistoryResponse struct {
+	ID         string    `json:"id"`
+	ConfigID   string    `json:"config_id"`
+	ConfigName string    `json:"config_name"`
+	Provider   string    `json:"provider"`
+	Action     string    `json:"action"`
+	ChangedAt  time.Time `json:"changed_at"`
+}
+
+func toHistoryResponse(h *AIConfigHistory) aiConfigHistoryResponse {
+	return aiConfigHistoryResponse{
+		ID:         h.ID,
+		ConfigID:   h.ConfigID,
+		ConfigName: h.ConfigName,
+		Provider:   h.Provider,
+		Action:     h.Action,
+		ChangedAt:  h.ChangedAt,
+	}
+}
+
+// ListHistory handles GET /ai-configs/history
+func (h *Handler) ListHistory(c *gin.Context) {
+	limit, offset := parsePagination(c)
+	records, err := h.svc.historyRepo.List(c.Request.Context(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list AI config history"})
+		return
+	}
+	resp := make([]aiConfigHistoryResponse, len(records))
+	for i, r := range records {
+		resp[i] = toHistoryResponse(r)
+	}
+	c.JSON(http.StatusOK, gin.H{"data": resp})
+}
+
+// ListHistoryByConfig handles GET /ai-configs/:id/history
+func (h *Handler) ListHistoryByConfig(c *gin.Context) {
+	id := c.Param("id")
+	limit, offset := parsePagination(c)
+	records, err := h.svc.historyRepo.ListByConfig(c.Request.Context(), id, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list AI config history"})
+		return
+	}
+	resp := make([]aiConfigHistoryResponse, len(records))
+	for i, r := range records {
+		resp[i] = toHistoryResponse(r)
+	}
+	c.JSON(http.StatusOK, gin.H{"data": resp})
+}
+
+func parsePagination(c *gin.Context) (limit, offset int) {
+	limit = 50
+	offset = 0
+	if v := c.Query("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 500 {
+			limit = n
+		}
+	}
+	if v := c.Query("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+	return
 }
