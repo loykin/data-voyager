@@ -6,10 +6,14 @@ type AIConfigHistory = components['schemas']['AIConfigHistory']
 
 export type { AIConfig, CreateAIConfigRequest, UpdateAIConfigRequest, AIConfigHistory }
 
+function apiError(error: unknown, fallback: string): Error {
+  return new Error((error as { error?: string } | null)?.error ?? fallback)
+}
+
 export const aiConfigApi = {
   list: async (): Promise<AIConfig[]> => {
     const { data, error } = await apiClient.GET('/ai-configs')
-    if (error) throw new Error((error as { error?: string }).error ?? 'Failed to fetch AI configs')
+    if (error || !data) throw apiError(error, 'Failed to fetch AI configs')
     return data.data
   },
 
@@ -17,13 +21,13 @@ export const aiConfigApi = {
     const { data, error } = await apiClient.GET('/ai-configs/{id}', {
       params: { path: { id } },
     })
-    if (error) throw new Error((error as { error?: string }).error ?? 'Not found')
+    if (error || !data) throw apiError(error, 'Not found')
     return data.data
   },
 
   create: async (body: CreateAIConfigRequest): Promise<AIConfig> => {
     const { data, error } = await apiClient.POST('/ai-configs', { body })
-    if (error) throw new Error((error as { error?: string }).error ?? 'Failed to create AI config')
+    if (error || !data) throw apiError(error, 'Failed to create AI config')
     return data.data
   },
 
@@ -32,7 +36,7 @@ export const aiConfigApi = {
       params: { path: { id } },
       body,
     })
-    if (error) throw new Error((error as { error?: string }).error ?? 'Failed to update AI config')
+    if (error || !data) throw apiError(error, 'Failed to update AI config')
     return data.data
   },
 
@@ -40,21 +44,21 @@ export const aiConfigApi = {
     const { error } = await apiClient.DELETE('/ai-configs/{id}', {
       params: { path: { id } },
     })
-    if (error) throw new Error((error as { error?: string }).error ?? 'Failed to delete AI config')
+    if (error) throw apiError(error, 'Failed to delete AI config')
   },
 
   activate: async (id: string): Promise<void> => {
     const { error } = await apiClient.POST('/ai-configs/{id}/activate', {
       params: { path: { id } },
     })
-    if (error) throw new Error((error as { error?: string }).error ?? 'Failed to activate AI config')
+    if (error) throw apiError(error, 'Failed to activate AI config')
   },
 
   listHistory: async (limit = 50, offset = 0): Promise<AIConfigHistory[]> => {
     const { data, error } = await apiClient.GET('/ai-configs/history', {
       params: { query: { limit, offset } },
     })
-    if (error) throw new Error((error as { error?: string }).error ?? 'Failed to fetch AI config history')
+    if (error || !data) throw apiError(error, 'Failed to fetch AI config history')
     return data.data
   },
 
@@ -62,7 +66,7 @@ export const aiConfigApi = {
     const { data, error } = await apiClient.GET('/ai-configs/{id}/history', {
       params: { path: { id }, query: { limit, offset } },
     })
-    if (error) throw new Error((error as { error?: string }).error ?? 'Failed to fetch AI config history')
+    if (error || !data) throw apiError(error, 'Failed to fetch AI config history')
     return data.data
   },
 }
