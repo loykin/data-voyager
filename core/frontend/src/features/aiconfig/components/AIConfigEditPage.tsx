@@ -12,7 +12,7 @@ import {
 } from '@data-voyager/shared-ui/components/ui/select'
 import { aiConfigApi } from '../api/aiconfig.api'
 import type { CreateAIConfigRequest, UpdateAIConfigRequest } from '../api/aiconfig.api'
-import { PROVIDER_LABELS } from './columns'
+import { PROVIDER_LABELS } from '../tabs/list/columns'
 
 type ProviderKey = 'claude' | 'openai' | 'copilot' | 'ollama'
 const PROVIDERS: ProviderKey[] = ['claude', 'openai', 'copilot', 'ollama']

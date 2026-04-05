@@ -1,28 +1,27 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DataGrid } from '@data-voyager/shared-ui'
+import { DataGrid, useSidePanelStore } from '@data-voyager/shared-ui'
 import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Input } from '@data-voyager/shared-ui/components/ui/input'
 import { Plus, Search } from 'lucide-react'
-import { useDatasources, useDeleteDatasource } from '@/features/datasource'
+import { useDatasources } from '@/features/datasource'
+import type { Connection } from '../../api/datasource.api'
 import { getColumns } from './columns'
+import { DatasourceSheet } from './sheet'
 
-interface Props {
-  typeFilter?: string
-}
-
-export function DatasourceList({ typeFilter }: Props) {
+export function DatasourceListTab() {
   const navigate = useNavigate()
-  const { data, isLoading, error } = useDatasources(typeFilter)
-  const { mutate: deleteDatasource } = useDeleteDatasource()
+  const { open } = useSidePanelStore()
+  const { data, isLoading, error, refetch } = useDatasources()
 
-  const cols = useMemo(
-    () => getColumns(
-      (id) => navigate(`/datasource/edit?id=${id}`),
-      (id) => deleteDatasource(id),
-    ),
-    [navigate, deleteDatasource],
-  )
+  const cols = useMemo(() => getColumns(), [])
+
+  function openSheet(conn: Connection) {
+    open(
+      <DatasourceSheet id={conn.id} onChanged={() => { void refetch() }} />,
+      560,
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -32,7 +31,6 @@ export function DatasourceList({ typeFilter }: Props) {
           Add Datasource
         </Button>
       </div>
-
       <DataGrid
         data={data ?? []}
         columns={cols}
@@ -40,6 +38,8 @@ export function DatasourceList({ typeFilter }: Props) {
         error={error}
         bordered={true}
         enableSorting
+        onRowClick={openSheet}
+        rowCursor={true}
         searchableColumns={['name', 'type', 'description']}
         leftFilters={(table) => (
           <div className="relative">

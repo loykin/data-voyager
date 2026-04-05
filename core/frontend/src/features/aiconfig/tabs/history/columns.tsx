@@ -1,11 +1,13 @@
 import { Badge } from '@data-voyager/shared-ui'
 import type { DataGridColumnDef } from '@data-voyager/shared-ui'
-import type { ConnectionHistory } from '../api/datasource.api'
+import type { AIConfigHistory } from '@/features/aiconfig'
+import { PROVIDER_LABELS } from '../list/columns'
 
 const ACTION_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  created: 'default',
-  updated: 'secondary',
-  deleted: 'destructive',
+  created:   'default',
+  updated:   'secondary',
+  deleted:   'destructive',
+  activated: 'outline',
 }
 
 function formatDateTime(iso: string): string {
@@ -15,18 +17,20 @@ function formatDateTime(iso: string): string {
   })
 }
 
-export const historyColumns: DataGridColumnDef<ConnectionHistory>[] = [
+export const historyColumns: DataGridColumnDef<AIConfigHistory>[] = [
   {
-    accessorKey: 'connection_name',
+    accessorKey: 'config_name',
     header: 'Name',
     meta: { flex: 2 },
   },
   {
-    accessorKey: 'connection_type',
-    header: 'Type',
-    meta: { flex: 1 },
+    accessorKey: 'provider',
+    header: 'Provider',
+    meta: { flex: 1.5 },
     cell: ({ row }) => (
-      <Badge variant="secondary" className="text-xs">{row.original.connection_type}</Badge>
+      <span className="text-muted-foreground">
+        {PROVIDER_LABELS[row.original.provider] ?? row.original.provider}
+      </span>
     ),
   },
   {

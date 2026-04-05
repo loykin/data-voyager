@@ -1,11 +1,8 @@
 import type { DataGridColumnDef } from '@data-voyager/shared-ui'
-import { Badge } from '@data-voyager/shared-ui/components/ui/badge'
-import type { Connection } from '@/features/datasource'
+import { Badge } from '@data-voyager/shared-ui'
+import type { Connection } from '../../api/datasource.api'
 
-export function getColumns(
-  onEdit: (id: string) => void,
-  onDelete: (id: string) => void,
-): DataGridColumnDef<Connection>[] {
+export function getColumns(): DataGridColumnDef<Connection>[] {
   return [
     {
       accessorKey: 'id',
@@ -34,8 +31,7 @@ export function getColumns(
     {
       accessorKey: 'is_active',
       header: 'Status',
-      meta: { flex: 0.8 },
-      size: 80,
+      meta: { flex: 0.8, align: 'center' },
       cell: ({ row }) => (
         <Badge variant={row.original.is_active ? 'default' : 'outline'}>
           {row.original.is_active ? 'Active' : 'Inactive'}
@@ -53,24 +49,6 @@ export function getColumns(
           ))}
         </div>
       ),
-    },
-    {
-      id: 'actions',
-      header: '',
-      size: 40,
-      meta: {
-        actions: () => [
-          {
-            label: 'Edit',
-            onClick: (r) => onEdit(r.id),
-          },
-          {
-            label: 'Delete',
-            onClick: (r) => onDelete(r.id),
-            variant: 'destructive' as const,
-          },
-        ],
-      },
     },
   ]
 }

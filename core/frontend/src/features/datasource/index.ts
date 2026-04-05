@@ -2,6 +2,7 @@ export { DatasourcePage } from './components/DatasourcePage'
 export { DatasourceCreateForm } from './components/DatasourceCreateForm'
 export { DatasourceEditPage } from './components/DatasourceEditPage'
 export { DatasourceShowPage } from './components/DatasourceShowPage'
+export { DatasourceSheet } from './tabs/list/sheet'
 export { datasourceApi } from './api/datasource.api'
 export {
   useDatasources,

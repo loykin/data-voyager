@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2, X, CheckCircle2, XCircle, Bot, AlertTriangle, Loader2, Zap } from 'lucide-react'
 import { Button, Badge, useSidePanelStore } from '@data-voyager/shared-ui'
-import { aiConfigApi } from '../api/aiconfig.api'
+import { aiConfigApi } from '@/features/aiconfig'
 import { PROVIDER_LABELS } from './columns'
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
