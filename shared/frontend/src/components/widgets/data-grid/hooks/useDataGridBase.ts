@@ -29,7 +29,7 @@ export function useDataGridBase<T extends object>(options: UseDataGridBaseOption
     enableColumnFilters = false,
     visibilityState,
     initialPinning,
-    columnSizingMode = 'auto',
+    columnSizingMode = 'flex',
     checkboxConfig,
     tableKey,
     persistState,

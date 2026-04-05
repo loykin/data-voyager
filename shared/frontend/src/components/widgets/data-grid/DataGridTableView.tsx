@@ -379,8 +379,9 @@ function DataGridBodyRow<T extends object>({
             data-col-id={cell.column.id}
             className={cn(
               'flex items-center px-3 py-1 overflow-hidden bg-background',
-              meta?.align === 'right' && 'text-right',
-              meta?.align === 'center' && 'text-center',
+              meta?.align === 'right' && 'justify-end',
+              meta?.align === 'center' && 'justify-center',
+              meta?.wrap && 'items-start whitespace-normal',
               bordered && 'border-r border-border',
               edge === 'left-edge' && 'shadow-[1px_0_0_0_hsl(var(--border))]',
               edge === 'right-edge' && 'shadow-[-1px_0_0_0_hsl(var(--border))]',
@@ -400,9 +401,7 @@ function DataGridBodyRow<T extends object>({
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             ) : (
-              <span className={cn('block', meta?.wrap ? 'whitespace-normal' : 'truncate')}>
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </span>
+              flexRender(cell.column.columnDef.cell, cell.getContext())
             )}
           </TableCell>
         )

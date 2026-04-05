@@ -74,7 +74,7 @@ export function getListColumns(): DataGridColumnDef<AIConfig>[] {
     {
       accessorKey: 'is_active',
       header: 'Status',
-      meta: { flex: 0.8 },
+      meta: { flex: 0.8, align: 'center' },
       cell: ({ row }) => row.original.is_active ? (
         <Badge variant="secondary" className="text-xs">Active</Badge>
       ) : null,
