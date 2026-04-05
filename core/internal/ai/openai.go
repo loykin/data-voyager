@@ -107,12 +107,8 @@ func (a *openAIAdapter) Complete(ctx context.Context, req ChatRequest) (*Provide
 	tools := make([]oaiToolDef, 0, len(req.Tools))
 	for _, t := range req.Tools {
 		tools = append(tools, oaiToolDef{
-			Type: "function",
-			Function: oaiFunctionDef{
-				Name:        t.Name,
-				Description: t.Description,
-				Parameters:  t.Parameters,
-			},
+			Type:     "function",
+			Function: oaiFunctionDef(t),
 		})
 	}
 
