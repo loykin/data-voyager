@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
 
+	"data-voyager/core/internal/aiconfig"
 	"data-voyager/core/internal/config"
 	"data-voyager/core/internal/connection"
 	"data-voyager/core/internal/settings"
@@ -33,6 +34,7 @@ var mysqlMigrations embed.FS
 type Repos struct {
 	Connection connection.Repository
 	Settings   settings.Repository
+	AIConfigs  aiconfig.Repository
 }
 
 // Open opens a sqlx.DB connection and optionally runs goose migrations.
@@ -69,16 +71,19 @@ func NewRepos(db *sqlx.DB, cfg config.DBConfig) (*Repos, error) {
 		return &Repos{
 			Connection: stpostgres.NewConnectionRepo(db),
 			Settings:   stpostgres.NewSettingsRepo(db),
+			AIConfigs:  stpostgres.NewAIConfigRepo(db),
 		}, nil
 	case "sqlite", "sqlite3":
 		return &Repos{
 			Connection: stsqlite.NewConnectionRepo(db),
 			Settings:   stsqlite.NewSettingsRepo(db),
+			AIConfigs:  stsqlite.NewAIConfigRepo(db),
 		}, nil
 	case "mysql":
 		return &Repos{
 			Connection: stmysql.NewConnectionRepo(db),
 			Settings:   stmysql.NewSettingsRepo(db),
+			AIConfigs:  stmysql.NewAIConfigRepo(db),
 		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported metadata_store.type: %s", cfg.Type)

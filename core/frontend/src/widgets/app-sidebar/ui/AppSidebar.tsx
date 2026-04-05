@@ -9,9 +9,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from '@data-voyager/shared-ui/components/ui/sidebar'
-import { Database, LayoutGrid, LineChart, BarChart2, CalendarDays, Search, Settings } from 'lucide-react'
+import { Database, LayoutGrid, LineChart, BarChart2, CalendarDays, Search, Settings, Bot } from 'lucide-react'
 
 const navGroups = [
   {
@@ -26,16 +29,14 @@ const navGroups = [
     items: [
       { title: 'DataGrid Demo', url: '/demo', icon: LayoutGrid },
       { title: 'Time Series Demo', url: '/demo/chart', icon: LineChart },
-      { title: 'Histogram Demo',  url: '/demo/histogram', icon: BarChart2     },
-      { title: 'Datetime Demo',   url: '/demo/datetime',   icon: CalendarDays  },
+      { title: 'Histogram Demo',  url: '/demo/histogram', icon: BarChart2    },
+      { title: 'Datetime Demo',   url: '/demo/datetime',  icon: CalendarDays },
     ],
   },
-  {
-    label: 'System',
-    items: [
-      { title: 'Settings', url: '/settings', icon: Settings },
-    ],
-  },
+]
+
+const settingsSubItems = [
+  { title: 'AI Config', url: '/settings/ai', icon: Bot },
 ]
 
 export function AppSidebar() {
@@ -71,6 +72,37 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+
+        {/* Settings group with sub-items */}
+        <SidebarGroup>
+          <SidebarGroupLabel>System</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link to="/settings/ai" />}
+                  isActive={pathname.startsWith('/settings')}
+                >
+                  <Settings />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+                <SidebarMenuSub>
+                  {settingsSubItems.map((item) => (
+                    <SidebarMenuSubItem key={item.title}>
+                      <SidebarMenuSubButton
+                        render={<Link to={item.url} />}
+                        isActive={pathname === item.url}
+                      >
+                        <item.icon className="h-3.5 w-3.5" />
+                        <span>{item.title}</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  ))}
+                </SidebarMenuSub>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarRail />

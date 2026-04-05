@@ -9,3 +9,4 @@ CREATE TABLE IF NOT EXISTS ai_settings (
 
 -- +goose Down
 DROP TABLE IF EXISTS ai_settings;
+

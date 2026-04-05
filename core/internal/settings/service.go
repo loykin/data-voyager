@@ -212,19 +212,34 @@ func (s *Service) SaveAIConfig(ctx context.Context, req SaveAIConfigRequest) err
 		{"ai.ollama.model", req.Ollama.Model, false},
 	}
 
-	secretEntries := []kv{
-		{"ai.claude.api_key", req.Claude.APIKey, true},
-		{"ai.openai.api_key", req.OpenAI.APIKey, true},
-		{"ai.copilot.api_key", req.Copilot.APIKey, true},
+	type secretKV struct {
+		key   string
+		value string // "" means delete, non-empty means update
+		touch bool   // true when the caller explicitly sent a value (or explicit clear)
+	}
+
+	secretEntries := []secretKV{
+		{"ai.claude.api_key", req.Claude.APIKey, req.Claude.APIKey != ""},
+		{"ai.openai.api_key", req.OpenAI.APIKey, req.OpenAI.APIKey != ""},
+		{"ai.copilot.api_key", req.Copilot.APIKey, req.Copilot.APIKey != ""},
 	}
 
 	for _, e := range secretEntries {
-		if e.value != "" {
-			entries = append(entries, e)
+		if !e.touch {
+			// Caller sent empty string — leave existing value untouched.
+			continue
 		}
+		entries = append(entries, kv{e.key, e.value, true})
 	}
 
 	for _, e := range entries {
+		// An explicit empty secret means "delete the stored key".
+		if e.secret && e.value == "" {
+			if err := s.repo.Delete(ctx, e.key); err != nil {
+				return fmt.Errorf("delete setting %s: %w", e.key, err)
+			}
+			continue
+		}
 		val := e.value
 		if e.secret {
 			if s.encryptKey == nil {

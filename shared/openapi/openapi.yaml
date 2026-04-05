@@ -14,6 +14,8 @@ tags:
     description: Data source connection management
   - name: settings
     description: Application settings management
+  - name: ai-configs
+    description: AI provider configuration management
 
 paths:
   /connections:
@@ -294,6 +296,121 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectionStatsResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai-configs:
+    get:
+      operationId: listAIConfigs
+      summary: List all AI provider configs (no api_key values)
+      tags: [ai-configs]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConfigListResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createAIConfig
+      summary: Create an AI provider config
+      tags: [ai-configs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAIConfigRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConfigResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai-configs/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: getAIConfig
+      summary: Get an AI config by ID
+      tags: [ai-configs]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConfigResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      operationId: updateAIConfig
+      summary: Update an AI config (empty api_key keeps existing)
+      tags: [ai-configs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAIConfigRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConfigResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      operationId: deleteAIConfig
+      summary: Delete an AI config
+      tags: [ai-configs]
+      responses:
+        "204":
+          description: No Content
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /ai-configs/{id}/activate:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+
+    post:
+      operationId: activateAIConfig
+      summary: Set the active AI config (clears others)
+      tags: [ai-configs]
+      responses:
+        "204":
+          description: No Content
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -705,6 +822,83 @@ components:
           type: string
         base_url:
           type: string
+
+    # AI Config schemas (new dynamic CRUD system)
+    AIConfig:
+      type: object
+      required: [id, name, provider, api_key_set, model, base_url, is_active, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        provider:
+          type: string
+          enum: [claude, openai, copilot, ollama]
+        api_key_set:
+          type: boolean
+          description: Whether an API key has been stored (key value never returned)
+        model:
+          type: string
+        base_url:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateAIConfigRequest:
+      type: object
+      required: [name, provider]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        provider:
+          type: string
+          enum: [claude, openai, copilot, ollama]
+        api_key:
+          type: string
+        model:
+          type: string
+        base_url:
+          type: string
+
+    UpdateAIConfigRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        provider:
+          type: string
+          enum: [claude, openai, copilot, ollama]
+        api_key:
+          type: string
+          description: Empty string keeps existing key
+        model:
+          type: string
+        base_url:
+          type: string
+
+    AIConfigResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/AIConfig"
+
+    AIConfigListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIConfig"
 
     AISettingsData:
       type: object

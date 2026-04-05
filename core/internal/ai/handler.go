@@ -14,10 +14,11 @@ import (
 
 // Handler is the HTTP handler for AI chat endpoints.
 type Handler struct {
-	repo        ConnRepo
-	registry    *datasource.Registry
-	staticCfg   *config.AIConfig // config.toml fallback
-	settingsSvc SettingsLoader   // nil when settings package unavailable
+	repo           ConnRepo
+	registry       *datasource.Registry
+	staticCfg      *config.AIConfig // config.toml fallback
+	settingsSvc    SettingsLoader   // legacy: nil when not available
+	aiConfigLoader AIConfigLoader   // preferred: new aiconfig system
 }
 
 // NewHandler creates an AI HTTP handler.
@@ -30,12 +31,47 @@ func (h *Handler) WithSettingsLoader(svc SettingsLoader) {
 	h.settingsSvc = svc
 }
 
-// resolveConfig returns the effective AIConfig: DB settings override toml fallback.
+// WithAIConfigLoader attaches an AIConfigLoader (new aiconfig system).
+// When set it takes priority over SettingsLoader.
+func (h *Handler) WithAIConfigLoader(l AIConfigLoader) {
+	h.aiConfigLoader = l
+}
+
+// resolveConfig returns the effective config for the chat provider.
+// Priority: AIConfigLoader (new) → SettingsLoader (legacy) → static toml.
 func (h *Handler) resolveConfig(c *gin.Context) (*config.AIConfig, error) {
+	// 1. New aiconfig system
+	if h.aiConfigLoader != nil {
+		active, err := h.aiConfigLoader.LoadActiveAIConfig(c.Request.Context())
+		if err != nil {
+			return nil, err
+		}
+		if active != nil {
+			return activeToConfig(active), nil
+		}
+	}
+	// 2. Legacy settings
 	if h.settingsSvc != nil {
 		return h.settingsSvc.LoadAIConfig(c.Request.Context(), h.staticCfg)
 	}
+	// 3. Static toml config
 	return h.staticCfg, nil
+}
+
+// activeToConfig converts an ActiveConfig to the legacy config.AIConfig shape
+// expected by NewProvider. Avoids importing the aiconfig package.
+func activeToConfig(a *ActiveConfig) *config.AIConfig {
+	cfg := &config.AIConfig{Enabled: true, Provider: a.Provider}
+	switch a.Provider {
+	case "claude":
+		cfg.Claude = config.ClaudeConfig{APIKey: a.APIKey, Model: a.Model, BaseURL: a.BaseURL}
+	case "openai", "copilot":
+		cfg.OpenAI = config.OpenAIConfig{APIKey: a.APIKey, Model: a.Model, BaseURL: a.BaseURL}
+		cfg.Copilot = cfg.OpenAI
+	case "ollama":
+		cfg.Ollama = config.OllamaConfig{BaseURL: a.BaseURL, Model: a.Model}
+	}
+	return cfg
 }
 
 // chatBody is the JSON body for POST /connections/{id}/ai/chat.

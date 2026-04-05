@@ -100,3 +100,18 @@ type ConnRepo interface {
 type SettingsLoader interface {
 	LoadAIConfig(ctx context.Context, fallback *config.AIConfig) (*config.AIConfig, error)
 }
+
+// ActiveConfig is the resolved AI provider configuration from the aiconfig store.
+// This is a flat struct so the ai package never needs to import aiconfig.
+type ActiveConfig struct {
+	Provider string
+	APIKey   string
+	Model    string
+	BaseURL  string
+}
+
+// AIConfigLoader loads the currently active AI config from the aiconfig store.
+// Avoids import cycle: ai never imports aiconfig.
+type AIConfigLoader interface {
+	LoadActiveAIConfig(ctx context.Context) (*ActiveConfig, error)
+}

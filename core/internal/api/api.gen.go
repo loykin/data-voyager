@@ -21,6 +21,54 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AIConfigProvider.
+const (
+	AIConfigProviderClaude  AIConfigProvider = "claude"
+	AIConfigProviderCopilot AIConfigProvider = "copilot"
+	AIConfigProviderOllama  AIConfigProvider = "ollama"
+	AIConfigProviderOpenai  AIConfigProvider = "openai"
+)
+
+// Valid indicates whether the value is a known member of the AIConfigProvider enum.
+func (e AIConfigProvider) Valid() bool {
+	switch e {
+	case AIConfigProviderClaude:
+		return true
+	case AIConfigProviderCopilot:
+		return true
+	case AIConfigProviderOllama:
+		return true
+	case AIConfigProviderOpenai:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateAIConfigRequestProvider.
+const (
+	CreateAIConfigRequestProviderClaude  CreateAIConfigRequestProvider = "claude"
+	CreateAIConfigRequestProviderCopilot CreateAIConfigRequestProvider = "copilot"
+	CreateAIConfigRequestProviderOllama  CreateAIConfigRequestProvider = "ollama"
+	CreateAIConfigRequestProviderOpenai  CreateAIConfigRequestProvider = "openai"
+)
+
+// Valid indicates whether the value is a known member of the CreateAIConfigRequestProvider enum.
+func (e CreateAIConfigRequestProvider) Valid() bool {
+	switch e {
+	case CreateAIConfigRequestProviderClaude:
+		return true
+	case CreateAIConfigRequestProviderCopilot:
+		return true
+	case CreateAIConfigRequestProviderOllama:
+		return true
+	case CreateAIConfigRequestProviderOpenai:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FieldKind.
 const (
 	Boolean FieldKind = "boolean"
@@ -64,6 +112,57 @@ func (e FrameType) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Defines values for UpdateAIConfigRequestProvider.
+const (
+	Claude  UpdateAIConfigRequestProvider = "claude"
+	Copilot UpdateAIConfigRequestProvider = "copilot"
+	Ollama  UpdateAIConfigRequestProvider = "ollama"
+	Openai  UpdateAIConfigRequestProvider = "openai"
+)
+
+// Valid indicates whether the value is a known member of the UpdateAIConfigRequestProvider enum.
+func (e UpdateAIConfigRequestProvider) Valid() bool {
+	switch e {
+	case Claude:
+		return true
+	case Copilot:
+		return true
+	case Ollama:
+		return true
+	case Openai:
+		return true
+	default:
+		return false
+	}
+}
+
+// AIConfig defines model for AIConfig.
+type AIConfig struct {
+	// ApiKeySet Whether an API key has been stored (key value never returned)
+	ApiKeySet bool             `json:"api_key_set"`
+	BaseUrl   string           `json:"base_url"`
+	CreatedAt time.Time        `json:"created_at"`
+	Id        string           `json:"id"`
+	IsActive  bool             `json:"is_active"`
+	Model     string           `json:"model"`
+	Name      string           `json:"name"`
+	Provider  AIConfigProvider `json:"provider"`
+	UpdatedAt time.Time        `json:"updated_at"`
+}
+
+// AIConfigProvider defines model for AIConfig.Provider.
+type AIConfigProvider string
+
+// AIConfigListResponse defines model for AIConfigListResponse.
+type AIConfigListResponse struct {
+	Data []AIConfig `json:"data"`
+}
+
+// AIConfigResponse defines model for AIConfigResponse.
+type AIConfigResponse struct {
+	Data AIConfig `json:"data"`
 }
 
 // AISettingsData defines model for AISettingsData.
@@ -196,6 +295,18 @@ type CopilotSettingsResponse struct {
 	Model     *string `json:"model,omitempty"`
 }
 
+// CreateAIConfigRequest defines model for CreateAIConfigRequest.
+type CreateAIConfigRequest struct {
+	ApiKey   *string                       `json:"api_key,omitempty"`
+	BaseUrl  *string                       `json:"base_url,omitempty"`
+	Model    *string                       `json:"model,omitempty"`
+	Name     string                        `json:"name"`
+	Provider CreateAIConfigRequestProvider `json:"provider"`
+}
+
+// CreateAIConfigRequestProvider defines model for CreateAIConfigRequest.Provider.
+type CreateAIConfigRequestProvider string
+
 // CreateConnectionRequest defines model for CreateConnectionRequest.
 type CreateConnectionRequest struct {
 	Config      map[string]interface{} `json:"config"`
@@ -325,6 +436,19 @@ type TimeRange struct {
 	To *string `json:"to,omitempty"`
 }
 
+// UpdateAIConfigRequest defines model for UpdateAIConfigRequest.
+type UpdateAIConfigRequest struct {
+	// ApiKey Empty string keeps existing key
+	ApiKey   *string                        `json:"api_key,omitempty"`
+	BaseUrl  *string                        `json:"base_url,omitempty"`
+	Model    *string                        `json:"model,omitempty"`
+	Name     *string                        `json:"name,omitempty"`
+	Provider *UpdateAIConfigRequestProvider `json:"provider,omitempty"`
+}
+
+// UpdateAIConfigRequestProvider defines model for UpdateAIConfigRequest.Provider.
+type UpdateAIConfigRequestProvider string
+
 // UpdateAISettingsRequest defines model for UpdateAISettingsRequest.
 type UpdateAISettingsRequest struct {
 	Claude   *ClaudeSettingsInput  `json:"claude,omitempty"`
@@ -371,6 +495,12 @@ type ListConnectionsParams struct {
 	CreatedBy *string `form:"created_by,omitempty" json:"created_by,omitempty"`
 }
 
+// CreateAIConfigJSONRequestBody defines body for CreateAIConfig for application/json ContentType.
+type CreateAIConfigJSONRequestBody = CreateAIConfigRequest
+
+// UpdateAIConfigJSONRequestBody defines body for UpdateAIConfig for application/json ContentType.
+type UpdateAIConfigJSONRequestBody = UpdateAIConfigRequest
+
 // CreateConnectionJSONRequestBody defines body for CreateConnection for application/json ContentType.
 type CreateConnectionJSONRequestBody = CreateConnectionRequest
 
@@ -391,6 +521,24 @@ type UpdateAISettingsJSONRequestBody = UpdateAISettingsRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List all AI provider configs (no api_key values)
+	// (GET /ai-configs)
+	ListAIConfigs(c *gin.Context)
+	// Create an AI provider config
+	// (POST /ai-configs)
+	CreateAIConfig(c *gin.Context)
+	// Delete an AI config
+	// (DELETE /ai-configs/{id})
+	DeleteAIConfig(c *gin.Context, id string)
+	// Get an AI config by ID
+	// (GET /ai-configs/{id})
+	GetAIConfig(c *gin.Context, id string)
+	// Update an AI config (empty api_key keeps existing)
+	// (PUT /ai-configs/{id})
+	UpdateAIConfig(c *gin.Context, id string)
+	// Set the active AI config (clears others)
+	// (POST /ai-configs/{id}/activate)
+	ActivateAIConfig(c *gin.Context, id string)
 	// Get connection statistics
 	// (GET /connection-stats)
 	GetConnectionStats(c *gin.Context)
@@ -443,6 +591,128 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// ListAIConfigs operation middleware
+func (siw *ServerInterfaceWrapper) ListAIConfigs(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListAIConfigs(c)
+}
+
+// CreateAIConfig operation middleware
+func (siw *ServerInterfaceWrapper) CreateAIConfig(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateAIConfig(c)
+}
+
+// DeleteAIConfig operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAIConfig(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteAIConfig(c, id)
+}
+
+// GetAIConfig operation middleware
+func (siw *ServerInterfaceWrapper) GetAIConfig(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetAIConfig(c, id)
+}
+
+// UpdateAIConfig operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAIConfig(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateAIConfig(c, id)
+}
+
+// ActivateAIConfig operation middleware
+func (siw *ServerInterfaceWrapper) ActivateAIConfig(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ActivateAIConfig(c, id)
+}
 
 // GetConnectionStats operation middleware
 func (siw *ServerInterfaceWrapper) GetConnectionStats(c *gin.Context) {
@@ -759,6 +1029,12 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.GET(options.BaseURL+"/ai-configs", wrapper.ListAIConfigs)
+	router.POST(options.BaseURL+"/ai-configs", wrapper.CreateAIConfig)
+	router.DELETE(options.BaseURL+"/ai-configs/:id", wrapper.DeleteAIConfig)
+	router.GET(options.BaseURL+"/ai-configs/:id", wrapper.GetAIConfig)
+	router.PUT(options.BaseURL+"/ai-configs/:id", wrapper.UpdateAIConfig)
+	router.POST(options.BaseURL+"/ai-configs/:id/activate", wrapper.ActivateAIConfig)
 	router.GET(options.BaseURL+"/connection-stats", wrapper.GetConnectionStats)
 	router.GET(options.BaseURL+"/connection-types", wrapper.ListConnectionTypes)
 	router.GET(options.BaseURL+"/connections", wrapper.ListConnections)
@@ -778,52 +1054,58 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

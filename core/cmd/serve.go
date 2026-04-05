@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"data-voyager/core"
+	"data-voyager/core/internal/aiconfig"
 	"data-voyager/core/internal/app"
 	"data-voyager/core/internal/config"
 	"data-voyager/core/internal/connection"
@@ -87,14 +89,33 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	registry := datasource.NewRegistry()
 
+	// Derive data directory from the SQLite path so the encryption key file
+	// lives alongside the database. For non-SQLite stores the dataDir is empty
+	// and BuildService falls back to the VOYAGER_ENCRYPTION_KEY env var.
+	dataDir := ""
+	if cfg.MetadataStore.Type == "sqlite" || cfg.MetadataStore.Type == "sqlite3" {
+		dataDir = filepath.Dir(cfg.MetadataStore.SQLite.Path)
+	}
+
+	// Resolve encryption key once — shared by both settings and aiconfig packages.
+	encryptKey, err := settings.ResolveEncryptionKey(dataDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve encryption key: %w", err)
+	}
+
 	// Register all service loaders. Add new domains here as the app grows.
-	settingsSvc, err := settings.BuildService(repos.Settings)
+	settingsSvc, err := settings.BuildService(repos.Settings, encryptKey)
 	if err != nil {
 		return fmt.Errorf("failed to initialize settings service: %w", err)
 	}
 
+	aiConfigSvc, err := aiconfig.BuildService(repos.AIConfigs, encryptKey)
+	if err != nil {
+		return fmt.Errorf("failed to initialize aiconfig service: %w", err)
+	}
+
 	loaders := []app.Loader{
-		connection.NewLoader(repos.Connection, registry, cfg, settingsSvc),
+		connection.NewLoader(repos.Connection, registry, cfg, settingsSvc, aiConfigSvc),
 	}
 	for _, l := range loaders {
 		if err := l.Load(); err != nil {

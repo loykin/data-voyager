@@ -31,8 +31,11 @@ const DatetimeDemoPage = React.lazy(() =>
 const DiscoverPage = React.lazy(() =>
   import('@/pages/discover').then((m) => ({ default: m.DiscoverPage }))
 )
-const SettingsPage = React.lazy(() =>
-  import('@/pages/settings').then((m) => ({ default: m.SettingsPage }))
+const AIConfigPage = React.lazy(() =>
+  import('@/pages/settings').then((m) => ({ default: m.AIConfigPage }))
+)
+const AIConfigEditPage = React.lazy(() =>
+  import('@/pages/settings').then((m) => ({ default: m.AIConfigEditPage }))
 )
 
 const queryClient = new QueryClient({
@@ -55,8 +58,8 @@ function AppLayoutRoute() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SidePanelHost />
       <BrowserRouter basename="/ui">
+        <SidePanelHost />
         <React.Suspense
           fallback={
             <div className="flex min-h-screen items-center justify-center">Loading...</div>
@@ -74,7 +77,9 @@ export function App() {
               <Route path="/demo/histogram" element={<HistogramDemoPage />} />
               <Route path="/demo/datetime" element={<DatetimeDemoPage />} />
               <Route path="/discover" element={<DiscoverPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/settings" element={<Navigate to="/settings/ai" replace />} />
+              <Route path="/settings/ai" element={<AIConfigPage />} />
+              <Route path="/settings/ai/edit" element={<AIConfigEditPage />} />
             </Route>
           </Routes>
         </React.Suspense>
