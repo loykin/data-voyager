@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test-backend:
+    name: Go Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+
+      - name: Set up Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Show Go version
+        run: go version
+
+      - name: Download dependencies
+        run: go work sync && go mod download -x 2>/dev/null; true
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Staticcheck
+        run: $(go env GOPATH)/bin/staticcheck ./core/... ./sdk/... ./shared/...
+
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+      - name: Run gosec
+        run: |
+          set -e
+          $(go env GOPATH)/bin/gosec -no-fail -fmt=json -out=gosec-report.json ./core/... ./sdk/... ./shared/...
+
+      - name: Upload gosec report
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: gosec-report
+          path: gosec-report.json
+
+      - name: Trivy Scan (Go dependencies)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          format: json
+          output: trivy-report.json
+
+      - name: Upload Trivy report
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: trivy-report
+          path: trivy-report.json
+
+      - name: Build
+        run: go build ./core/... ./sdk/... ./shared/...
+
+      - name: Run tests
+        env:
+          CGO_ENABLED: 1
+        run: go test -p 1 -race -covermode=atomic -coverprofile=coverage.out ./core/... ./sdk/... ./shared/...
+
+      - name: Show coverage summary
+        run: go tool cover -func=coverage.out | tail -n 1
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: coverage
+          path: coverage.out
+
+  test-frontend:
+    name: Frontend Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter data-voyager-frontend lint
+
+      - name: Type check
+        run: pnpm --filter data-voyager-frontend exec tsc --noEmit
+
+      - name: Test
+        run: pnpm --filter data-voyager-frontend test
+
+      - name: Build
+        run: pnpm --filter data-voyager-frontend build
