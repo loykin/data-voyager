@@ -3,6 +3,19 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SidePanelHost } from '@data-voyager/shared-ui'
 import { AppLayout } from '@/widgets/app-layout'
+import { registerAll } from '@/features/menu'
+import { datasourceMenuItems } from '@/features/datasource/menu'
+import { discoverMenuItems } from '@/features/discover/menu'
+import { aiconfigMenuItems } from '@/features/aiconfig/menu'
+import { demoMenuItems } from '@/pages/demo/menu'
+
+// Bootstrap: register all menu items at module load time
+registerAll([
+  ...datasourceMenuItems,
+  ...discoverMenuItems,
+  ...aiconfigMenuItems,
+  ...demoMenuItems,
+])
 
 const DatasourcePage = React.lazy(() =>
   import('@/pages/datasource').then((m) => ({ default: m.DatasourcePage }))

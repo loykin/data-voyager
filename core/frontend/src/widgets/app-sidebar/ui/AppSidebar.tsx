@@ -14,33 +14,12 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from '@data-voyager/shared-ui/components/ui/sidebar'
-import { Database, LayoutGrid, LineChart, BarChart2, CalendarDays, Search, Settings, Bot } from 'lucide-react'
-
-const navGroups = [
-  {
-    label: 'Data',
-    items: [
-      { title: 'Datasources', url: '/datasource', icon: Database },
-      { title: 'Discover', url: '/discover', icon: Search },
-    ],
-  },
-  {
-    label: 'Dev',
-    items: [
-      { title: 'DataGrid Demo', url: '/demo', icon: LayoutGrid },
-      { title: 'Time Series Demo', url: '/demo/chart', icon: LineChart },
-      { title: 'Histogram Demo',  url: '/demo/histogram', icon: BarChart2    },
-      { title: 'Datetime Demo',   url: '/demo/datetime',  icon: CalendarDays },
-    ],
-  },
-]
-
-const settingsSubItems = [
-  { title: 'AI Config', url: '/settings/ai', icon: Bot },
-]
+import { Database } from 'lucide-react'
+import { getSections } from '@/features/menu'
 
 export function AppSidebar() {
   const { pathname } = useLocation()
+  const sections = getSections()
 
   return (
     <Sidebar>
@@ -52,57 +31,42 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {navGroups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+        {sections.map((section) => (
+          <SidebarGroup key={section.group}>
+            <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                {section.items.map((item) => (
+                  <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton
-                      render={<Link to={item.url} />}
-                      isActive={pathname.startsWith(item.url)}
+                      render={item.path ? <Link to={item.path} /> : <button type="button" />}
+                      isActive={item.path ? pathname.startsWith(item.path) : false}
                     >
-                      <item.icon />
-                      <span>{item.title}</span>
+                      {item.icon}
+                      <span>{item.label}</span>
                     </SidebarMenuButton>
+
+                    {item.children && item.children.length > 0 && (
+                      <SidebarMenuSub>
+                        {item.children.map((child) => (
+                          <SidebarMenuSubItem key={child.id}>
+                            <SidebarMenuSubButton
+                              render={<Link to={child.path} />}
+                              isActive={pathname === child.path}
+                            >
+                              {child.icon}
+                              <span>{child.label}</span>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    )}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
-
-        {/* Settings group with sub-items */}
-        <SidebarGroup>
-          <SidebarGroupLabel>System</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  render={<Link to="/settings/ai" />}
-                  isActive={pathname.startsWith('/settings')}
-                >
-                  <Settings />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-                <SidebarMenuSub>
-                  {settingsSubItems.map((item) => (
-                    <SidebarMenuSubItem key={item.title}>
-                      <SidebarMenuSubButton
-                        render={<Link to={item.url} />}
-                        isActive={pathname === item.url}
-                      >
-                        <item.icon className="h-3.5 w-3.5" />
-                        <span>{item.title}</span>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  ))}
-                </SidebarMenuSub>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarRail />
