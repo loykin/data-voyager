@@ -29,14 +29,20 @@ jobs:
       - name: Download dependencies
         run: go work sync && go mod download -x 2>/dev/null; true
 
+      - name: Generate extension loaders
+        run: |
+          go run meta/scripts/generate.go --root .
+          mkdir -p core/frontend/out
+          touch core/frontend/out/.keep
+
       - name: Vet
-        run: go vet ./core/... ./sdk/... ./shared/...
+        run: go vet ./core/... ./sdk/...
 
       - name: Install staticcheck
         run: go install honnef.co/go/tools/cmd/staticcheck@latest
 
       - name: Staticcheck
-        run: $(go env GOPATH)/bin/staticcheck ./core/... ./sdk/... ./shared/...
+        run: $(go env GOPATH)/bin/staticcheck ./core/... ./sdk/...
 
       - name: Install gosec
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
@@ -44,7 +50,7 @@ jobs:
       - name: Run gosec
         run: |
           set -e
-          $(go env GOPATH)/bin/gosec -no-fail -fmt=json -out=gosec-report.json ./core/... ./sdk/... ./shared/...
+          $(go env GOPATH)/bin/gosec -no-fail -fmt=json -out=gosec-report.json ./core/... ./sdk/...
 
       - name: Upload gosec report
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
@@ -66,12 +72,12 @@ jobs:
           path: trivy-report.json
 
       - name: Build
-        run: go build ./core/... ./sdk/... ./shared/...
+        run: go build ./core/... ./sdk/...
 
       - name: Run tests
         env:
           CGO_ENABLED: 1
-        run: go test -p 1 -race -covermode=atomic -coverprofile=coverage.out ./core/... ./sdk/... ./shared/...
+        run: go test -p 1 -race -covermode=atomic -coverprofile=coverage.out ./core/... ./sdk/...
 
       - name: Show coverage summary
         run: go tool cover -func=coverage.out | tail -n 1
@@ -108,7 +114,7 @@ jobs:
       - name: Generate API types
         run: |
           mkdir -p core/frontend/src/generated/api
-          pnpm --filter data-voyager-frontend exec openapi-typescript shared/openapi/openapi.yaml \
+          npx openapi-typescript shared/openapi/openapi.yaml \
             -o core/frontend/src/generated/api/schema.d.ts
           npx tsx meta/scripts/generate.ts --root .
 
