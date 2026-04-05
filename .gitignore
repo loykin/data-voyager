@@ -80,3 +80,4 @@ Phylax-main/
 # Auto-generated extension loaders (meta/scripts로 생성, 커밋 안 함)
 core/internal/generated/
 core/frontend/src/generated/
+!core/frontend/src/generated/api/client.ts

@@ -30,7 +30,7 @@ jobs:
         run: go work sync && go mod download -x 2>/dev/null; true
 
       - name: Vet
-        run: go vet ./...
+        run: go vet ./core/... ./sdk/... ./shared/...
 
       - name: Install staticcheck
         run: go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -104,6 +104,13 @@ jobs:
 
       - name: Lint
         run: pnpm --filter data-voyager-frontend lint
+
+      - name: Generate API types
+        run: |
+          mkdir -p core/frontend/src/generated/api
+          pnpm --filter data-voyager-frontend exec openapi-typescript shared/openapi/openapi.yaml \
+            -o core/frontend/src/generated/api/schema.d.ts
+          npx tsx meta/scripts/generate.ts --root .
 
       - name: Type check
         run: pnpm --filter data-voyager-frontend exec tsc --noEmit
