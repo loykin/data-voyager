@@ -8,6 +8,9 @@ export type {
   DatasourceConfigProps,
   QueryEditorProps,
   QueryResult,
+  SchemaNode,
+  SchemaNodeType,
+  SchemaProvider,
 } from './extension';
 
 export type { ApiClient } from './api';
