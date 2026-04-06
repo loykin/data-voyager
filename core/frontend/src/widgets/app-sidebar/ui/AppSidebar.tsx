@@ -13,6 +13,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  SidebarTrigger,
 } from '@data-voyager/shared-ui/components/ui/sidebar'
 import { Database } from 'lucide-react'
 import { getSections } from '@/features/menu'
@@ -23,10 +24,13 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <Database className="h-5 w-5" />
-          <span className="text-base font-semibold">Data Voyager</span>
+      <SidebarHeader className="p-0">
+        <div className="flex h-12 items-center justify-between px-3">
+          <div className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            <span className="text-base font-semibold">Data Voyager</span>
+          </div>
+          <SidebarTrigger />
         </div>
       </SidebarHeader>
 
