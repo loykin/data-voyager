@@ -9,7 +9,7 @@ import {
 } from '@data-voyager/shared-ui/components/ui/select'
 import { Alert, AlertDescription } from '@data-voyager/shared-ui/components/ui/alert'
 import { Button } from '@data-voyager/shared-ui/components/ui/button'
-import { Play, Plus, X, ChevronDown, ChevronRight, Table2, LineChart, Bot } from 'lucide-react'
+import { Play, Plus, X, ChevronDown, ChevronRight, Table2, LineChart, Bot, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { DatetimeRange } from '@data-voyager/shared-ui/components/widgets/datetime-range/DatetimeRange'
 import { DataGrid, TimeSeriesChart } from '@data-voyager/shared-ui'
 import type { DataGridColumnDef } from '@data-voyager/shared-ui'
@@ -27,6 +27,8 @@ import { VariableBar } from './VariableBar'
 import { usePluginContext } from '@/shared/lib/usePluginContext'
 import { frameToAlignedData, canRenderAsChart } from '../lib/frameToChart'
 import { AIChatPanel } from '@/widgets/ai-chat'
+import { SchemaTree } from '@/features/schema-explorer'
+import { Resizable } from 're-resizable'
 
 // ─── time conversion ────────────────────────────────────────────────────────
 function toBackendTimeString(v: DateTimeRangeValue): string {
@@ -198,6 +200,8 @@ export function DiscoverPage() {
   const [startTime, setStartTime] = useState<DateTimeRangeValue>(relativeAgo(1, 'Hours ago'))
   const [endTime, setEndTime] = useState<DateTimeRangeValue>(relativeNow())
   const [aiOpen, setAiOpen] = useState(false)
+  // 커넥션 선택 시 자동으로 패널 열림
+  const [schemaOpen, setSchemaOpen] = useState(false)
 
   const { data: datasources = [] } = useDatasources()
   const { variables, setVariable, removeVariable, addVariable, toQueryVars } = useVariables()
@@ -207,6 +211,17 @@ export function DiscoverPage() {
   const selectedDatasource = datasources.find((ds) => ds.id === selectedId)
   const plugin = selectedDatasource ? datasourceRegistry.get(selectedDatasource.type) : undefined
   const QueryEditorComponent = plugin?.queryEditorComponent ?? null
+  const schemaProvider = plugin?.schemaProvider
+
+  // 컬럼 클릭 → 활성 쿼리에 삽입 (마지막 미접힌 쿼리 대상)
+  const handleSchemaInsert = useCallback((text: string) => {
+    setQueries((prev) => {
+      const active = [...prev].reverse().find((q) => !q.collapsed) ?? prev[prev.length - 1]
+      return prev.map((q) =>
+        q.refId === active.refId ? { ...q, text: q.text ? `${q.text}\n${text}` : text } : q,
+      )
+    })
+  }, [])
 
   const addQuery = useCallback(() => {
     setQueries((prev) => {
@@ -249,8 +264,57 @@ export function DiscoverPage() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* ── main content ── */}
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+
+      {/* ── 왼쪽: Schema Explorer ── */}
+      {selectedId && schemaOpen && (
+        <Resizable
+          defaultSize={{ width: 240, height: '100%' }}
+          minWidth={180}
+          maxWidth={400}
+          enable={{ right: true }}
+          className="flex flex-col border-r shrink-0 overflow-hidden"
+        >
+          {/* 패널 헤더 */}
+          <div className="flex h-8 shrink-0 items-center justify-between border-b px-2">
+            <span className="text-xs font-medium text-muted-foreground">Schema</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              onClick={() => setSchemaOpen(false)}
+              title="Hide schema panel"
+            >
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <SchemaTree
+            connectionId={selectedId}
+            provider={schemaProvider}
+            ctx={pluginCtx}
+            onInsert={handleSchemaInsert}
+            className="flex-1 min-h-0"
+          />
+        </Resizable>
+      )}
+
+      {/* ── 오른쪽: main content ── */}
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4 min-w-0">
+
+      {/* Schema 패널 열기 버튼 (닫혔을 때) */}
+      {selectedId && !schemaOpen && (
+        <div className="flex">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            onClick={() => setSchemaOpen(true)}
+          >
+            <PanelLeftOpen className="h-3.5 w-3.5" />
+            Schema
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold">Discover</h1>
@@ -262,7 +326,7 @@ export function DiscoverPage() {
         <Select
           value={selectedId?.toString() ?? ''}
           onValueChange={(v) => {
-            if (v) setSearchParams({ connection: v })
+            if (v) { setSearchParams({ connection: v }); setSchemaOpen(true) }
             reset()
           }}
         >
@@ -415,7 +479,7 @@ export function DiscoverPage() {
           </p>
         </div>
       )}
-      </div>{/* end main content */}
+      </div>{/* end right content */}
 
       {/* ── AI chat panel ── */}
       {aiOpen && (

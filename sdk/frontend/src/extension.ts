@@ -43,6 +43,44 @@ export interface PanelConfigProps {
   onChange: (options: Record<string, unknown>) => void;
 }
 
+// SchemaNodeType — 스키마 트리 노드의 종류
+export type SchemaNodeType =
+  | 'database'  // ClickHouse database, PostgreSQL catalog
+  | 'schema'    // PostgreSQL schema (public, pg_catalog 등)
+  | 'table'
+  | 'view'
+  | 'column'
+  | 'index'     // Elasticsearch index 등
+  | 'field';    // Elasticsearch field 등
+
+// SchemaNode — 스키마 트리의 한 노드
+export interface SchemaNode {
+  /** 트리 내 고유 키 (예: 'schema/public/table/users/col/id') */
+  id: string;
+  /** 화면에 표시할 이름 */
+  label: string;
+  type: SchemaNodeType;
+  /** false면 클릭해도 자식 fetch 안 함 */
+  hasChildren: boolean;
+  /** 툴팁/뱃지용 부가 정보 */
+  meta?: {
+    dataType?: string;
+    nullable?: boolean;
+    rowCount?: string;
+    comment?: string;
+  };
+}
+
+// SchemaProvider — 플러그인이 선택적으로 구현하는 스키마 탐색기 제공자
+export interface SchemaProvider {
+  /** 루트 노드 목록 반환 (DB마다 다름: schema / database / index) */
+  getRootNodes(ctx: PluginContext, connectionId: string): Promise<SchemaNode[]>;
+  /** 노드 클릭 시 자식 노드 lazy load */
+  getChildNodes(ctx: PluginContext, connectionId: string, node: SchemaNode): Promise<SchemaNode[]>;
+  /** 컬럼 노드를 클릭했을 때 에디터에 삽입할 텍스트 (방언별 따옴표 처리) */
+  getInsertText?(node: SchemaNode): string;
+}
+
 // DatasourcePlugin — 새 데이터소스 타입을 추가하는 extension
 export interface DatasourcePlugin {
   id: string;
@@ -50,6 +88,8 @@ export interface DatasourcePlugin {
   description?: string;
   configComponent: React.ComponentType<DatasourceConfigProps>;
   queryEditorComponent?: React.ComponentType<QueryEditorProps>;
+  /** 없으면 core의 generic fallback SchemaProvider 사용 */
+  schemaProvider?: SchemaProvider;
 }
 
 export interface DatasourceConfigProps {

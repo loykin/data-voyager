@@ -250,8 +250,39 @@ func (h *Handler) TestConnectionConfig(c *gin.Context) {
 	})
 }
 
-func (h *Handler) GetConnectionSchema(c *gin.Context, _ openapi_types.UUID) {
-	c.JSON(http.StatusNotImplemented, api.ErrorResponse{Error: "not implemented yet"})
+func (h *Handler) GetConnectionSchema(c *gin.Context, id openapi_types.UUID) {
+	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
+	if err != nil {
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
+		return
+	}
+
+	plugin, exists := h.registry.Get(conn.Type)
+	if !exists {
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "plugin not found for type"})
+		return
+	}
+
+	cfg, err := plugin.ParseConfig(conn.Config)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to parse config"})
+		return
+	}
+
+	dbConn, err := plugin.Connect(c.Request.Context(), cfg)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, api.ErrorResponse{Error: fmt.Sprintf("connection failed: %s", err)})
+		return
+	}
+	defer func() { _ = dbConn.Close() }()
+
+	schema, err := dbConn.GetSchema(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: fmt.Sprintf("failed to get schema: %s", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": schema})
 }
 
 func (h *Handler) QueryConnection(c *gin.Context, id openapi_types.UUID) {
