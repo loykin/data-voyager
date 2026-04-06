@@ -271,6 +271,27 @@ func (c *Connection) GetSchema(ctx context.Context) (*sdk.SchemaInfo, error) {
 	return &sdk.SchemaInfo{Databases: databases}, nil
 }
 
+// GetColumnsForTable fetches column definitions for a specific table using system.columns.
+func (c *Connection) GetColumnsForTable(ctx context.Context, database, table string) ([]sdk.ColumnInfo, error) {
+	query := `
+		SELECT name, type
+		FROM system.columns
+		WHERE database = ? AND table = ?
+		ORDER BY position
+	`
+	_, rows, err := c.queryRaw(ctx, query, database, table)
+	if err != nil {
+		return nil, err
+	}
+	cols := make([]sdk.ColumnInfo, 0, len(rows))
+	for _, row := range rows {
+		name, _ := row[0].(string)
+		typ, _ := row[1].(string)
+		cols = append(cols, sdk.ColumnInfo{Name: name, Type: typ})
+	}
+	return cols, nil
+}
+
 func (c *Connection) GetTables(ctx context.Context, database string) ([]sdk.TableInfo, error) {
 	query := `
 		SELECT name, engine as type, total_rows, total_bytes
@@ -289,13 +310,27 @@ func (c *Connection) GetTables(ctx context.Context, database string) ([]sdk.Tabl
 		tableType, _ := row[1].(string)
 
 		var rowCount, size *int64
-		if rc, ok := row[2].(uint64); ok {
-			count := int64(rc)
-			rowCount = &count
+		// total_rows and total_bytes are Nullable(UInt64) in ClickHouse,
+		// so the driver returns *uint64 not uint64.
+		switch v := row[2].(type) {
+		case uint64:
+			c := int64(v)
+			rowCount = &c
+		case *uint64:
+			if v != nil {
+				c := int64(*v)
+				rowCount = &c
+			}
 		}
-		if sz, ok := row[3].(uint64); ok {
-			bytes := int64(sz)
-			size = &bytes
+		switch v := row[3].(type) {
+		case uint64:
+			b := int64(v)
+			size = &b
+		case *uint64:
+			if v != nil {
+				b := int64(*v)
+				size = &b
+			}
 		}
 
 		tables = append(tables, sdk.TableInfo{Name: name, Type: tableType, RowCount: rowCount, Size: size})
@@ -304,7 +339,14 @@ func (c *Connection) GetTables(ctx context.Context, database string) ([]sdk.Tabl
 }
 
 func (c *Connection) getDatabases(ctx context.Context) ([]sdk.DatabaseInfo, error) {
-	_, rows, err := c.queryRaw(ctx, "SELECT name FROM system.databases ORDER BY name")
+	// Exclude built-in ClickHouse system/metadata databases so the AI only
+	// sees user-created databases and tables.
+	query := `
+		SELECT name FROM system.databases
+		WHERE name NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA', '_temporary_and_external_tables')
+		ORDER BY name
+	`
+	_, rows, err := c.queryRaw(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get databases: %w", err)
 	}

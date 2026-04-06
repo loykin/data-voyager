@@ -6,6 +6,52 @@ import { useQuery } from '@tanstack/react-query'
 import { useAgentChat, type ChatMessage } from '../hooks/useAgentChat'
 import { aiConfigApi } from '@/features/aiconfig'
 
+// ── query result table ────────────────────────────────────────────────────────
+interface DataField {
+  name: string
+  values: unknown[]
+}
+interface DataFrame {
+  fields: DataField[]
+}
+
+function QueryResultTable({ frames }: { frames: unknown[] }) {
+  const frame = (frames?.[0] ?? null) as DataFrame | null
+  if (!frame || !frame.fields || frame.fields.length === 0) return null
+
+  const cols = frame.fields
+  const rowCount = cols[0]?.values?.length ?? 0
+  if (rowCount === 0) return <p className="text-xs text-muted-foreground">0 rows returned.</p>
+
+  return (
+    <div className="mt-1 overflow-x-auto rounded border text-xs">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="bg-muted/60">
+            {cols.map((c) => (
+              <th key={c.name} className="border-b px-2 py-1 text-left font-medium whitespace-nowrap">
+                {c.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rowCount }).map((_, ri) => (
+            <tr key={ri} className="border-b last:border-0 hover:bg-muted/30">
+              {cols.map((c) => (
+                <td key={c.name} className="px-2 py-1 whitespace-nowrap font-mono">
+                  {String(c.values[ri] ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="px-2 py-1 text-[10px] text-muted-foreground">{rowCount} rows</p>
+    </div>
+  )
+}
+
 // ── tool call pill ────────────────────────────────────────────────────────────
 function ToolCallBadge({ name, args, result }: { name: string; args?: unknown; result?: unknown }) {
   const [open, setOpen] = useState(false)
@@ -65,6 +111,10 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
                 <ToolCallBadge key={i} name={tc.name} args={tc.args} result={tc.result} />
               ))}
             </div>
+          )}
+          {/* Query result table */}
+          {msg.queryFrames && msg.queryFrames.length > 0 && (
+            <QueryResultTable frames={msg.queryFrames} />
           )}
           {/* Text content */}
           {(msg.content || msg.streaming) && (

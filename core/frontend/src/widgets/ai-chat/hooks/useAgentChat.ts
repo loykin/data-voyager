@@ -53,6 +53,7 @@ export function useAgentChat(connectionId: string | null) {
 
       const ctrl = new AbortController()
       abortRef.current = ctrl
+      let receivedDone = false
 
       try {
         const resp = await fetch(`/api/v1/connections/${connectionId}/ai/chat`, {
@@ -130,11 +131,13 @@ export function useAgentChat(connectionId: string | null) {
                 )
               )
             } else if (chunk.type === 'done') {
+              receivedDone = true
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantId ? { ...m, streaming: false } : m
                 )
               )
+              break // stream is complete, stop reading
             } else if (chunk.type === 'error') {
               setMessages((prev) =>
                 prev.map((m) =>
@@ -148,6 +151,8 @@ export function useAgentChat(connectionId: string | null) {
         }
       } catch (err) {
         if ((err as Error).name === 'AbortError') return
+        // Ignore connection errors that happen after a clean `done` chunk
+        if (receivedDone) return
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId

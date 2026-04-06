@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -160,4 +161,76 @@ func (a *openAIAdapter) Complete(ctx context.Context, req ChatRequest) (*Provide
 		})
 	}
 	return result, nil
+}
+
+// parseFallbackToolCall detects tool calls embedded in content as plain text.
+// Some Ollama models output {"name":"...","arguments":{...}} as text instead
+// of using the tool_calls API field. Searches the entire content for a
+// fenced JSON block or a bare JSON object with a "name" field.
+func parseFallbackToolCall(content string) (*ToolCall, string) {
+	// 0. Look for <tool_call>...</tool_call> XML format (some Ollama models)
+	const tcOpen = "<tool_call>"
+	const tcClose = "</tool_call>"
+	if start := strings.Index(content, tcOpen); start != -1 {
+		if end := strings.Index(content, tcClose); end > start {
+			candidate := strings.TrimSpace(content[start+len(tcOpen) : end])
+			if tc := parseToolCallJSON(candidate); tc != nil {
+				before := strings.TrimSpace(content[:start])
+				after := strings.TrimSpace(content[end+len(tcClose):])
+				remaining := strings.TrimSpace(before + " " + after)
+				return tc, remaining
+			}
+		}
+	}
+
+	// 1. Look for ```json ... ``` or ``` ... ``` blocks anywhere in the content
+	for _, fence := range []string{"```json", "```"} {
+		start := strings.Index(content, fence)
+		if start == -1 {
+			continue
+		}
+		afterFence := content[start+len(fence):]
+		// skip optional language tag line
+		if nl := strings.Index(afterFence, "\n"); nl >= 0 {
+			afterFence = afterFence[nl+1:]
+		}
+		end := strings.Index(afterFence, "```")
+		if end == -1 {
+			continue
+		}
+		candidate := strings.TrimSpace(afterFence[:end])
+		if tc := parseToolCallJSON(candidate); tc != nil {
+			// return text before and after the fence block as remaining content
+			before := strings.TrimSpace(content[:start])
+			after := strings.TrimSpace(afterFence[end+3:])
+			remaining := strings.TrimSpace(before + " " + after)
+			return tc, remaining
+		}
+	}
+
+	// 2. Try the whole trimmed content as bare JSON
+	if tc := parseToolCallJSON(strings.TrimSpace(content)); tc != nil {
+		return tc, ""
+	}
+
+	return nil, content
+}
+
+func parseToolCallJSON(text string) *ToolCall {
+	var raw struct {
+		Name      string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+	}
+	if err := json.Unmarshal([]byte(text), &raw); err != nil || raw.Name == "" {
+		return nil
+	}
+	args := "{}"
+	if len(raw.Arguments) > 0 {
+		args = string(raw.Arguments)
+	}
+	return &ToolCall{
+		ID:      "fallback-" + raw.Name,
+		Name:    raw.Name,
+		ArgJSON: args,
+	}
 }
