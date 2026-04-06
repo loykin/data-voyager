@@ -126,8 +126,13 @@ func (a *Agent) Run(ctx context.Context, connID string, messages []Message, out 
 			}
 			break
 		}
-		// Reset error state on any tool-call round
-		hadToolErrors = false
+		// Reset error state only when run_query is called (not on get_schema)
+		for _, tc := range resp.ToolCalls {
+			if tc.Name == "run_query" || tc.Name == "execute_query" || tc.Name == "execute_sql" || tc.Name == "run_sql" {
+				hadToolErrors = false
+				break
+			}
+		}
 
 		// Execute each tool call
 		for _, tc := range resp.ToolCalls {

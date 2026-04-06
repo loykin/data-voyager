@@ -28,16 +28,16 @@ func AvailableTools() []Tool {
 	return []Tool{
 		{
 			Name:        "get_schema",
-			Description: "Get the database schema. Without 'table' arg returns all tables with row counts and sizes. With 'table' arg returns only that table's columns. Always call with 'table' before writing SQL for that table.",
+			Description: "Get column definitions for a specific table. Pass the table name (e.g. \"stb_monitoring_raw\") or database.table (e.g. \"catv.stb_monitoring_raw\"). Call this before writing SQL to confirm exact column names.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"table": map[string]any{
 						"type":        "string",
-						"description": "Optional. If provided, return only this table's column definitions.",
+						"description": "The table name to inspect, e.g. \"stb_monitoring_raw\" or \"catv.stb_monitoring_raw\".",
 					},
 				},
-				"required": []string{},
+				"required": []string{"table"},
 			},
 		},
 		{
@@ -129,10 +129,49 @@ type columnFetcher interface {
 	GetColumnsForTable(ctx context.Context, database, table string) ([]sdk.ColumnInfo, error)
 }
 
+// SchemaContext fetches a compact schema summary (db names + table list, no columns)
+// for injection into the system prompt before the agent loop starts.
+func (te *ToolExecutor) SchemaContext(ctx context.Context, connID string) string {
+	dbConn, closeConn, err := te.openConn(ctx, connID)
+	if err != nil {
+		return ""
+	}
+	defer closeConn()
+
+	schema, err := dbConn.GetSchema(ctx)
+	if err != nil {
+		return ""
+	}
+
+	var sb strings.Builder
+	for _, db := range schema.Databases {
+		sb.WriteString(fmt.Sprintf("Database: %s\n", db.Name))
+		for _, tbl := range db.Tables {
+			meta := ""
+			if tbl.RowCount != nil {
+				meta += fmt.Sprintf(" rows=%d", *tbl.RowCount)
+			}
+			if tbl.Size != nil {
+				meta += fmt.Sprintf(" size=%d bytes", *tbl.Size)
+			}
+			sb.WriteString(fmt.Sprintf("  - %s%s\n", tbl.Name, meta))
+		}
+	}
+	return sb.String()
+}
+
 func (te *ToolExecutor) execGetSchema(ctx context.Context, connID string, tc ToolCall) (string, Chunk, error) {
 	var args getSchemaArgs
 	_ = json.Unmarshal([]byte(tc.ArgJSON), &args)
-	tableFilter := strings.ToLower(strings.TrimSpace(args.Table))
+
+	// Support both "tablename" and "database.tablename" formats.
+	raw := strings.ToLower(strings.TrimSpace(args.Table))
+	var dbFilter, tableFilter string
+	if parts := strings.SplitN(raw, ".", 2); len(parts) == 2 {
+		dbFilter, tableFilter = parts[0], parts[1]
+	} else {
+		tableFilter = raw
+	}
 
 	dbConn, closeConn, err := te.openConn(ctx, connID)
 	if err != nil {
@@ -147,8 +186,18 @@ func (te *ToolExecutor) execGetSchema(ctx context.Context, connID string, tc Too
 
 	// If a specific table is requested, return just that table's columns.
 	// Try GetColumnsForTable (direct system.columns query) first for accuracy.
+	// If no table specified, redirect — schema is already in the system prompt.
+	if tableFilter == "" {
+		msg := "The full table list is already provided in the system prompt. Call get_schema with a specific table name to get its column definitions."
+		chunk := Chunk{Type: ChunkToolResult, Tool: tc.Name, Result: map[string]any{"info": msg}}
+		return msg, chunk, nil
+	}
+
 	if tableFilter != "" {
 		for _, db := range schema.Databases {
+			if dbFilter != "" && strings.ToLower(db.Name) != dbFilter {
+				continue
+			}
 			for _, tbl := range db.Tables {
 				if strings.ToLower(tbl.Name) == tableFilter {
 					// Fetch columns via direct query if supported
@@ -177,6 +226,47 @@ func (te *ToolExecutor) execGetSchema(ctx context.Context, connID string, tc Too
 							sb.WriteString(fmt.Sprintf("  - %s (%s)\n", col.Name, col.Type))
 						}
 					}
+
+					// Fetch sample rows so the model can infer data formats
+					// (e.g. whether a String column contains JSON, dates, etc.)
+					// Try bare table name first (connection may already be scoped to the DB).
+					sampleSQL := fmt.Sprintf("SELECT * FROM %s LIMIT 3", tbl.Name)
+					sampleResult, sampleErr := dbConn.Query(ctx, sampleSQL)
+					if sampleErr != nil {
+						sampleSQL = fmt.Sprintf("SELECT * FROM %s.%s LIMIT 3", db.Name, tbl.Name)
+						sampleResult, sampleErr = dbConn.Query(ctx, sampleSQL)
+					}
+					if sampleErr == nil && len(sampleResult.Frames) > 0 {
+						frame := sampleResult.Frames[0]
+						if len(frame.Fields) > 0 && len(frame.Fields[0].Values) > 0 {
+							sb.WriteString("\nSample rows:\n")
+							// Header
+							for i, f := range frame.Fields {
+								if i > 0 {
+									sb.WriteString(" | ")
+								}
+								sb.WriteString(f.Name)
+							}
+							sb.WriteString("\n")
+							// Rows
+							rowCount := len(frame.Fields[0].Values)
+							for r := 0; r < rowCount; r++ {
+								for i, f := range frame.Fields {
+									if i > 0 {
+										sb.WriteString(" | ")
+									}
+									val := fmt.Sprintf("%v", f.Values[r])
+									// Truncate long values (e.g. large JSON blobs)
+									if len(val) > 120 {
+										val = val[:120] + "..."
+									}
+									sb.WriteString(val)
+								}
+								sb.WriteString("\n")
+							}
+						}
+					}
+
 					resultText := fmt.Sprintf(
 						"get_schema(%s) result:\n%s\nUse ONLY these column names in SQL for table %s.",
 						tbl.Name, sb.String(), tbl.Name,

@@ -213,6 +213,33 @@ func parseFallbackToolCall(content string) (*ToolCall, string) {
 		return tc, ""
 	}
 
+	// 3. Scan content for an embedded JSON object containing "name" field.
+	// Handles models that emit reasoning text followed by a bare JSON tool call.
+	for i := 0; i < len(content); i++ {
+		if content[i] != '{' {
+			continue
+		}
+		// Find matching closing brace
+		depth := 0
+		for j := i; j < len(content); j++ {
+			if content[j] == '{' {
+				depth++
+			} else if content[j] == '}' {
+				depth--
+				if depth == 0 {
+					candidate := strings.TrimSpace(content[i : j+1])
+					if tc := parseToolCallJSON(candidate); tc != nil {
+						before := strings.TrimSpace(content[:i])
+						after := strings.TrimSpace(content[j+1:])
+						remaining := strings.TrimSpace(before + " " + after)
+						return tc, remaining
+					}
+					break
+				}
+			}
+		}
+	}
+
 	return nil, content
 }
 

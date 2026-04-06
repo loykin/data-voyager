@@ -1,10 +1,12 @@
 package ai
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"data-voyager/core/internal/config"
 	"data-voyager/core/internal/datasource"
@@ -118,11 +120,17 @@ func (h *Handler) Chat(c *gin.Context) {
 		return
 	}
 
-	// Prepend system prompt
-	systemMsg := Message{Role: RoleSystem, Content: BuildSystemPrompt(conn.Type)}
+	executor := NewToolExecutor(h.repo, h.registry)
+
+	// Pre-fetch schema so the model starts with accurate DB/table info.
+	schemaCtx, cancel := context.WithTimeout(c.Request.Context(), 8*time.Second)
+	schemaInfo := executor.SchemaContext(schemaCtx, connID)
+	cancel()
+
+	// Prepend system prompt with schema context
+	systemMsg := Message{Role: RoleSystem, Content: BuildSystemPrompt(conn.Type, schemaInfo)}
 	msgs := append([]Message{systemMsg}, body.Messages...)
 
-	executor := NewToolExecutor(h.repo, h.registry)
 	agent := NewAgent(provider, executor)
 
 	// Set SSE headers
