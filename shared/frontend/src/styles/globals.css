@@ -4,6 +4,7 @@
 
 @source "../**/*.{ts,tsx}";
 @source "../../../../core/frontend/src/**/*.{ts,tsx}";
+@source "../../node_modules/@loykin/gridkit/dist/index.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -131,27 +132,3 @@
   }
 }
 
-/*
- * DataGrid scrollbar — cross-platform (Windows / Mac)
- * ::-webkit-scrollbar forces classic (non-overlay) mode in Chrome/Safari/Edge.
- * Classic mode = scrollbar gets its own track area, never overlays content.
- * scrollbar-width/scrollbar-color intentionally NOT set — those keep overlay mode on Chrome 121+.
- * Firefox falls back to system scrollbar (thin on macOS, classic on Windows/Linux).
- */
-.dg-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.dg-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.dg-scroll::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-muted-foreground) 30%, transparent);
-  border-radius: 4px;
-}
-.dg-scroll::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-muted-foreground) 50%, transparent);
-}
-.dg-scroll::-webkit-scrollbar-corner {
-  background: transparent;
-}
