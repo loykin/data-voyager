@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { DataGrid } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar } from '@data-voyager/shared-ui'
 import { datasourceApi } from '@/features/datasource'
 import { historyColumns } from './columns'
 
@@ -21,7 +21,8 @@ export function ConnectionHistoryTab() {
       bordered={true}
       enableSorting
       emptyMessage="No history recorded. Enable a statistics store to start tracking changes."
-      pageSizes={[25, 50, 100]}
+      pagination={{ pageSize: 25 }}
+      footer={(table) => <DataGridPaginationBar table={table} pageSizes={[25, 50, 100]} />}
     />
   )
 }

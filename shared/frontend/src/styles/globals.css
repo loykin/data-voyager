@@ -1,10 +1,10 @@
 @import "@fontsource-variable/inter";
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@loykin/gridkit/styles";
 
 @source "../**/*.{ts,tsx}";
 @source "../../../../core/frontend/src/**/*.{ts,tsx}";
-@source "../../node_modules/@loykin/gridkit/dist/index.js";
 
 @custom-variant dark (&:is(.dark *));
 

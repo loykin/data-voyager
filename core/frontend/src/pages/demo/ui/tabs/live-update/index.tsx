@@ -96,7 +96,6 @@ export function LiveUpdateTab() {
       <DataGrid
         data={pods}
         columns={columns}
-        enablePagination={false}
         enableSorting
         enableColumnFilters
         bordered

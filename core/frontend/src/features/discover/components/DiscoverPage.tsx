@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@data-voyager/shared-ui/components/ui/a
 import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Play, Plus, X, ChevronDown, ChevronRight, Table2, LineChart, Bot, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { DatetimeRange } from '@data-voyager/shared-ui/components/widgets/datetime-range/DatetimeRange'
-import { DataGrid, TimeSeriesChart } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar, TimeSeriesChart } from '@data-voyager/shared-ui'
 import type { DataGridColumnDef } from '@data-voyager/shared-ui'
 import type { DateTimeRangeValue } from '@data-voyager/shared-ui'
 import {
@@ -173,7 +173,8 @@ function ResultPanel({ item }: { item: BatchQueryResultItem }) {
           columns={buildColumns(frame.fields.map((f) => f.name))}
           enableSorting
           enableColumnFilters={false}
-          pageSizes={[50, 100, 500]}
+          pagination={{ pageSize: 50 }}
+          footer={(table) => <DataGridPaginationBar table={table} pageSizes={[50, 100, 500]} />}
           emptyMessage="Query returned no rows"
         />
       ) : chartData ? (

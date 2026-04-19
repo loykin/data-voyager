@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DataGrid, useSidePanelStore } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar, useSidePanelStore } from '@data-voyager/shared-ui'
 import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Input } from '@data-voyager/shared-ui/components/ui/input'
 import { Plus, Search } from 'lucide-react'
@@ -53,7 +53,8 @@ export function DatasourceListTab() {
           </div>
         )}
         emptyMessage="No datasources yet. Add your first one."
-        pageSizes={[10, 25, 50]}
+        pagination={{ pageSize: 10 }}
+        footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 25, 50]} />}
       />
     </div>
   )

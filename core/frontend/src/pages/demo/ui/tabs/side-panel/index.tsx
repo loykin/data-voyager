@@ -1,4 +1,4 @@
-import { DataGrid, useSidePanelStore } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar, useSidePanelStore } from '@data-voyager/shared-ui'
 import { SMALL_DATA } from '../../data'
 import { columns } from '../../columns'
 import type { Employee } from '../../data'
@@ -69,7 +69,8 @@ export function SidePanelTab() {
         columns={columns}
         enableSorting
         enableColumnFilters
-        pageSizes={[10, 20, 50]}
+        pagination={{ pageSize: 10 }}
+        footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 20, 50]} />}
         emptyMessage="No employees found"
         onRowClick={handleRowClick}
       />
