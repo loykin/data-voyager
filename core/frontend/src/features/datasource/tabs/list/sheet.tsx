@@ -1,10 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2, X, CheckCircle2, XCircle, Database, Loader2, Wifi } from 'lucide-react'
 import { Button, Badge, useSidePanelStore } from '@data-voyager/shared-ui'
-import { datasourceApi } from '@/features/datasource'
-import { datasourceKeys } from '@/features/datasource'
+import {
+  datasourceCreatedBy,
+  datasourceDescription,
+  datasourceKeys,
+  datasourceTags,
+  getDatasourceManager,
+  useDatasource,
+  useDeleteDatasource,
+} from '@/features/datasource'
+import { useMutation } from '@tanstack/react-query'
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -23,31 +30,30 @@ interface DatasourceSheetProps {
 export function DatasourceSheet({ id, onChanged }: DatasourceSheetProps) {
   const { close } = useSidePanelStore()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string; latency?: number } | null>(null)
 
-  const { data: conn, isLoading } = useQuery({
-    queryKey: datasourceKeys.one(id),
-    queryFn: () => datasourceApi.getOne(id),
-  })
+  const { data: conn, isLoading } = useDatasource(id)
 
-  const deleteMutation = useMutation({
-    mutationFn: () => datasourceApi.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: datasourceKeys.all })
-      onChanged()
-      close()
-    },
-  })
+  const deleteDatasource = useDeleteDatasource()
+  const deleteMutation = {
+    mutate: () => deleteDatasource.mutate(id, {
+      onSuccess: () => {
+        onChanged()
+        close()
+      },
+    }),
+    isPending: deleteDatasource.isPending,
+  }
 
   const testMutation = useMutation({
-    mutationFn: () => datasourceApi.testById(id),
+    mutationKey: [...datasourceKeys.one(id), 'health'],
+    mutationFn: () => getDatasourceManager().instances.healthCheck(id, conn?.type ?? ''),
     onSuccess: (result) => {
       setTestResult({
-        ok: result.is_connected,
-        message: result.message,
-        latency: result.latency_ms ?? undefined,
+        ok: result.ok,
+        message: result.message ?? (result.ok ? 'Datasource healthy' : 'Datasource check failed'),
+        latency: typeof result.details?.latencyMs === 'number' ? result.details.latencyMs : undefined,
       })
     },
     onError: (err) => {
@@ -76,8 +82,8 @@ export function DatasourceSheet({ id, onChanged }: DatasourceSheetProps) {
         <div className="flex items-center gap-2.5 min-w-0">
           <Database className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="font-semibold text-base truncate">{conn.name}</span>
-          <Badge variant={conn.is_active ? 'default' : 'outline'} className="text-xs shrink-0">
-            {conn.is_active ? 'Active' : 'Inactive'}
+          <Badge variant={conn.enabled ? 'default' : 'outline'} className="text-xs shrink-0">
+            {conn.enabled ? 'Active' : 'Inactive'}
           </Badge>
         </div>
         <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -132,23 +138,23 @@ export function DatasourceSheet({ id, onChanged }: DatasourceSheetProps) {
           <InfoRow
             label="Status"
             value={
-              conn.is_active
+              conn.enabled
                 ? <span className="inline-flex items-center gap-1 text-green-600"><CheckCircle2 className="h-3.5 w-3.5" />Active</span>
                 : <span className="text-muted-foreground">Inactive</span>
             }
           />
         </div>
 
-        {conn.description && (
-          <InfoRow label="Description" value={conn.description} />
+        {datasourceDescription(conn) && (
+          <InfoRow label="Description" value={datasourceDescription(conn)} />
         )}
 
-        {conn.tags && conn.tags.length > 0 && (
+        {datasourceTags(conn).length > 0 && (
           <InfoRow
             label="Tags"
             value={
               <div className="flex flex-wrap gap-1 mt-0.5">
-                {conn.tags.map((tag) => (
+                {datasourceTags(conn).map((tag) => (
                   <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
                 ))}
               </div>
@@ -161,14 +167,14 @@ export function DatasourceSheet({ id, onChanged }: DatasourceSheetProps) {
         <div className="grid grid-cols-2 gap-4">
           <InfoRow
             label="Created"
-            value={<span className="text-muted-foreground">{new Date(conn.created_at).toLocaleString()}</span>}
+            value={<span className="text-muted-foreground">{conn.createdAt ? new Date(conn.createdAt).toLocaleString() : '—'}</span>}
           />
           <InfoRow
             label="Updated"
-            value={<span className="text-muted-foreground">{new Date(conn.updated_at).toLocaleString()}</span>}
+            value={<span className="text-muted-foreground">{conn.updatedAt ? new Date(conn.updatedAt).toLocaleString() : '—'}</span>}
           />
-          {conn.created_by && (
-            <InfoRow label="Created by" value={conn.created_by} />
+          {datasourceCreatedBy(conn) && (
+            <InfoRow label="Created by" value={datasourceCreatedBy(conn)} />
           )}
         </div>
       </div>

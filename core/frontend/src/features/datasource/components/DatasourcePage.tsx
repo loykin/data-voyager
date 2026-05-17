@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { TabbedPageTemplate } from '@data-voyager/shared-ui'
 import { DatasourceListTab } from '../tabs/list'
-import { ConnectionHistoryTab } from '../tabs/history'
+import { DatasourceHistoryTab } from '../tabs/history'
 
 export function DatasourcePage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -14,12 +14,12 @@ export function DatasourcePage() {
       header={
         <div>
           <h1 className="text-xl font-semibold">Datasources</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your database connections</p>
+          <p className="text-sm text-muted-foreground mt-1">Manage your datasources</p>
         </div>
       }
       tabs={[
         { id: 'list',    label: 'Datasources', content: <DatasourceListTab /> },
-        { id: 'history', label: 'History',     content: <ConnectionHistoryTab /> },
+        { id: 'history', label: 'History',     content: <DatasourceHistoryTab /> },
       ]}
     />
   )

@@ -14,13 +14,14 @@ import { DatetimeRange } from '@data-voyager/shared-ui/components/widgets/dateti
 import { DataGrid, DataGridPaginationBar, TimeSeriesChart } from '@data-voyager/shared-ui'
 import type { DataGridColumnDef } from '@data-voyager/shared-ui'
 import type { DateTimeRangeValue } from '@data-voyager/shared-ui'
+import type { BatchQueryResultItem } from '@loykin/datasourcekit'
 import {
   relativeAgo,
   relativeNow,
 } from '@data-voyager/shared-ui/components/widgets/datetime-range/datetime-utils'
 import { datasourceRegistry } from '@data-voyager/sdk'
 import { useDatasources } from '@/features/datasource'
-import type { TimeRange, BatchQueryResultItem } from '@/features/datasource'
+import type { TimeRange } from '@/features/datasource'
 import { useBatchQueryExecution } from '@/features/discover'
 import { useVariables } from '@/features/discover'
 import { VariableBar } from './VariableBar'
@@ -121,13 +122,13 @@ function ResultPanel({ item }: { item: BatchQueryResultItem }) {
   const frame = item.data?.frames?.[0] ?? null
   const chartAvailable = canRenderAsChart(frame)
   const defaultMode: ViewMode =
-    frame?.frame_type === 'time_series' && chartAvailable ? 'timeseries' : 'table'
+    frame?.frameType === 'time_series' && chartAvailable ? 'timeseries' : 'table'
   const [mode, setMode] = useState<ViewMode>(defaultMode)
 
   if (item.error) {
     return (
       <Alert variant="destructive" className="m-3">
-        <AlertDescription>{item.error}</AlertDescription>
+        <AlertDescription>{item.error.message}</AlertDescription>
       </Alert>
     )
   }
@@ -146,19 +147,19 @@ function ResultPanel({ item }: { item: BatchQueryResultItem }) {
     <div className="flex flex-col gap-2">
       {/* Stats + view toggle */}
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        {item.stats && (
+        {item.data.stats && (
           <>
-            <span>{item.stats.rows_returned} rows</span>
+            <span>{item.data.stats.rowsReturned} rows</span>
             <span>·</span>
-            <span>{item.stats.execution_time_ms} ms</span>
+            <span>{item.data.stats.executionTimeMs} ms</span>
           </>
         )}
         <div className="ml-auto flex items-center gap-2">
-          {item.inspect && (
+          {item.data.inspect && (
             <details>
               <summary className="cursor-pointer select-none text-xs">Inspect</summary>
               <pre className="mt-1 rounded bg-muted/50 p-2 text-[11px] font-mono whitespace-pre-wrap">
-                {item.inspect.executed_query}
+                {item.data.inspect.executedQuery}
               </pre>
             </details>
           )}
@@ -194,14 +195,14 @@ function ResultPanel({ item }: { item: BatchQueryResultItem }) {
 // ─── page ───────────────────────────────────────────────────────────────────
 export function DiscoverPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const connIdParam = searchParams.get('connection')
-  const selectedId = connIdParam ?? null
+  const datasourceUidParam = searchParams.get('datasource')
+  const selectedId = datasourceUidParam ?? null
 
   const [queries, setQueries] = useState<QueryItem[]>([{ refId: 'A', text: 'SELECT 1', collapsed: false }])
   const [startTime, setStartTime] = useState<DateTimeRangeValue>(relativeAgo(1, 'Hours ago'))
   const [endTime, setEndTime] = useState<DateTimeRangeValue>(relativeNow())
   const [aiOpen, setAiOpen] = useState(false)
-  // 커넥션 선택 시 자동으로 패널 열림
+  // 데이터소스 선택 시 자동으로 패널 열림
   const [schemaOpen, setSchemaOpen] = useState(false)
 
   const { data: datasources = [] } = useDatasources()
@@ -209,7 +210,7 @@ export function DiscoverPage() {
   const { execute, results, running, error, reset } = useBatchQueryExecution(selectedId ?? '')
   const pluginCtx = usePluginContext()
 
-  const selectedDatasource = datasources.find((ds) => ds.id === selectedId)
+  const selectedDatasource = datasources.find((ds) => ds.uid === selectedId)
   const plugin = selectedDatasource ? datasourceRegistry.get(selectedDatasource.type) : undefined
   const QueryEditorComponent = plugin?.queryEditorComponent ?? null
   const schemaProvider = plugin?.schemaProvider
@@ -259,7 +260,7 @@ export function DiscoverPage() {
 
   const resultMap = useMemo(() => {
     const m: Record<string, BatchQueryResultItem> = {}
-    results?.forEach((r) => { m[r.ref_id] = r })
+    results?.forEach((r) => { m[r.id] = r })
     return m
   }, [results])
 
@@ -289,7 +290,7 @@ export function DiscoverPage() {
             </Button>
           </div>
           <SchemaTree
-            connectionId={selectedId}
+            datasourceUid={selectedId}
             provider={schemaProvider}
             ctx={pluginCtx}
             onInsert={handleSchemaInsert}
@@ -319,7 +320,7 @@ export function DiscoverPage() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold">Discover</h1>
-        <p className="text-muted-foreground mt-0.5 text-sm">Run queries against your connections</p>
+        <p className="text-muted-foreground mt-0.5 text-sm">Run queries against your datasources</p>
       </div>
 
       {/* Toolbar */}
@@ -327,16 +328,16 @@ export function DiscoverPage() {
         <Select
           value={selectedId?.toString() ?? ''}
           onValueChange={(v) => {
-            if (v) { setSearchParams({ connection: v }); setSchemaOpen(true) }
+            if (v) { setSearchParams({ datasource: v }); setSchemaOpen(true) }
             reset()
           }}
         >
           <SelectTrigger className="w-56">
-            <SelectValue placeholder="Select a connection…" />
+            <SelectValue placeholder="Select a datasource..." />
           </SelectTrigger>
           <SelectContent>
             {datasources.map((ds) => (
-              <SelectItem key={ds.id} value={String(ds.id)}>
+              <SelectItem key={ds.uid} value={String(ds.uid)}>
                 {ds.name}
               </SelectItem>
             ))}
@@ -408,7 +409,7 @@ export function DiscoverPage() {
                 {q.refId}
               </span>
               <span className="flex-1 truncate font-mono text-xs text-muted-foreground">
-                {q.text.split('\n')[0] || (QueryEditorComponent ? 'empty query' : 'select a connection')}
+                {q.text.split('\n')[0] || (QueryEditorComponent ? 'empty query' : 'select a datasource')}
               </span>
               {resultMap[q.refId]?.error && (
                 <span className="text-xs text-destructive">error</span>
@@ -435,7 +436,7 @@ export function DiscoverPage() {
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground p-4">
-                    Select a connection above to open the query editor.
+                    Select a datasource above to open the query editor.
                   </div>
                 )}
               </div>
@@ -444,7 +445,7 @@ export function DiscoverPage() {
         ))}
       </div>
 
-      {/* Top-level error (connection/batch failure) */}
+      {/* Top-level error (datasource/batch failure) */}
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -455,14 +456,14 @@ export function DiscoverPage() {
       {results && results.length > 0 && (
         <div className="flex flex-col gap-4">
           {results.map((r) => (
-            <div key={r.ref_id} className="flex flex-col gap-1">
+            <div key={r.id} className="flex flex-col gap-1">
               {results.length > 1 && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center justify-center rounded bg-muted px-1.5 py-0.5 font-mono font-medium">
-                    {r.ref_id}
+                    {r.id}
                   </span>
-                  {r.inspect?.raw_query && (
-                    <span className="truncate font-mono opacity-60">{r.inspect.raw_query}</span>
+                  {r.data?.inspect?.rawQuery && (
+                    <span className="truncate font-mono opacity-60">{r.data.inspect.rawQuery}</span>
                   )}
                 </div>
               )}
@@ -476,7 +477,7 @@ export function DiscoverPage() {
       {!results && !error && !running && (
         <div className="flex flex-1 flex-col items-center justify-center text-muted-foreground">
           <p className="text-sm">
-            {selectedId ? 'Run a query to see results.' : 'Select a connection to get started.'}
+            {selectedId ? 'Run a query to see results.' : 'Select a datasource to get started.'}
           </p>
         </div>
       )}
@@ -484,7 +485,7 @@ export function DiscoverPage() {
 
       {/* ── AI chat panel ── */}
       {aiOpen && (
-        <AIChatPanel connectionId={selectedId} onClose={() => setAiOpen(false)} />
+        <AIChatPanel datasourceUid={selectedId} onClose={() => setAiOpen(false)} />
       )}
     </div>
   )

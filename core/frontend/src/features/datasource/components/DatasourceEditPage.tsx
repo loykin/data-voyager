@@ -8,7 +8,13 @@ import { Alert, AlertDescription } from '@data-voyager/shared-ui/components/ui/a
 import { Separator } from '@data-voyager/shared-ui/components/ui/separator'
 import { Loader2, Check, X, TestTube } from 'lucide-react'
 import { datasourceRegistry } from '@data-voyager/sdk'
-import { useDatasource, useUpdateDatasource, useTestConnection } from '@/features/datasource'
+import {
+  datasourceDescription,
+  datasourceTags,
+  useDatasource,
+  useUpdateDatasource,
+  useTestDatasource,
+} from '@/features/datasource'
 
 export function DatasourceEditPage() {
   const navigate = useNavigate()
@@ -17,7 +23,7 @@ export function DatasourceEditPage() {
 
   const { data: datasource, isLoading } = useDatasource(id)
   const { mutate: updateDatasource, isPending } = useUpdateDatasource()
-  const { testConnection, testing } = useTestConnection()
+  const { testDatasource, testing } = useTestDatasource()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -29,11 +35,11 @@ export function DatasourceEditPage() {
   useEffect(() => {
     if (datasource) {
       setName(datasource.name)
-      setDescription(datasource.description ?? '')
-      setTags((datasource.tags ?? []).join(', '))
-      setIsActive(datasource.is_active)
+      setDescription(datasourceDescription(datasource) ?? '')
+      setTags(datasourceTags(datasource).join(', '))
+      setIsActive(datasource.enabled ?? true)
       try {
-        setConfig(datasource.config ?? {})
+        setConfig((datasource.options as Record<string, unknown> | undefined) ?? {})
       } catch {
         setConfig({})
       }
@@ -47,8 +53,8 @@ export function DatasourceEditPage() {
     if (!datasource) return
     setTestResult(null)
     try {
-      const result = await testConnection({ type: datasource.type, config })
-      setTestResult({ success: result.is_connected, message: result.message })
+      const result = await testDatasource({ type: datasource.type, options: config })
+      setTestResult({ success: result.ok, message: result.message })
     } catch (err) {
       setTestResult({
         success: false,
@@ -64,10 +70,12 @@ export function DatasourceEditPage() {
         id,
         data: {
           name,
-          description: description || undefined,
-          tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
-          is_active: isActive,
-          config,
+          enabled: isActive,
+          options: config,
+          meta: {
+            ...(description ? { description } : {}),
+            ...(tags ? { tags: tags.split(',').map((t) => t.trim()).filter(Boolean) } : {}),
+          },
         },
       },
       { onSuccess: () => navigate('/datasource') }
@@ -95,7 +103,7 @@ export function DatasourceEditPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Edit — {datasource.name}</h1>
-        <p className="text-sm text-muted-foreground">Update connection settings</p>
+        <p className="text-sm text-muted-foreground">Update datasource settings</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -137,7 +145,7 @@ export function DatasourceEditPage() {
 
         <section className="flex flex-col gap-4">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            {plugin ? `${plugin.name} Connection` : `${datasource.type} Connection`}
+            {plugin ? `${plugin.name} Datasource` : `${datasource.type} Datasource`}
           </h2>
           {ConfigComponent ? (
             <ConfigComponent config={config} onChange={setConfig} onTest={handleTest} />
@@ -164,7 +172,7 @@ export function DatasourceEditPage() {
         <div className="flex items-center justify-between">
           <Button type="button" variant="outline" onClick={handleTest} disabled={testing}>
             {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TestTube className="mr-2 h-4 w-4" />}
-            Test Connection
+            Test Datasource
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => navigate('/datasource')}>

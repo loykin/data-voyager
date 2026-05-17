@@ -9,11 +9,11 @@ export const apiClient = createClient<paths>({ baseUrl: '/api/v1' })
 
 // Re-export component types for convenience
 export type { components, operations } from './schema.d.ts'
-export type Connection = import('./schema.d.ts').components['schemas']['Connection']
-export type CreateConnectionRequest = import('./schema.d.ts').components['schemas']['CreateConnectionRequest']
-export type UpdateConnectionRequest = import('./schema.d.ts').components['schemas']['UpdateConnectionRequest']
-export type ConnectionTestResult = import('./schema.d.ts').components['schemas']['ConnectionTestResult']
-export type ConnectionStats = import('./schema.d.ts').components['schemas']['ConnectionStats']
+export type Datasource = import('./schema.d.ts').components['schemas']['Datasource']
+export type CreateDatasourceRequest = import('./schema.d.ts').components['schemas']['CreateDatasourceRequest']
+export type UpdateDatasourceRequest = import('./schema.d.ts').components['schemas']['UpdateDatasourceRequest']
+export type DatasourceTestResult = import('./schema.d.ts').components['schemas']['DatasourceTestResult']
+export type DatasourceStats = import('./schema.d.ts').components['schemas']['DatasourceStats']
 export type QueryRequest = import('./schema.d.ts').components['schemas']['QueryRequest']
 export type QueryResult = import('./schema.d.ts').components['schemas']['QueryResult']
 export type ErrorResponse = import('./schema.d.ts').components['schemas']['ErrorResponse']

@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { DataGrid, DataGridPaginationBar } from '@data-voyager/shared-ui'
-import { datasourceApi } from '@/features/datasource'
+import { listDatasourceHistory } from '@/features/datasource'
 import { historyColumns } from './columns'
 
-export function ConnectionHistoryTab() {
+export function DatasourceHistoryTab() {
   const { data = [], isLoading, error } = useQuery({
-    queryKey: ['connection-history'],
-    queryFn: () => datasourceApi.listHistory(100, 0),
+    queryKey: ['datasource-history'],
+    queryFn: () => listDatasourceHistory(100, 0),
   })
 
   const cols = useMemo(() => historyColumns, [])

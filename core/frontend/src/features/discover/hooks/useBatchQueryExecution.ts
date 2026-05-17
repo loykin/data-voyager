@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
-import { datasourceApi } from '@/features/datasource'
-import type { BatchQueryResultItem, TimeRange } from '@/features/datasource'
+import type { BatchQueryResultItem } from '@loykin/datasourcekit'
+import { getDatasourceManager } from '@/features/datasource/api/datasource.manager'
+import type { TimeRange } from '@/features/datasource'
 
 export type BatchQueryItem = {
   refId: string
@@ -10,22 +11,25 @@ export type BatchQueryItem = {
   limit?: number
 }
 
-export const useBatchQueryExecution = (connectionId: string) => {
+export const useBatchQueryExecution = (datasourceUid: string) => {
   const mutation = useMutation({
     mutationFn: (items: BatchQueryItem[]): Promise<BatchQueryResultItem[]> =>
-      datasourceApi
-        .batchQuery(connectionId, {
-          queries: items.map((item) => ({
-            ref_id: item.refId,
-            request: {
-              query: item.query,
-              variables: item.variables,
-              time_range: item.timeRange,
+      getDatasourceManager()
+        .instances.batchQuery(
+          items.map((item) => ({
+            id: item.refId,
+            datasourceUid,
+            query: {
+              text: item.query,
               limit: item.limit ?? 10000,
             },
           })),
-        })
-        .then((r) => r.results),
+          {
+            variables: items[0]?.variables as Record<string, string | string[]> | undefined,
+            timeRange: items[0]?.timeRange as { from: string; to: string } | undefined,
+          },
+        )
+        .then((result) => result.items),
   })
 
   return {

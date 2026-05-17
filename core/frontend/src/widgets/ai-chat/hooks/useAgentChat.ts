@@ -22,14 +22,14 @@ function makeId() {
   return Math.random().toString(36).slice(2)
 }
 
-export function useAgentChat(connectionId: string | null) {
+export function useAgentChat(datasourceUid: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [running, setRunning] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!connectionId || !text.trim() || running) return
+      if (!datasourceUid || !text.trim() || running) return
 
       // Append user message
       const userMsg: ChatMessage = { id: makeId(), role: 'user', content: text }
@@ -55,7 +55,7 @@ export function useAgentChat(connectionId: string | null) {
       abortRef.current = ctrl
 
       try {
-        const resp = await fetch(`/api/v1/connections/${connectionId}/ai/chat`, {
+        const resp = await fetch(`/api/v1/datasources/${datasourceUid}/ai/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ messages: history }),
@@ -151,7 +151,7 @@ export function useAgentChat(connectionId: string | null) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: `Connection error: ${String(err)}`, streaming: false }
+              ? { ...m, content: `Datasource error: ${String(err)}`, streaming: false }
               : m
           )
         )
@@ -162,7 +162,7 @@ export function useAgentChat(connectionId: string | null) {
         )
       }
     },
-    [connectionId, running]
+    [datasourceUid, running]
   )
 
   const clearMessages = useCallback(() => {

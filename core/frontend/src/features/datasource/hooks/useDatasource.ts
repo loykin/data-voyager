@@ -1,26 +1,40 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { datasourceApi } from '../api/datasource.api'
-import type { UpdateConnectionRequest, CreateConnectionRequest, TestConnectionRequest, ConnectionTestResult } from '@/features/datasource'
+import type { DatasourceCreateInput, DatasourceInstance, DatasourceUpdateInput } from '@loykin/datasourcekit'
+import { getDatasourceManager, testDatasourceOptions } from '@/features/datasource'
 
 // Query keys
 export const datasourceKeys = {
-  all: ['connections'] as const,
-  filtered: (type?: string) => ['connections', { type }] as const,
-  one: (id: string) => ['connections', id] as const,
+  all: ['datasources'] as const,
+  types: ['datasource-types'] as const,
+  filtered: (type?: string) => ['datasources', { type }] as const,
+  one: (uid: string) => ['datasources', uid] as const,
+}
+
+export const useDatasourceTypes = () => {
+  return useQuery({
+    queryKey: datasourceKeys.types,
+    queryFn: () => getDatasourceManager().types.list(),
+  })
 }
 
 // Read
 export const useDatasources = (type?: string) => {
   return useQuery({
     queryKey: datasourceKeys.filtered(type),
-    queryFn: () => datasourceApi.getList(type),
+    queryFn: () =>
+      getDatasourceManager()
+        .instances.list({ filter: type ? { type } : undefined })
+        .then((result) => result.items as DatasourceInstance<Record<string, unknown>>[]),
   })
 }
 
 export const useDatasource = (id: string) => {
   return useQuery({
     queryKey: datasourceKeys.one(id),
-    queryFn: () => datasourceApi.getOne(id),
+    queryFn: () =>
+      getDatasourceManager()
+        .instances.get(id)
+        .then((result) => result as DatasourceInstance<Record<string, unknown>>),
     enabled: !!id,
   })
 }
@@ -29,7 +43,7 @@ export const useDatasource = (id: string) => {
 export const useDeleteDatasource = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => datasourceApi.remove(id),
+    mutationFn: (id: string) => getDatasourceManager().instances.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all })
     },
@@ -39,8 +53,8 @@ export const useDeleteDatasource = () => {
 export const useUpdateDatasource = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateConnectionRequest }) =>
-      datasourceApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: DatasourceUpdateInput<Record<string, unknown>> }) =>
+      getDatasourceManager().instances.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all })
       queryClient.invalidateQueries({ queryKey: datasourceKeys.one(id) })
@@ -51,7 +65,8 @@ export const useUpdateDatasource = () => {
 export const useCreateDatasource = () => {
   const queryClient = useQueryClient()
   const mutation = useMutation({
-    mutationFn: (data: CreateConnectionRequest) => datasourceApi.create(data),
+    mutationFn: (data: DatasourceCreateInput<Record<string, unknown>>) =>
+      getDatasourceManager().instances.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all })
     },
@@ -64,14 +79,15 @@ export const useCreateDatasource = () => {
   }
 }
 
-export const useTestConnection = () => {
+export const useTestDatasource = () => {
   const mutation = useMutation({
-    mutationFn: (req: TestConnectionRequest) => datasourceApi.testConfig(req),
+    mutationFn: ({ type, options }: { type: string; options: Record<string, unknown> }) =>
+      testDatasourceOptions(type, options),
   })
   return {
-    testConnection: mutation.mutateAsync,
+    testDatasource: mutation.mutateAsync,
     testing: mutation.isPending,
-    testResult: mutation.data as ConnectionTestResult | null,
+    testResult: mutation.data ?? null,
     testError: mutation.error?.message ?? null,
     reset: mutation.reset,
   }

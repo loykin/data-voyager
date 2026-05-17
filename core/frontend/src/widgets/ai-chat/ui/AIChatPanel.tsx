@@ -83,12 +83,12 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 
 // ── chat panel ────────────────────────────────────────────────────────────────
 interface AIChatPanelProps {
-  connectionId: string | null
+  datasourceUid: string | null
   onClose: () => void
 }
 
-export function AIChatPanel({ connectionId, onClose }: AIChatPanelProps) {
-  const { messages, running, sendMessage, clearMessages, abort } = useAgentChat(connectionId)
+export function AIChatPanel({ datasourceUid, onClose }: AIChatPanelProps) {
+  const { messages, running, sendMessage, clearMessages, abort } = useAgentChat(datasourceUid)
   const [draft, setDraft] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -159,11 +159,11 @@ export function AIChatPanel({ connectionId, onClose }: AIChatPanelProps) {
               ) : (
                 <>
                   <p className="text-sm">
-                    {connectionId
+                    {datasourceUid
                       ? 'Ask anything about your data. I can query the database, explain results, and help you explore.'
-                      : 'Select a connection to start chatting.'}
+                      : 'Select a datasource to start chatting.'}
                   </p>
-                  {connectionId && (
+                  {datasourceUid && (
                     <div className="mt-2 flex flex-col gap-1.5 w-full text-left">
                       {['Show me the table list', 'What are the top 10 rows in the first table?', 'How many rows does each table have?'].map((s) => (
                         <button
@@ -197,11 +197,11 @@ export function AIChatPanel({ connectionId, onClose }: AIChatPanelProps) {
             placeholder={
               !aiReady
                 ? 'Configure AI in Settings first'
-                : connectionId
+                : datasourceUid
                   ? 'Ask about your data…'
-                  : 'Select a connection first'
+                  : 'Select a datasource first'
             }
-            disabled={!connectionId || running || !aiReady}
+            disabled={!datasourceUid || running || !aiReady}
             className="min-h-15 resize-none text-sm"
             rows={2}
           />
@@ -214,7 +214,7 @@ export function AIChatPanel({ connectionId, onClose }: AIChatPanelProps) {
               size="icon"
               className="h-auto shrink-0"
               onClick={handleSend}
-              disabled={!connectionId || !draft.trim() || !aiReady}
+              disabled={!datasourceUid || !draft.trim() || !aiReady}
             >
               <Send className="h-4 w-4" />
             </Button>

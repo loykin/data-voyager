@@ -35,6 +35,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.65.0(react@19.2.4))
+      '@loykin/datasourcekit':
+        specifier: 0.0.3
+        version: 0.0.3
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.95.2(react@19.2.4)
@@ -1119,6 +1122,9 @@ packages:
 
   '@lezer/lr@1.4.8':
     resolution: {integrity: sha512-bPWa0Pgx69ylNlMlPvBPryqeLYQjyJjqPx+Aupm5zydLIF3NE+6MMLT8Yi23Bd9cif9VS00aUebn+6fDIGBcDA==}
+
+  '@loykin/datasourcekit@0.0.3':
+    resolution: {integrity: sha512-t/b3fn/xfT0kI1kWgs1eYi7GjAvo3Q9ts9QX5yoNnGDsUaqD5Be7ojes+wx//IKUpoYxxWDfxpvBw1qO2Zoguw==}
 
   '@loykin/gridkit@0.1.13':
     resolution: {integrity: sha512-IQqUjwmg2I9hP8aR3Zb3Gh9h1Coz+s2fREWSn+40IvDiWRbnP9eyz5EBHgynvn+20wHulZRYjNUjrMkGxCDayQ==}
@@ -4220,6 +4226,8 @@ snapshots:
   '@lezer/lr@1.4.8':
     dependencies:
       '@lezer/common': 1.5.1
+
+  '@loykin/datasourcekit@0.0.3': {}
 
   '@loykin/gridkit@0.1.13(@tanstack/react-table@8.21.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@tanstack/react-virtual@3.13.23(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))':
     dependencies:

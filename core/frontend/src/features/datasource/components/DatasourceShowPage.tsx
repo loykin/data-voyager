@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@data-voyager/shared-u
 import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Badge } from '@data-voyager/shared-ui/components/ui/badge'
 import { Loader2 } from 'lucide-react'
-import { useDatasource } from '@/features/datasource'
+import { datasourceDescription, useDatasource } from '@/features/datasource'
 
 export function DatasourceShowPage() {
   const navigate = useNavigate()
@@ -41,15 +41,15 @@ export function DatasourceShowPage() {
             <div>
               <dt className="font-medium text-muted-foreground">Status</dt>
               <dd>
-                <Badge variant={datasource.is_active ? 'default' : 'secondary'}>
-                  {datasource.is_active ? 'Active' : 'Inactive'}
+                <Badge variant={datasource.enabled ? 'default' : 'secondary'}>
+                  {datasource.enabled ? 'Active' : 'Inactive'}
                 </Badge>
               </dd>
             </div>
-            {datasource.description && (
+            {datasourceDescription(datasource) && (
               <div className="col-span-2">
                 <dt className="font-medium text-muted-foreground">Description</dt>
-                <dd>{datasource.description}</dd>
+                <dd>{datasourceDescription(datasource)}</dd>
               </div>
             )}
           </dl>

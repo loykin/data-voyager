@@ -10,19 +10,19 @@ servers:
     description: API v1
 
 tags:
-  - name: connections
-    description: Data source connection management
+  - name: datasources
+    description: Datasource management
   - name: settings
     description: Application settings management
   - name: ai-configs
     description: AI provider configuration management
 
 paths:
-  /connections:
+  /datasources:
     get:
-      operationId: listConnections
-      summary: List all connections
-      tags: [connections]
+      operationId: listDatasources
+      summary: List all datasources
+      tags: [datasources]
       parameters:
         - in: query
           name: type
@@ -30,12 +30,12 @@ paths:
             type: string
           description: Filter by datasource type
         - in: query
-          name: is_active
+          name: enabled
           schema:
             type: boolean
           description: Filter by active status
         - in: query
-          name: created_by
+          name: createdBy
           schema:
             type: string
           description: Filter by creator
@@ -45,74 +45,74 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionListResponse"
+                $ref: "#/components/schemas/DatasourceListResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
     post:
-      operationId: createConnection
-      summary: Create a connection
-      tags: [connections]
+      operationId: createDatasource
+      summary: Create a datasource
+      tags: [datasources]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateConnectionRequest"
+              $ref: "#/components/schemas/CreateDatasourceRequest"
       responses:
         "201":
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionResponse"
+                $ref: "#/components/schemas/DatasourceResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /connections/{id}:
+  /datasources/{uid}:
     parameters:
       - in: path
-        name: id
+        name: uid
         required: true
         schema:
           type: string
           format: uuid
 
     get:
-      operationId: getConnection
-      summary: Get a connection by ID
-      tags: [connections]
+      operationId: getDatasource
+      summary: Get a datasource by UID
+      tags: [datasources]
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionResponse"
+                $ref: "#/components/schemas/DatasourceResponse"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
     put:
-      operationId: updateConnection
-      summary: Update a connection
-      tags: [connections]
+      operationId: updateDatasource
+      summary: Update a datasource
+      tags: [datasources]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateConnectionRequest"
+              $ref: "#/components/schemas/UpdateDatasourceRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionResponse"
+                $ref: "#/components/schemas/DatasourceResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "404":
@@ -121,98 +121,98 @@ paths:
           $ref: "#/components/responses/InternalError"
 
     delete:
-      operationId: deleteConnection
-      summary: Delete a connection
-      tags: [connections]
+      operationId: deleteDatasource
+      summary: Delete a datasource
+      tags: [datasources]
       responses:
         "204":
           description: No Content
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /connections/test:
+  /datasources/test:
     post:
-      operationId: testConnectionConfig
-      summary: Test a connection config without saving
-      tags: [connections]
+      operationId: testDatasourceConfig
+      summary: Test datasource options without saving
+      tags: [datasources]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestConnectionRequest"
+              $ref: "#/components/schemas/TestDatasourceRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionTestResponse"
+                $ref: "#/components/schemas/DatasourceTestResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /connections/{id}/test:
+  /datasources/{uid}/test:
     parameters:
       - in: path
-        name: id
+        name: uid
         required: true
         schema:
           type: string
           format: uuid
     post:
-      operationId: testConnection
-      summary: Test a connection
-      tags: [connections]
+      operationId: testDatasource
+      summary: Test a datasource
+      tags: [datasources]
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionTestResponse"
+                $ref: "#/components/schemas/DatasourceTestResponse"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /connections/{id}/schema:
+  /datasources/{uid}/schema:
     parameters:
       - in: path
-        name: id
+        name: uid
         required: true
         schema:
           type: string
           format: uuid
     get:
-      operationId: getConnectionSchema
-      summary: Get datasource schema for a connection
-      tags: [connections]
+      operationId: getDatasourceSchema
+      summary: Get datasource schema for a datasource
+      tags: [datasources]
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionSchemaResponse"
+                $ref: "#/components/schemas/DatasourceSchemaResponse"
         "404":
           $ref: "#/components/responses/NotFound"
         "501":
           $ref: "#/components/responses/NotImplemented"
 
-  /connections/{id}/query:
+  /datasources/{uid}/query:
     parameters:
       - in: path
-        name: id
+        name: uid
         required: true
         schema:
           type: string
           format: uuid
     post:
-      operationId: queryConnection
-      summary: Execute a query through a connection
-      tags: [connections]
+      operationId: queryDatasource
+      summary: Execute a query through a datasource
+      tags: [datasources]
       requestBody:
         required: true
         content:
@@ -235,18 +235,18 @@ paths:
         "502":
           $ref: "#/components/responses/BadGateway"
 
-  /connections/{id}/query/batch:
+  /datasources/{uid}/query/batch:
     parameters:
       - in: path
-        name: id
+        name: uid
         required: true
         schema:
           type: string
           format: uuid
     post:
-      operationId: batchQueryConnection
-      summary: Execute multiple queries through a connection and return all results
-      tags: [connections]
+      operationId: batchQueryDatasource
+      summary: Execute multiple queries through a datasource and return all results
+      tags: [datasources]
       requestBody:
         required: true
         content:
@@ -269,41 +269,41 @@ paths:
         "502":
           $ref: "#/components/responses/BadGateway"
 
-  /connection-types:
+  /datasource-types:
     get:
-      operationId: listConnectionTypes
-      summary: List supported connection types
-      tags: [connections]
+      operationId: listDatasourceTypes
+      summary: List supported datasource types
+      tags: [datasources]
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionTypesResponse"
+                $ref: "#/components/schemas/DatasourceTypesResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /connection-stats:
+  /datasource-stats:
     get:
-      operationId: getConnectionStats
-      summary: Get connection statistics
-      tags: [connections]
+      operationId: getDatasourceStats
+      summary: Get datasource statistics
+      tags: [datasources]
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionStatsResponse"
+                $ref: "#/components/schemas/DatasourceStatsResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /connections/history:
+  /datasources/history:
     get:
-      operationId: listConnectionHistory
+      operationId: listDatasourceHistory
       summary: List all datasource change history (requires statistics_store)
-      tags: [connections]
+      tags: [datasources]
       parameters:
         - in: query
           name: limit
@@ -324,23 +324,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionHistoryListResponse"
+                $ref: "#/components/schemas/DatasourceHistoryListResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /connections/{id}/history:
+  /datasources/{uid}/history:
     parameters:
       - in: path
-        name: id
+        name: uid
         required: true
         schema:
           type: string
           format: uuid
 
     get:
-      operationId: listConnectionHistoryByConnection
+      operationId: listDatasourceHistoryByDatasource
       summary: List change history for a specific datasource
-      tags: [connections]
+      tags: [datasources]
       parameters:
         - in: query
           name: limit
@@ -361,14 +361,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionHistoryListResponse"
+                $ref: "#/components/schemas/DatasourceHistoryListResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /ai-configs:
     get:
       operationId: listAIConfigs
-      summary: List all AI provider configs (no api_key values)
+      summary: List all AI provider optionss (no api_key values)
       tags: [ai-configs]
       responses:
         "200":
@@ -382,7 +382,7 @@ paths:
 
     post:
       operationId: createAIConfig
-      summary: Create an AI provider config
+      summary: Create an AI provider options
       tags: [ai-configs]
       requestBody:
         required: true
@@ -580,11 +580,11 @@ paths:
 
 components:
   schemas:
-    Connection:
+    Datasource:
       type: object
-      required: [id, name, type, config, is_active, created_at, updated_at]
+      required: [uid, name, type, options, enabled, createdAt, updatedAt]
       properties:
-        id:
+        uid:
           type: string
           format: uuid
         name:
@@ -592,62 +592,57 @@ components:
         type:
           type: string
           description: Datasource type identifier (e.g. "postgresql", "clickhouse")
-        config:
+        options:
           type: object
           additionalProperties: true
-          description: Driver-specific connection configuration
+          description: Driver-specific datasource options
           x-go-type: json.RawMessage
-        description:
-          type: string
-        is_active:
+        enabled:
           type: boolean
-        created_at:
+        createdAt:
           type: string
           format: date-time
-        updated_at:
+        updatedAt:
           type: string
           format: date-time
-        created_by:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
+        meta:
+          type: object
+          additionalProperties: true
 
-    ConnectionTestResult:
+    DatasourceTestResult:
       type: object
-      required: [is_connected, message]
+      required: [ok, message]
       properties:
-        is_connected:
+        ok:
           type: boolean
         message:
           type: string
-        latency_ms:
+        latencyMs:
           type: integer
           format: int64
-        tested_at:
+        testedAt:
           type: string
           format: date-time
 
-    ConnectionStats:
+    DatasourceStats:
       type: object
-      required: [total_count, active_count, count_by_type]
+      required: [totalCount, activeCount, countByType]
       properties:
-        total_count:
+        totalCount:
           type: integer
           format: int64
-        active_count:
+        activeCount:
           type: integer
           format: int64
-        count_by_type:
+        countByType:
           type: object
           additionalProperties:
             type: integer
             format: int64
 
-    CreateConnectionRequest:
+    CreateDatasourceRequest:
       type: object
-      required: [name, type, config]
+      required: [name, type, options]
       properties:
         name:
           type: string
@@ -655,44 +650,36 @@ components:
         type:
           type: string
           minLength: 1
-        config:
+        options:
           type: object
           additionalProperties: true
-        description:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        created_by:
-          type: string
+        meta:
+          type: object
+          additionalProperties: true
 
-    UpdateConnectionRequest:
+    UpdateDatasourceRequest:
       type: object
       properties:
         name:
           type: string
           minLength: 1
-        config:
+        options:
           type: object
           additionalProperties: true
-        description:
-          type: string
-        tags:
-          type: array
-          items:
-            type: string
-        is_active:
+        meta:
+          type: object
+          additionalProperties: true
+        enabled:
           type: boolean
 
-    TestConnectionRequest:
+    TestDatasourceRequest:
       type: object
-      required: [type, config]
+      required: [type, options]
       properties:
         type:
           type: string
           minLength: 1
-        config:
+        options:
           type: object
           additionalProperties: true
 
@@ -732,26 +719,26 @@ components:
 
     QueryStats:
       type: object
-      required: [execution_time_ms, rows_returned]
+      required: [executionTimeMs, rowsReturned]
       properties:
-        execution_time_ms:
+        executionTimeMs:
           type: integer
           format: int64
-        rows_returned:
+        rowsReturned:
           type: integer
           format: int64
-        bytes_read:
+        bytesRead:
           type: integer
           format: int64
 
     QueryInspect:
       type: object
-      required: [raw_query, executed_query]
+      required: [rawQuery, executedQuery]
       properties:
-        raw_query:
+        rawQuery:
           type: string
           description: Original template before variable substitution.
-        executed_query:
+        executedQuery:
           type: string
           description: Final query after all variable substitution.
         variables:
@@ -791,11 +778,11 @@ components:
 
     DataFrame:
       type: object
-      required: [frame_type, fields]
+      required: [frameType, fields]
       properties:
         name:
           type: string
-        frame_type:
+        frameType:
           $ref: "#/components/schemas/FrameType"
         fields:
           type: array
@@ -812,30 +799,30 @@ components:
             $ref: "#/components/schemas/DataFrame"
 
     # Response envelopes
-    ConnectionResponse:
+    DatasourceResponse:
       type: object
       required: [data]
       properties:
         data:
-          $ref: "#/components/schemas/Connection"
+          $ref: "#/components/schemas/Datasource"
 
-    ConnectionListResponse:
+    DatasourceListResponse:
       type: object
       required: [data]
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/Connection"
+            $ref: "#/components/schemas/Datasource"
 
-    ConnectionTestResponse:
+    DatasourceTestResponse:
       type: object
       required: [data]
       properties:
         data:
-          $ref: "#/components/schemas/ConnectionTestResult"
+          $ref: "#/components/schemas/DatasourceTestResult"
 
-    ConnectionTypesResponse:
+    DatasourceTypesResponse:
       type: object
       required: [data]
       properties:
@@ -844,42 +831,42 @@ components:
           items:
             type: string
 
-    ConnectionStatsResponse:
+    DatasourceStatsResponse:
       type: object
       required: [data]
       properties:
         data:
-          $ref: "#/components/schemas/ConnectionStats"
+          $ref: "#/components/schemas/DatasourceStats"
 
-    ConnectionHistory:
+    DatasourceHistory:
       type: object
-      required: [id, connection_id, connection_name, connection_type, action, changed_at]
+      required: [id, datasourceUid, datasourceName, datasourceType, action, changedAt]
       properties:
         id:
           type: string
-        connection_id:
+        datasourceUid:
           type: string
-        connection_name:
+        datasourceName:
           type: string
-        connection_type:
+        datasourceType:
           type: string
         action:
           type: string
           enum: [created, updated, deleted]
-        changed_at:
+        changedAt:
           type: string
           format: date-time
 
-    ConnectionHistoryListResponse:
+    DatasourceHistoryListResponse:
       type: object
       required: [data]
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/ConnectionHistory"
+            $ref: "#/components/schemas/DatasourceHistory"
 
-    ConnectionSchemaResponse:
+    DatasourceSchemaResponse:
       type: object
       required: [data]
       properties:
@@ -900,9 +887,9 @@ components:
 
     BatchQueryItem:
       type: object
-      required: [ref_id, request]
+      required: [id, request]
       properties:
-        ref_id:
+        id:
           type: string
           description: Query identifier (e.g. "A", "B"). Returned in results.
         request:
@@ -920,9 +907,9 @@ components:
 
     BatchQueryResultItem:
       type: object
-      required: [ref_id]
+      required: [id]
       properties:
-        ref_id:
+        id:
           type: string
         data:
           $ref: "#/components/schemas/QueryResult"
@@ -1201,7 +1188,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     BadGateway:
-      description: Bad Gateway — upstream datasource connection or query failed
+      description: Bad Gateway — upstream datasource datasource or query failed
       content:
         application/json:
           schema:

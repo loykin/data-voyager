@@ -35,7 +35,7 @@ function buildFallbackProvider(schema: SchemaInfo): SchemaProvider {
       return schema.databases.map(dbToRootNodes)
     },
 
-    async getChildNodes(_ctx: PluginContext, _connId: string, node) {
+    async getChildNodes(_ctx: PluginContext, _datasourceUid: string, node) {
       const parts = node.id.split('/')
 
       if (node.type === 'database') {
@@ -72,7 +72,7 @@ function buildFallbackProvider(schema: SchemaInfo): SchemaProvider {
 // ─── useSchemaTree ────────────────────────────────────────────────────────────
 
 interface UseSchemaTreeOptions {
-  connectionId: string
+  datasourceUid: string
   provider?: SchemaProvider // 플러그인 제공, 없으면 fallback
   ctx: PluginContext
 }
@@ -83,16 +83,16 @@ export interface TreeNode extends SchemaNode {
   expanded?: boolean
 }
 
-export function useSchemaTree({ connectionId, provider, ctx }: UseSchemaTreeOptions) {
+export function useSchemaTree({ datasourceUid, provider, ctx }: UseSchemaTreeOptions) {
   const [nodes, setNodes] = useState<TreeNode[]>([])
   const [initialized, setInitialized] = useState(false)
 
   // 스키마 전체를 먼저 fetch (캐시 5분)
   const { isLoading, error, refetch } = useQuery({
-    queryKey: ['connection-schema', connectionId],
-    queryFn: () => schemaApi.getSchema(connectionId),
+    queryKey: ['datasource-schema', datasourceUid],
+    queryFn: () => schemaApi.getSchema(datasourceUid),
     staleTime: 5 * 60 * 1000,
-    enabled: !!connectionId,
+    enabled: !!datasourceUid,
     retry: 1,
     // 결과를 받으면 루트 노드 초기화
     select: (schema) => schema,
@@ -103,11 +103,11 @@ export function useSchemaTree({ connectionId, provider, ctx }: UseSchemaTreeOpti
     async (schema: SchemaInfo) => {
       if (initialized) return
       const p = provider ?? buildFallbackProvider(schema)
-      const roots = await p.getRootNodes(ctx, connectionId)
+      const roots = await p.getRootNodes(ctx, datasourceUid)
       setNodes(roots.map((n) => ({ ...n })))
       setInitialized(true)
     },
-    [initialized, provider, ctx, connectionId],
+    [initialized, provider, ctx, datasourceUid],
   )
 
   // 노드 토글 (열기/닫기 + lazy load)
@@ -133,7 +133,7 @@ export function useSchemaTree({ connectionId, provider, ctx }: UseSchemaTreeOpti
         return
       }
 
-      const children = await p.getChildNodes(ctx, connectionId, targetNode)
+      const children = await p.getChildNodes(ctx, datasourceUid, targetNode)
       setNodes((prev) =>
         updateNode(prev, nodeId, (n) => ({
           ...n,
@@ -143,7 +143,7 @@ export function useSchemaTree({ connectionId, provider, ctx }: UseSchemaTreeOpti
         })),
       )
     },
-    [nodes, provider, ctx, connectionId],
+    [nodes, provider, ctx, datasourceUid],
   )
 
   return { nodes, setNodes, initialize, toggleNode, isLoading, error, refetch }

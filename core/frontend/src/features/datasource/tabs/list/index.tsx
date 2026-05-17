@@ -5,7 +5,7 @@ import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Input } from '@data-voyager/shared-ui/components/ui/input'
 import { Plus, Search } from 'lucide-react'
 import { useDatasources } from '@/features/datasource'
-import type { Connection } from '../../api/datasource.api'
+import type { DatasourceInstance } from '@loykin/datasourcekit'
 import { getColumns } from './columns'
 import { DatasourceSheet } from './sheet'
 
@@ -16,9 +16,9 @@ export function DatasourceListTab() {
 
   const cols = useMemo(() => getColumns(), [])
 
-  function openSheet(conn: Connection) {
+  function openSheet(conn: DatasourceInstance<Record<string, unknown>>) {
     open(
-      <DatasourceSheet id={conn.id} onChanged={() => { void refetch() }} />,
+      <DatasourceSheet id={conn.uid} onChanged={() => { void refetch() }} />,
       560,
     )
   }
