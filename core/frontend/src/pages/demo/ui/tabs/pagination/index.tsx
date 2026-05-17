@@ -13,7 +13,7 @@ export function PaginationTab() {
         columns={columns}
         enableColumnFilters
         enableSorting
-        rightFilters={(table) => <ColumnVisibilityDropdown table={table} />}
+        headerRight={(table) => <ColumnVisibilityDropdown table={table} />}
         pagination={{ pageSize: 10 }}
         footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 20, 50]} />}
         emptyMessage="No employees found"

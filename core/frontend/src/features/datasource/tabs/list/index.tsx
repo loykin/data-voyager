@@ -41,7 +41,7 @@ export function DatasourceListTab() {
         onRowClick={openSheet}
         rowCursor={true}
         searchableColumns={['name', 'type', 'description']}
-        leftFilters={(table) => (
+        headerLeft={(table) => (
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input

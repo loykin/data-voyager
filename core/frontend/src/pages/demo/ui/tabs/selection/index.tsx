@@ -25,7 +25,7 @@ export function SelectionTab() {
         data={SMALL_DATA}
         columns={columns}
         enableSorting
-        rightFilters={(table) => <ColumnVisibilityDropdown table={table} />}
+        headerRight={(table) => <ColumnVisibilityDropdown table={table} />}
         pagination={{ pageSize: 10 }}
         footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 20, 50]} />}
         emptyMessage="No employees found"
