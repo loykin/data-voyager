@@ -74,17 +74,17 @@ func activeToConfig(a *ActiveConfig) *config.AIConfig {
 	return cfg
 }
 
-// chatBody is the JSON body for POST /connections/{id}/ai/chat.
+// chatBody is the JSON body for POST /datasources/{uid}/ai/chat.
 type chatBody struct {
 	Messages []Message `json:"messages"`
 }
 
-// Chat handles POST /api/v1/connections/:id/ai/chat
+// Chat handles POST /api/v1/datasources/:uid/ai/chat
 // and streams the agent response as Server-Sent Events.
 func (h *Handler) Chat(c *gin.Context) {
-	connID := c.Param("id")
-	if connID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid connection id"})
+	datasourceUID := c.Param("uid")
+	if datasourceUID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid datasource uid"})
 		return
 	}
 
@@ -112,9 +112,9 @@ func (h *Handler) Chat(c *gin.Context) {
 	}
 
 	// Look up connection to get dialect for system prompt
-	conn, err := h.repo.GetConnByID(c.Request.Context(), connID)
+	conn, err := h.repo.GetConnByID(c.Request.Context(), datasourceUID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "connection not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "datasource not found"})
 		return
 	}
 
@@ -134,7 +134,7 @@ func (h *Handler) Chat(c *gin.Context) {
 	out := make(chan Chunk, 32)
 	ctx := c.Request.Context()
 
-	go agent.Run(ctx, connID, msgs, out)
+	go agent.Run(ctx, datasourceUID, msgs, out)
 
 	c.Stream(func(w io.Writer) bool {
 		chunk, ok := <-out
@@ -149,5 +149,5 @@ func (h *Handler) Chat(c *gin.Context) {
 
 // RegisterRoutes registers the AI chat route on the given router group.
 func RegisterRoutes(r *gin.RouterGroup, h *Handler) {
-	r.POST("/connections/:id/ai/chat", h.Chat)
+	r.POST("/datasources/:uid/ai/chat", h.Chat)
 }

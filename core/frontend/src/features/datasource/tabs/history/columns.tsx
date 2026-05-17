@@ -1,6 +1,6 @@
 import { Badge } from '@data-voyager/shared-ui'
 import type { DataGridColumnDef } from '@data-voyager/shared-ui'
-import type { ConnectionHistory } from '@/features/datasource'
+import type { DatasourceHistory } from '@/features/datasource'
 
 const ACTION_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   created: 'default',
@@ -15,18 +15,18 @@ function formatDateTime(iso: string): string {
   })
 }
 
-export const historyColumns: DataGridColumnDef<ConnectionHistory>[] = [
+export const historyColumns: DataGridColumnDef<DatasourceHistory>[] = [
   {
-    accessorKey: 'connection_name',
+    accessorKey: 'datasourceName',
     header: 'Name',
     meta: { flex: 2 },
   },
   {
-    accessorKey: 'connection_type',
+    accessorKey: 'datasourceType',
     header: 'Type',
     meta: { flex: 1 },
     cell: ({ row }) => (
-      <Badge variant="secondary" className="text-xs">{row.original.connection_type}</Badge>
+      <Badge variant="secondary" className="text-xs">{row.original.datasourceType}</Badge>
     ),
   },
   {
@@ -40,12 +40,12 @@ export const historyColumns: DataGridColumnDef<ConnectionHistory>[] = [
     ),
   },
   {
-    accessorKey: 'changed_at',
+    accessorKey: 'changedAt',
     header: 'When',
     meta: { flex: 1.5 },
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {formatDateTime(row.original.changed_at as unknown as string)}
+        {formatDateTime(row.original.changedAt)}
       </span>
     ),
   },

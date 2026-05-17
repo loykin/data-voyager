@@ -146,7 +146,7 @@ function hasAnyMatch(nodes: TreeNode[], filter: string): boolean {
 // ─── SchemaTree ───────────────────────────────────────────────────────────────
 
 interface SchemaTreeProps {
-  connectionId: string
+  datasourceUid: string
   provider?: SchemaProvider
   ctx: PluginContext
   /** 컬럼 클릭 시 콜백 */
@@ -154,19 +154,19 @@ interface SchemaTreeProps {
   className?: string
 }
 
-export function SchemaTree({ connectionId, provider, ctx, onInsert, className }: SchemaTreeProps) {
+export function SchemaTree({ datasourceUid, provider, ctx, onInsert, className }: SchemaTreeProps) {
   const [filter, setFilter] = useState('')
   const initialized = useRef(false)
 
   const { data: schema, isLoading: schemaLoading, error: schemaError, refetch } = useQuery({
-    queryKey: ['connection-schema', connectionId],
-    queryFn: () => schemaApi.getSchema(connectionId),
+    queryKey: ['datasource-schema', datasourceUid],
+    queryFn: () => schemaApi.getSchema(datasourceUid),
     staleTime: 5 * 60 * 1000,
-    enabled: !!connectionId,
+    enabled: !!datasourceUid,
     retry: 1,
   })
 
-  const { nodes, initialize, toggleNode } = useSchemaTree({ connectionId, provider, ctx })
+  const { nodes, initialize, toggleNode } = useSchemaTree({ datasourceUid, provider, ctx })
 
   // 스키마 로드 완료 시 단 한 번만 초기화
   useEffect(() => {

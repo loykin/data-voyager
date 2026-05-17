@@ -1,4 +1,4 @@
-import { DataGrid, ColumnVisibilityDropdown } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar, ColumnVisibilityDropdown } from '@data-voyager/shared-ui'
 import { SMALL_DATA } from '../../data'
 import { columns } from '../../columns'
 
@@ -13,8 +13,9 @@ export function PaginationTab() {
         columns={columns}
         enableColumnFilters
         enableSorting
-        rightFilters={(table) => <ColumnVisibilityDropdown table={table} />}
-        pageSizes={[10, 20, 50]}
+        headerRight={(table) => <ColumnVisibilityDropdown table={table} />}
+        pagination={{ pageSize: 10 }}
+        footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 20, 50]} />}
         emptyMessage="No employees found"
       />
     </section>

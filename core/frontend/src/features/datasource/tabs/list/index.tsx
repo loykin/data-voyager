@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DataGrid, useSidePanelStore } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar, useSidePanelStore } from '@data-voyager/shared-ui'
 import { Button } from '@data-voyager/shared-ui/components/ui/button'
 import { Input } from '@data-voyager/shared-ui/components/ui/input'
 import { Plus, Search } from 'lucide-react'
 import { useDatasources } from '@/features/datasource'
-import type { Connection } from '../../api/datasource.api'
+import type { DatasourceInstance } from '@loykin/datasourcekit'
 import { getColumns } from './columns'
 import { DatasourceSheet } from './sheet'
 
@@ -16,9 +16,9 @@ export function DatasourceListTab() {
 
   const cols = useMemo(() => getColumns(), [])
 
-  function openSheet(conn: Connection) {
+  function openSheet(conn: DatasourceInstance<Record<string, unknown>>) {
     open(
-      <DatasourceSheet id={conn.id} onChanged={() => { void refetch() }} />,
+      <DatasourceSheet id={conn.uid} onChanged={() => { void refetch() }} />,
       560,
     )
   }
@@ -41,7 +41,7 @@ export function DatasourceListTab() {
         onRowClick={openSheet}
         rowCursor={true}
         searchableColumns={['name', 'type', 'description']}
-        leftFilters={(table) => (
+        headerLeft={(table) => (
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
@@ -53,7 +53,8 @@ export function DatasourceListTab() {
           </div>
         )}
         emptyMessage="No datasources yet. Add your first one."
-        pageSizes={[10, 25, 50]}
+        pagination={{ pageSize: 10 }}
+        footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 25, 50]} />}
       />
     </div>
   )

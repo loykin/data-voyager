@@ -1,4 +1,4 @@
-import { DataGrid } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar } from '@data-voyager/shared-ui'
 import { ALL_DATA } from '../../data'
 import { columns } from '../../columns'
 
@@ -12,7 +12,8 @@ export function BorderedTab() {
           columns={columns}
           enableSorting
           enableColumnFilters
-          pageSizes={[10, 20]}
+          pagination={{ pageSize: 10 }}
+          footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 20]} />}
           emptyMessage="No employees found"
         />
       </div>
@@ -25,7 +26,8 @@ export function BorderedTab() {
           enableSorting
           enableColumnFilters
           bordered
-          pageSizes={[10, 20]}
+          pagination={{ pageSize: 10 }}
+          footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 20]} />}
           emptyMessage="No employees found"
         />
       </div>

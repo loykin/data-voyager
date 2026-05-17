@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { Button, useSidePanelStore, DataGrid } from '@data-voyager/shared-ui'
+import { Button, useSidePanelStore, DataGrid, DataGridPaginationBar } from '@data-voyager/shared-ui'
 import { aiConfigApi } from '@/features/aiconfig'
 import type { AIConfig } from '../../api/aiconfig.api'
 import { getListColumns } from './columns'
@@ -48,7 +48,8 @@ export function AIConfigListTab() {
         onRowClick={openSheet}
         rowCursor={true}
         emptyMessage="No AI configs yet. Click Add Config to create one."
-        pageSizes={[10, 25, 50]}
+        pagination={{ pageSize: 10 }}
+        footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 25, 50]} />}
       />
     </div>
   )

@@ -40,7 +40,7 @@ func (h *Handler) WithHistoryRepo(r HistoryRepository) *Handler {
 func (h *Handler) parseAndValidateConfig(c *gin.Context, dsType sdk.DataSourceType, rawConfig map[string]interface{}) (json.RawMessage, bool) {
 	plugin, exists := h.registry.Get(dsType)
 	if !exists {
-		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: "unsupported connection type"})
+		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: "unsupported datasource type"})
 		return nil, false
 	}
 	configJSON, err := json.Marshal(rawConfig)
@@ -60,13 +60,13 @@ func (h *Handler) parseAndValidateConfig(c *gin.Context, dsType sdk.DataSourceTy
 	return configJSON, true
 }
 
-func (h *Handler) ListConnections(c *gin.Context, params api.ListConnectionsParams) {
+func (h *Handler) ListDatasources(c *gin.Context, params api.ListDatasourcesParams) {
 	filter := Filter{}
 	if params.Type != nil {
 		filter.Type = sdk.DataSourceType(*params.Type)
 	}
-	if params.IsActive != nil {
-		filter.IsActive = params.IsActive
+	if params.Enabled != nil {
+		filter.IsActive = params.Enabled
 	}
 	if params.CreatedBy != nil {
 		filter.CreatedBy = *params.CreatedBy
@@ -78,21 +78,21 @@ func (h *Handler) ListConnections(c *gin.Context, params api.ListConnectionsPara
 		return
 	}
 
-	apiConns := make([]api.Connection, len(conns))
+	apiConns := make([]api.Datasource, len(conns))
 	for i, conn := range conns {
-		apiConns[i] = toAPIConnection(conn)
+		apiConns[i] = toAPIDatasource(conn)
 	}
-	c.JSON(http.StatusOK, api.ConnectionListResponse{Data: apiConns})
+	c.JSON(http.StatusOK, api.DatasourceListResponse{Data: apiConns})
 }
 
-func (h *Handler) CreateConnection(c *gin.Context) {
-	var body api.CreateConnectionRequest
+func (h *Handler) CreateDatasource(c *gin.Context) {
+	var body api.CreateDatasourceRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	configJSON, ok := h.parseAndValidateConfig(c, sdk.DataSourceType(body.Type), body.Config)
+	configJSON, ok := h.parseAndValidateConfig(c, sdk.DataSourceType(body.Type), body.Options)
 	if !ok {
 		return
 	}
@@ -101,9 +101,9 @@ func (h *Handler) CreateConnection(c *gin.Context) {
 		Name:        body.Name,
 		Type:        sdk.DataSourceType(body.Type),
 		Config:      configJSON,
-		Description: strVal(body.Description),
-		Tags:        sliceVal(body.Tags),
-		CreatedBy:   strVal(body.CreatedBy),
+		Description: metaString(body.Meta, "description"),
+		Tags:        metaStringSlice(body.Meta, "tags"),
+		CreatedBy:   metaString(body.Meta, "createdBy"),
 		IsActive:    true,
 	}
 	if err := h.repo.Create(c.Request.Context(), conn); err != nil {
@@ -111,26 +111,26 @@ func (h *Handler) CreateConnection(c *gin.Context) {
 		return
 	}
 	h.recordHistory(c.Request.Context(), conn.ID, conn.Name, string(conn.Type), "created")
-	c.JSON(http.StatusCreated, api.ConnectionResponse{Data: toAPIConnection(conn)})
+	c.JSON(http.StatusCreated, api.DatasourceResponse{Data: toAPIDatasource(conn)})
 }
 
-func (h *Handler) GetConnection(c *gin.Context, id openapi_types.UUID) {
+func (h *Handler) GetDatasource(c *gin.Context, id openapi_types.UUID) {
 	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
-		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "datasource not found"})
 		return
 	}
-	c.JSON(http.StatusOK, api.ConnectionResponse{Data: toAPIConnection(conn)})
+	c.JSON(http.StatusOK, api.DatasourceResponse{Data: toAPIDatasource(conn)})
 }
 
-func (h *Handler) UpdateConnection(c *gin.Context, id openapi_types.UUID) {
+func (h *Handler) UpdateDatasource(c *gin.Context, id openapi_types.UUID) {
 	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
-		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "datasource not found"})
 		return
 	}
 
-	var body api.UpdateConnectionRequest
+	var body api.UpdateDatasourceRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
 		return
@@ -139,17 +139,18 @@ func (h *Handler) UpdateConnection(c *gin.Context, id openapi_types.UUID) {
 	if body.Name != nil {
 		conn.Name = *body.Name
 	}
-	if body.Description != nil {
-		conn.Description = *body.Description
+	if body.Meta != nil {
+		conn.Description = metaString(body.Meta, "description")
+		conn.Tags = metaStringSlice(body.Meta, "tags")
+		if createdBy := metaString(body.Meta, "createdBy"); createdBy != "" {
+			conn.CreatedBy = createdBy
+		}
 	}
-	if body.Tags != nil {
-		conn.Tags = *body.Tags
+	if body.Enabled != nil {
+		conn.IsActive = *body.Enabled
 	}
-	if body.IsActive != nil {
-		conn.IsActive = *body.IsActive
-	}
-	if body.Config != nil {
-		configJSON, ok := h.parseAndValidateConfig(c, conn.Type, *body.Config)
+	if body.Options != nil {
+		configJSON, ok := h.parseAndValidateConfig(c, conn.Type, *body.Options)
 		if !ok {
 			return
 		}
@@ -161,10 +162,10 @@ func (h *Handler) UpdateConnection(c *gin.Context, id openapi_types.UUID) {
 		return
 	}
 	h.recordHistory(c.Request.Context(), conn.ID, conn.Name, string(conn.Type), "updated")
-	c.JSON(http.StatusOK, api.ConnectionResponse{Data: toAPIConnection(conn)})
+	c.JSON(http.StatusOK, api.DatasourceResponse{Data: toAPIDatasource(conn)})
 }
 
-func (h *Handler) DeleteConnection(c *gin.Context, id openapi_types.UUID) {
+func (h *Handler) DeleteDatasource(c *gin.Context, id openapi_types.UUID) {
 	existing, _ := h.repo.GetByID(c.Request.Context(), id.String())
 	if err := h.repo.Delete(c.Request.Context(), id.String()); err != nil {
 		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
@@ -191,10 +192,10 @@ func (h *Handler) recordHistory(ctx context.Context, connID, name, connType, act
 	})
 }
 
-func (h *Handler) TestConnection(c *gin.Context, id openapi_types.UUID) {
+func (h *Handler) TestDatasource(c *gin.Context, id openapi_types.UUID) {
 	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
-		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "datasource not found"})
 		return
 	}
 	plugin, exists := h.registry.Get(conn.Type)
@@ -211,23 +212,23 @@ func (h *Handler) TestConnection(c *gin.Context, id openapi_types.UUID) {
 	if err != nil {
 		result = &sdk.ConnectionTestResult{IsConnected: false, Message: err.Error()}
 	}
-	c.JSON(http.StatusOK, api.ConnectionTestResponse{
-		Data: api.ConnectionTestResult{
-			IsConnected: result.IsConnected,
-			Message:     result.Message,
-			LatencyMs:   &result.Latency,
+	c.JSON(http.StatusOK, api.DatasourceTestResponse{
+		Data: api.DatasourceTestResult{
+			Ok:        result.IsConnected,
+			Message:   result.Message,
+			LatencyMs: &result.Latency,
 		},
 	})
 }
 
-func (h *Handler) TestConnectionConfig(c *gin.Context) {
-	var body api.TestConnectionRequest
+func (h *Handler) TestDatasourceConfig(c *gin.Context) {
+	var body api.TestDatasourceRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
 		return
 	}
 	dsType := sdk.DataSourceType(body.Type)
-	configJSON, ok := h.parseAndValidateConfig(c, dsType, body.Config)
+	configJSON, ok := h.parseAndValidateConfig(c, dsType, body.Options)
 	if !ok {
 		return
 	}
@@ -241,19 +242,19 @@ func (h *Handler) TestConnectionConfig(c *gin.Context) {
 	if err != nil {
 		result = &sdk.ConnectionTestResult{IsConnected: false, Message: err.Error()}
 	}
-	c.JSON(http.StatusOK, api.ConnectionTestResponse{
-		Data: api.ConnectionTestResult{
-			IsConnected: result.IsConnected,
-			Message:     result.Message,
-			LatencyMs:   &result.Latency,
+	c.JSON(http.StatusOK, api.DatasourceTestResponse{
+		Data: api.DatasourceTestResult{
+			Ok:        result.IsConnected,
+			Message:   result.Message,
+			LatencyMs: &result.Latency,
 		},
 	})
 }
 
-func (h *Handler) GetConnectionSchema(c *gin.Context, id openapi_types.UUID) {
+func (h *Handler) GetDatasourceSchema(c *gin.Context, id openapi_types.UUID) {
 	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
-		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "datasource not found"})
 		return
 	}
 
@@ -271,7 +272,7 @@ func (h *Handler) GetConnectionSchema(c *gin.Context, id openapi_types.UUID) {
 
 	dbConn, err := plugin.Connect(c.Request.Context(), cfg)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, api.ErrorResponse{Error: fmt.Sprintf("connection failed: %s", err)})
+		c.JSON(http.StatusBadGateway, api.ErrorResponse{Error: fmt.Sprintf("datasource failed: %s", err)})
 		return
 	}
 	defer func() { _ = dbConn.Close() }()
@@ -285,21 +286,21 @@ func (h *Handler) GetConnectionSchema(c *gin.Context, id openapi_types.UUID) {
 	c.JSON(http.StatusOK, gin.H{"data": schema})
 }
 
-func (h *Handler) QueryConnection(c *gin.Context, id openapi_types.UUID) {
+func (h *Handler) QueryDatasource(c *gin.Context, id openapi_types.UUID) {
 	var body api.QueryRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	// 1. Load the stored connection.
+	// 1. Load the stored datasource.
 	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
-		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "datasource not found"})
 		return
 	}
 
-	// 2. Resolve plugin and open a live connection.
+	// 2. Resolve plugin and open a live datasource session.
 	plugin, exists := h.registry.Get(conn.Type)
 	if !exists {
 		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "plugin not found for type"})
@@ -312,7 +313,7 @@ func (h *Handler) QueryConnection(c *gin.Context, id openapi_types.UUID) {
 	}
 	dbConn, err := plugin.Connect(c.Request.Context(), cfg)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, api.ErrorResponse{Error: fmt.Sprintf("connection failed: %s", err)})
+		c.JSON(http.StatusBadGateway, api.ErrorResponse{Error: fmt.Sprintf("datasource failed: %s", err)})
 		return
 	}
 	defer func() { _ = dbConn.Close() }()
@@ -386,7 +387,7 @@ func (h *Handler) QueryConnection(c *gin.Context, id openapi_types.UUID) {
 	})
 }
 
-func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
+func (h *Handler) BatchQueryDatasource(c *gin.Context, id openapi_types.UUID) {
 	var body api.BatchQueryRequest
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, api.ErrorResponse{Error: err.Error()})
@@ -397,10 +398,10 @@ func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
 		return
 	}
 
-	// Resolve connection + plugin once for all queries.
+	// Resolve datasource + plugin once for all queries.
 	conn, err := h.repo.GetByID(c.Request.Context(), id.String())
 	if err != nil {
-		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "connection not found"})
+		c.JSON(http.StatusNotFound, api.ErrorResponse{Error: "datasource not found"})
 		return
 	}
 	plugin, exists := h.registry.Get(conn.Type)
@@ -415,14 +416,14 @@ func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
 	}
 	dbConn, err := plugin.Connect(c.Request.Context(), cfg)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, api.ErrorResponse{Error: fmt.Sprintf("connection failed: %s", err)})
+		c.JSON(http.StatusBadGateway, api.ErrorResponse{Error: fmt.Sprintf("datasource failed: %s", err)})
 		return
 	}
 	defer func() { _ = dbConn.Close() }()
 
 	results := make([]api.BatchQueryResultItem, len(body.Queries))
 	for idx, item := range body.Queries {
-		refID := item.RefId
+		refID := item.Id
 		req := item.Request
 
 		var fromStr, toStr string
@@ -437,7 +438,7 @@ func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
 		tr, err := qb.ParseTimeRange(fromStr, toStr)
 		if err != nil {
 			errMsg := err.Error()
-			results[idx] = api.BatchQueryResultItem{RefId: refID, Error: &errMsg}
+			results[idx] = api.BatchQueryResultItem{Id: refID, Error: &errMsg}
 			continue
 		}
 
@@ -457,7 +458,7 @@ func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
 		renderedSQL, err := qb.RenderQuery(req.Query, tmplCtx)
 		if err != nil {
 			errMsg := err.Error()
-			results[idx] = api.BatchQueryResultItem{RefId: refID, Error: &errMsg}
+			results[idx] = api.BatchQueryResultItem{Id: refID, Error: &errMsg}
 			continue
 		}
 
@@ -466,7 +467,7 @@ func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
 		elapsed := time.Since(start)
 		if err != nil {
 			errMsg := fmt.Sprintf("query failed: %s", err)
-			results[idx] = api.BatchQueryResultItem{RefId: refID, Error: &errMsg}
+			results[idx] = api.BatchQueryResultItem{Id: refID, Error: &errMsg}
 			continue
 		}
 
@@ -477,8 +478,8 @@ func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
 		}
 		apiResult := sdkResultToAPI(result)
 		results[idx] = api.BatchQueryResultItem{
-			RefId: refID,
-			Data:  &apiResult,
+			Id:   refID,
+			Data: &apiResult,
 			Stats: &api.QueryStats{
 				ExecutionTimeMs: elapsed.Milliseconds(),
 				RowsReturned:    result.Stats.RowsReturned,
@@ -495,16 +496,16 @@ func (h *Handler) BatchQueryConnection(c *gin.Context, id openapi_types.UUID) {
 	c.JSON(http.StatusOK, api.BatchQueryResponse{Results: results})
 }
 
-func (h *Handler) ListConnectionTypes(c *gin.Context) {
+func (h *Handler) ListDatasourceTypes(c *gin.Context) {
 	types := h.registry.GetSupportedTypes()
 	strs := make([]string, len(types))
 	for i, t := range types {
 		strs[i] = string(t)
 	}
-	c.JSON(http.StatusOK, api.ConnectionTypesResponse{Data: strs})
+	c.JSON(http.StatusOK, api.DatasourceTypesResponse{Data: strs})
 }
 
-func (h *Handler) GetConnectionStats(c *gin.Context) {
+func (h *Handler) GetDatasourceStats(c *gin.Context) {
 	stats, err := h.repo.Stats(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: err.Error()})
@@ -514,8 +515,8 @@ func (h *Handler) GetConnectionStats(c *gin.Context) {
 	for k, v := range stats.CountByType {
 		countByType[string(k)] = v
 	}
-	c.JSON(http.StatusOK, api.ConnectionStatsResponse{
-		Data: api.ConnectionStats{
+	c.JSON(http.StatusOK, api.DatasourceStatsResponse{
+		Data: api.DatasourceStats{
 			TotalCount:  stats.TotalCount,
 			ActiveCount: stats.ActiveCount,
 			CountByType: countByType,
@@ -525,79 +526,100 @@ func (h *Handler) GetConnectionStats(c *gin.Context) {
 
 // -- helpers --
 
-func toAPIConnection(c *Connection) api.Connection {
-	conn := api.Connection{
-		Id:        uuid.MustParse(c.ID),
+func toAPIDatasource(c *Connection) api.Datasource {
+	meta := map[string]interface{}{}
+	if c.Description != "" {
+		meta["description"] = c.Description
+	}
+	if c.CreatedBy != "" {
+		meta["createdBy"] = c.CreatedBy
+	}
+	if len(c.Tags) > 0 {
+		meta["tags"] = c.Tags
+	}
+	conn := api.Datasource{
+		Uid:       uuid.MustParse(c.ID),
 		Name:      c.Name,
 		Type:      string(c.Type),
-		Config:    c.Config,
-		IsActive:  c.IsActive,
+		Options:   c.Config,
+		Enabled:   c.IsActive,
 		CreatedAt: c.CreatedAt,
 		UpdatedAt: c.UpdatedAt,
 	}
-	if c.Description != "" {
-		conn.Description = &c.Description
-	}
-	if c.CreatedBy != "" {
-		conn.CreatedBy = &c.CreatedBy
-	}
-	if len(c.Tags) > 0 {
-		conn.Tags = &c.Tags
+	if len(meta) > 0 {
+		conn.Meta = &meta
 	}
 	return conn
 }
 
-func strVal(s *string) string {
-	if s == nil {
+func metaString(meta *map[string]interface{}, key string) string {
+	if meta == nil {
 		return ""
 	}
-	return *s
+	value, ok := (*meta)[key].(string)
+	if !ok {
+		return ""
+	}
+	return value
 }
 
-func sliceVal(s *[]string) []string {
-	if s == nil {
+func metaStringSlice(meta *map[string]interface{}, key string) []string {
+	if meta == nil {
 		return nil
 	}
-	return *s
+	switch value := (*meta)[key].(type) {
+	case []string:
+		return value
+	case []interface{}:
+		result := make([]string, 0, len(value))
+		for _, item := range value {
+			if s, ok := item.(string); ok {
+				result = append(result, s)
+			}
+		}
+		return result
+	default:
+		return nil
+	}
 }
 
-// ListConnectionHistory handles GET /connections/history
-func (h *Handler) ListConnectionHistory(c *gin.Context, params api.ListConnectionHistoryParams) {
+// ListDatasourceHistory handles GET /datasources/history
+func (h *Handler) ListDatasourceHistory(c *gin.Context, params api.ListDatasourceHistoryParams) {
 	limit, offset := historyPage(params.Limit, params.Offset)
 	records, err := h.historyRepo.List(c.Request.Context(), limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to list connection history"})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to list datasource history"})
 		return
 	}
-	resp := make([]api.ConnectionHistory, len(records))
+	resp := make([]api.DatasourceHistory, len(records))
 	for i, r := range records {
-		resp[i] = toAPIConnectionHistory(r)
+		resp[i] = toAPIDatasourceHistory(r)
 	}
-	c.JSON(http.StatusOK, api.ConnectionHistoryListResponse{Data: resp})
+	c.JSON(http.StatusOK, api.DatasourceHistoryListResponse{Data: resp})
 }
 
-// ListConnectionHistoryByConnection handles GET /connections/:id/history
-func (h *Handler) ListConnectionHistoryByConnection(c *gin.Context, id openapi_types.UUID, params api.ListConnectionHistoryByConnectionParams) {
+// ListDatasourceHistoryByDatasource handles GET /datasources/:uid/history
+func (h *Handler) ListDatasourceHistoryByDatasource(c *gin.Context, id openapi_types.UUID, params api.ListDatasourceHistoryByDatasourceParams) {
 	limit, offset := historyPage(params.Limit, params.Offset)
 	records, err := h.historyRepo.ListByConnection(c.Request.Context(), id.String(), limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to list connection history"})
+		c.JSON(http.StatusInternalServerError, api.ErrorResponse{Error: "failed to list datasource history"})
 		return
 	}
-	resp := make([]api.ConnectionHistory, len(records))
+	resp := make([]api.DatasourceHistory, len(records))
 	for i, r := range records {
-		resp[i] = toAPIConnectionHistory(r)
+		resp[i] = toAPIDatasourceHistory(r)
 	}
-	c.JSON(http.StatusOK, api.ConnectionHistoryListResponse{Data: resp})
+	c.JSON(http.StatusOK, api.DatasourceHistoryListResponse{Data: resp})
 }
 
-func toAPIConnectionHistory(h *ConnectionHistory) api.ConnectionHistory {
-	return api.ConnectionHistory{
+func toAPIDatasourceHistory(h *ConnectionHistory) api.DatasourceHistory {
+	return api.DatasourceHistory{
 		Id:             h.ID,
-		ConnectionId:   h.ConnectionID,
-		ConnectionName: h.ConnectionName,
-		ConnectionType: h.ConnectionType,
-		Action:         api.ConnectionHistoryAction(h.Action),
+		DatasourceUid:  h.ConnectionID,
+		DatasourceName: h.ConnectionName,
+		DatasourceType: h.ConnectionType,
+		Action:         api.DatasourceHistoryAction(h.Action),
 		ChangedAt:      h.ChangedAt,
 	}
 }

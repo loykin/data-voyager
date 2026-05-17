@@ -1,4 +1,4 @@
-import { DataGrid } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar } from '@data-voyager/shared-ui'
 import { SMALL_DATA, ALL_DATA } from '../../data'
 import { columns } from '../../columns'
 import { teamColumns, salaryColumns } from './columns'
@@ -13,8 +13,8 @@ export function DashboardTab() {
             data={SMALL_DATA.slice(0, 20)}
             columns={teamColumns}
             enableSorting
-            pageSizes={[5, 10]}
-            paginationConfig={{ pageSize: 5 }}
+            pagination={{ pageSize: 5 }}
+            footer={(table) => <DataGridPaginationBar table={table} pageSizes={[5, 10]} />}
             emptyMessage="No data"
           />
         </div>
@@ -24,8 +24,8 @@ export function DashboardTab() {
             data={SMALL_DATA.slice(0, 20)}
             columns={salaryColumns}
             enableSorting
-            pageSizes={[5, 10]}
-            paginationConfig={{ pageSize: 5 }}
+            pagination={{ pageSize: 5 }}
+            footer={(table) => <DataGridPaginationBar table={table} pageSizes={[5, 10]} />}
             emptyMessage="No data"
           />
         </div>
@@ -38,7 +38,8 @@ export function DashboardTab() {
           columns={columns}
           enableColumnFilters
           enableSorting
-          pageSizes={[10, 20, 50]}
+          pagination={{ pageSize: 10 }}
+          footer={(table) => <DataGridPaginationBar table={table} pageSizes={[10, 20, 50]} />}
           emptyMessage="No employees found"
         />
       </div>

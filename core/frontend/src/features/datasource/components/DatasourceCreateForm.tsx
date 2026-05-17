@@ -10,21 +10,17 @@ import { Separator } from '@data-voyager/shared-ui/components/ui/separator'
 import { Loader2, Check, X, TestTube } from 'lucide-react'
 import { datasourceRegistry } from '@data-voyager/sdk'
 import type { DatasourcePlugin } from '@data-voyager/sdk'
-import { useQuery } from '@tanstack/react-query'
-import { datasourceApi } from '../api/datasource.api'
-import { useCreateDatasource, useTestConnection } from '@/features/datasource'
+import { useCreateDatasource, useDatasourceTypes, useTestDatasource } from '@/features/datasource'
 
 export function DatasourceCreateForm() {
   const navigate = useNavigate()
 
-  const { data: backendTypes = [] } = useQuery({
-    queryKey: ['connection-types'],
-    queryFn: datasourceApi.getTypes,
-  })
+  const { data: backendTypes = [] } = useDatasourceTypes()
+  const backendTypeIds = new Set(backendTypes.map((type) => type.type))
 
   const availablePlugins: DatasourcePlugin[] = datasourceRegistry
     .getAll()
-    .filter((p) => backendTypes.includes(p.id))
+    .filter((p) => backendTypeIds.has(p.id))
 
   const [selectedType, setSelectedType] = useState('')
   const [name, setName] = useState('')
@@ -46,7 +42,7 @@ export function DatasourceCreateForm() {
   }, [selectedType])
 
   const { createDatasource, creating } = useCreateDatasource()
-  const { testConnection, testing } = useTestConnection()
+  const { testDatasource, testing } = useTestDatasource()
 
   const plugin = datasourceRegistry.get(selectedType)
   const ConfigComponent = plugin?.configComponent
@@ -55,8 +51,8 @@ export function DatasourceCreateForm() {
     if (!selectedType) return
     setTestResult(null)
     try {
-      const result = await testConnection({ type: selectedType, config })
-      setTestResult({ success: result.is_connected, message: result.message })
+      const result = await testDatasource({ type: selectedType, options: config })
+      setTestResult({ success: result.ok, message: result.message })
     } catch (err) {
       setTestResult({
         success: false,
@@ -71,9 +67,12 @@ export function DatasourceCreateForm() {
     await createDatasource({
       name,
       type: selectedType,
-      description: description || undefined,
-      tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
-      config,
+      enabled: isActive,
+      options: config,
+      meta: {
+        ...(description ? { description } : {}),
+        ...(tags ? { tags: tags.split(',').map((t) => t.trim()).filter(Boolean) } : {}),
+      },
     })
     navigate('/datasource')
   }
@@ -145,7 +144,7 @@ export function DatasourceCreateForm() {
 
         <section className="flex flex-col gap-4">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            {plugin ? `${plugin.name} Connection` : 'Connection'}
+            {plugin ? `${plugin.name} Datasource` : 'Datasource'}
           </h2>
 
           {ConfigComponent ? (
@@ -153,7 +152,7 @@ export function DatasourceCreateForm() {
           ) : selectedType ? (
             <p className="text-sm text-muted-foreground">No configuration UI for "{selectedType}"</p>
           ) : (
-            <p className="text-sm text-muted-foreground">Select a type above to configure the connection.</p>
+            <p className="text-sm text-muted-foreground">Select a type above to configure the datasource.</p>
           )}
         </section>
 
@@ -175,7 +174,7 @@ export function DatasourceCreateForm() {
         <div className="flex items-center justify-between">
           <Button type="button" variant="outline" onClick={handleTest} disabled={testing || !selectedType}>
             {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TestTube className="mr-2 h-4 w-4" />}
-            Test Connection
+            Test Datasource
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => navigate('/datasource')}>

@@ -7,7 +7,7 @@ export interface FrameField {
 }
 
 export interface FrameLike {
-  frame_type?: string
+  frameType?: string
   fields: FrameField[]
 }
 

@@ -77,9 +77,9 @@ export const columns: DataGridColumnDef<Pod>[] = [
     meta: {
       filterType: false,
       actions: () => [
-        { label: 'Describe', onClick: (p) => alert(`describe ${p.name}`) },
-        { label: 'Logs',     onClick: (p) => alert(`logs ${p.name}`) },
-        { label: 'Delete',   onClick: (p) => alert(`delete ${p.name}`), variant: 'destructive' as const },
+        { label: 'Describe', onClick: (p: Pod) => alert(`describe ${p.name}`) },
+        { label: 'Logs',     onClick: (p: Pod) => alert(`logs ${p.name}`) },
+        { label: 'Delete',   onClick: (p: Pod) => alert(`delete ${p.name}`), variant: 'destructive' as const },
       ],
     },
   },

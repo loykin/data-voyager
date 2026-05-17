@@ -3,23 +3,27 @@ export { DatasourceCreateForm } from './components/DatasourceCreateForm'
 export { DatasourceEditPage } from './components/DatasourceEditPage'
 export { DatasourceShowPage } from './components/DatasourceShowPage'
 export { DatasourceSheet } from './tabs/list/sheet'
-export { datasourceApi } from './api/datasource.api'
+export {
+  datasourceCreatedBy,
+  datasourceDescription,
+  datasourceTags,
+  getDatasourceManager,
+  listDatasourceHistory,
+  testDatasourceOptions,
+} from './api/datasource.manager'
 export {
   useDatasources,
   useDatasource,
+  useDatasourceTypes,
   useDeleteDatasource,
   useUpdateDatasource,
   useCreateDatasource,
-  useTestConnection,
+  useTestDatasource,
   datasourceKeys,
 } from './hooks/useDatasource'
 export type {
-  Connection,
-  ConnectionConfig,
-  CreateConnectionRequest,
-  UpdateConnectionRequest,
-  TestConnectionRequest,
-  ConnectionTestResult,
+  DatasourceOptions,
+  DatasourceTestResult,
   QueryRequest,
   QueryResponse,
   QueryResult,
@@ -32,7 +36,8 @@ export type {
   FrameType,
   BatchQueryRequest,
   BatchQueryResponse,
-  BatchQueryResultItem,
+  DatasourceHistory,
   DataSource,
 } from './types/datasource.types'
-export type { ConnectionHistory } from './api/datasource.api'
+export type { DatasourceInstance, BatchQueryResultItem } from '@loykin/datasourcekit'
+export type { components } from '@/generated/api/schema.d.ts'

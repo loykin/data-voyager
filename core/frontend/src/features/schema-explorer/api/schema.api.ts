@@ -31,9 +31,9 @@ function apiError(error: unknown, fallback: string): Error {
 }
 
 export const schemaApi = {
-  getSchema: async (connectionId: string): Promise<SchemaInfo> => {
-    const { data, error } = await apiClient.GET('/connections/{id}/schema', {
-      params: { path: { id: connectionId } },
+  getSchema: async (datasourceUid: string): Promise<SchemaInfo> => {
+    const { data, error } = await apiClient.GET('/datasources/{uid}/schema', {
+      params: { path: { uid: datasourceUid } },
     })
     if (error || !data) throw apiError(error, 'Failed to fetch schema')
     // 백엔드가 { data: SchemaInfo } 형태로 반환

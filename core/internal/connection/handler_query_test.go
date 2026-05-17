@@ -101,13 +101,13 @@ func newHandler(repo Repository, plugin sdk.DatasourcePlugin) *Handler {
 
 func post(h *Handler, body any) *httptest.ResponseRecorder {
 	raw, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/connections/1/query", bytes.NewReader(raw))
+	req := httptest.NewRequest(http.MethodPost, "/datasources/1/query", bytes.NewReader(raw))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Params = gin.Params{{Key: "id", Value: testConnID}}
-	h.QueryConnection(c, uuid.MustParse(testConnID))
+	h.QueryDatasource(c, uuid.MustParse(testConnID))
 	return w
 }
 
@@ -120,7 +120,7 @@ func assertErrorContains(t *testing.T, w *httptest.ResponseRecorder, substr stri
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-func TestQueryConnection_Success(t *testing.T) {
+func TestQueryDatasource_Success(t *testing.T) {
 	mc := &mockConn{
 		result: &sdk.QueryResult{
 			Frames: []*sdk.DataFrame{{
@@ -155,7 +155,7 @@ func TestQueryConnection_Success(t *testing.T) {
 	assert.True(t, mc.closed, "connection must be closed after query")
 }
 
-func TestQueryConnection_WithVariables(t *testing.T) {
+func TestQueryDatasource_WithVariables(t *testing.T) {
 	var capturedSQL string
 	mc := &mockConn{result: &sdk.QueryResult{}}
 
@@ -175,7 +175,7 @@ func TestQueryConnection_WithVariables(t *testing.T) {
 	assert.Equal(t, "SELECT * FROM events WHERE env = 'prod'", capturedSQL)
 }
 
-func TestQueryConnection_CustomLimit(t *testing.T) {
+func TestQueryDatasource_CustomLimit(t *testing.T) {
 	var capturedSQL string
 	mc := &mockConn{result: &sdk.QueryResult{}}
 	h := newHandler(&mockRepo{conn: storedConn()}, &mockPlugin{
@@ -186,7 +186,7 @@ func TestQueryConnection_CustomLimit(t *testing.T) {
 	assert.Equal(t, "SELECT 1 LIMIT 42", capturedSQL)
 }
 
-func TestQueryConnection_DefaultLimit(t *testing.T) {
+func TestQueryDatasource_DefaultLimit(t *testing.T) {
 	var capturedSQL string
 	mc := &mockConn{result: &sdk.QueryResult{}}
 	h := newHandler(&mockRepo{conn: storedConn()}, &mockPlugin{
@@ -196,25 +196,25 @@ func TestQueryConnection_DefaultLimit(t *testing.T) {
 	assert.Equal(t, "SELECT 1 LIMIT 1000", capturedSQL)
 }
 
-func TestQueryConnection_NotFound(t *testing.T) {
+func TestQueryDatasource_NotFound(t *testing.T) {
 	h := newHandler(&mockRepo{err: errors.New("not found")}, &mockPlugin{})
 	w := post(h, api.QueryRequest{Query: "SELECT 1"})
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
-func TestQueryConnection_BadJSON(t *testing.T) {
+func TestQueryDatasource_BadJSON(t *testing.T) {
 	h := newHandler(&mockRepo{conn: storedConn()}, &mockPlugin{})
-	req := httptest.NewRequest(http.MethodPost, "/connections/1/query", bytes.NewBufferString("{bad json"))
+	req := httptest.NewRequest(http.MethodPost, "/datasources/1/query", bytes.NewBufferString("{bad json"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Params = gin.Params{{Key: "id", Value: testConnID}}
-	h.QueryConnection(c, uuid.MustParse(testConnID))
+	h.QueryDatasource(c, uuid.MustParse(testConnID))
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestQueryConnection_InvalidTimeRange(t *testing.T) {
+func TestQueryDatasource_InvalidTimeRange(t *testing.T) {
 	h := newHandler(&mockRepo{conn: storedConn()}, &mockPlugin{dbConn: &mockConn{}})
 	from := "not-a-time"
 	w := post(h, api.QueryRequest{
@@ -225,24 +225,24 @@ func TestQueryConnection_InvalidTimeRange(t *testing.T) {
 	assertErrorContains(t, w, "time_range.from")
 }
 
-func TestQueryConnection_InvalidTemplate(t *testing.T) {
+func TestQueryDatasource_InvalidTemplate(t *testing.T) {
 	h := newHandler(&mockRepo{conn: storedConn()}, &mockPlugin{dbConn: &mockConn{}})
 	w := post(h, api.QueryRequest{Query: "SELECT {{ unclosed"})
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assertErrorContains(t, w, "template parse error")
 }
 
-func TestQueryConnection_ConnectError(t *testing.T) {
+func TestQueryDatasource_ConnectError(t *testing.T) {
 	h := newHandler(
 		&mockRepo{conn: storedConn()},
 		&mockPlugin{connectErr: errors.New("dial tcp: connection refused")},
 	)
 	w := post(h, api.QueryRequest{Query: "SELECT 1"})
 	assert.Equal(t, http.StatusBadGateway, w.Code)
-	assertErrorContains(t, w, "connection failed")
+	assertErrorContains(t, w, "datasource failed")
 }
 
-func TestQueryConnection_QueryError(t *testing.T) {
+func TestQueryDatasource_QueryError(t *testing.T) {
 	mc := &mockConn{queryErr: errors.New("relation \"nope\" does not exist")}
 	h := newHandler(&mockRepo{conn: storedConn()}, &mockPlugin{dbConn: mc})
 	w := post(h, api.QueryRequest{Query: "SELECT * FROM nope"})
@@ -251,7 +251,7 @@ func TestQueryConnection_QueryError(t *testing.T) {
 	assert.True(t, mc.closed, "connection must be closed even on query error")
 }
 
-func TestQueryConnection_InspectPayload(t *testing.T) {
+func TestQueryDatasource_InspectPayload(t *testing.T) {
 	mc := &mockConn{result: &sdk.QueryResult{}}
 	h := newHandler(&mockRepo{conn: storedConn()}, &mockPlugin{dbConn: mc})
 	from := "2024-04-01T00:00:00Z"
@@ -270,7 +270,7 @@ func TestQueryConnection_InspectPayload(t *testing.T) {
 	assert.Contains(t, *resp.Inspect.Variables, "__start_time")
 }
 
-func TestQueryConnection_StatsElapsedTime(t *testing.T) {
+func TestQueryDatasource_StatsElapsedTime(t *testing.T) {
 	mc := &mockConn{result: &sdk.QueryResult{Stats: sdk.QueryStats{RowsReturned: 0}}}
 	slow := &slowConn{mockConn: mc, delay: 10 * time.Millisecond}
 	h := newHandler(&mockRepo{conn: storedConn()}, &mockPlugin{dbConn: slow})

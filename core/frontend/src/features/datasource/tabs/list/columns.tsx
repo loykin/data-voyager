@@ -1,12 +1,13 @@
 import type { DataGridColumnDef } from '@data-voyager/shared-ui'
 import { Badge } from '@data-voyager/shared-ui'
-import type { Connection } from '../../api/datasource.api'
+import type { DatasourceInstance } from '@loykin/datasourcekit'
+import { datasourceDescription, datasourceTags } from '@/features/datasource'
 
-export function getColumns(): DataGridColumnDef<Connection>[] {
+export function getColumns(): DataGridColumnDef<DatasourceInstance<Record<string, unknown>>>[] {
   return [
     {
-      accessorKey: 'id',
-      header: 'ID',
+      accessorKey: 'uid',
+      header: 'UID',
       meta: { flex: 0.4 },
     },
     {
@@ -25,16 +26,16 @@ export function getColumns(): DataGridColumnDef<Connection>[] {
       header: 'Description',
       meta: { flex: 1 },
       cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.original.description ?? '—'}</span>
+        <span className="text-muted-foreground">{datasourceDescription(row.original) ?? '—'}</span>
       ),
     },
     {
-      accessorKey: 'is_active',
+      accessorKey: 'enabled',
       header: 'Status',
       meta: { flex: 0.8, align: 'center' },
       cell: ({ row }) => (
-        <Badge variant={row.original.is_active ? 'default' : 'outline'}>
-          {row.original.is_active ? 'Active' : 'Inactive'}
+        <Badge variant={row.original.enabled ? 'default' : 'outline'}>
+          {row.original.enabled ? 'Active' : 'Inactive'}
         </Badge>
       ),
     },
@@ -44,7 +45,7 @@ export function getColumns(): DataGridColumnDef<Connection>[] {
       meta: { flex: 1.5 },
       cell: ({ row }) => (
         <div className="flex gap-1 flex-wrap">
-          {row.original.tags?.map((tag) => (
+          {datasourceTags(row.original).map((tag) => (
             <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
           ))}
         </div>

@@ -1,14 +1,23 @@
-export { DataGrid } from './DataGrid'
-export { DataGridInfinity } from './DataGridInfinity'
-export { ColumnVisibilityDropdown } from './ColumnVisibilityDropdown'
-export { useTableStore } from './hooks/useTableStore'
+export {
+  DataGrid,
+  DataGridInfinity,
+  DataGridDrag,
+  DataGridPaginationBar,
+  ColumnVisibilityDropdown,
+  TreeCell,
+  DragHandleCell,
+} from '@loykin/gridkit'
+
 export type {
   DataGridProps,
   DataGridInfinityProps,
+  DataGridDragProps,
+  DataGridPaginationConfig,
   DataGridColumnDef,
   DataGridBaseProps,
   TableViewConfig,
   ColumnSizingMode,
   TableWidthMode,
   CheckboxConfig,
-} from './types'
+  DataGridClassNames,
+} from '@loykin/gridkit'

@@ -1,4 +1,4 @@
-import { DataGrid } from '@data-voyager/shared-ui'
+import { DataGrid, DataGridPaginationBar } from '@data-voyager/shared-ui'
 import { ALL_DATA } from '../../data'
 import { columns } from '../../columns'
 
@@ -14,7 +14,8 @@ export function FixedHeightTab() {
         enableColumnFilters
         enableSorting
         tableHeight={500}
-        pageSizes={[20, 50, 100]}
+        pagination={{ pageSize: 20 }}
+        footer={(table) => <DataGridPaginationBar table={table} pageSizes={[20, 50, 100]} />}
         emptyMessage="No employees found"
       />
     </section>

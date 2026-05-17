@@ -1,11 +1,8 @@
 import type { components } from '@/generated/api/schema.d.ts'
+import type { DatasourceInstance } from '@loykin/datasourcekit'
 
-// Generated API types (single source of truth from openapi.yaml)
-export type Connection = components['schemas']['Connection']
-export type CreateConnectionRequest = components['schemas']['CreateConnectionRequest']
-export type UpdateConnectionRequest = components['schemas']['UpdateConnectionRequest']
-export type ConnectionTestResult = components['schemas']['ConnectionTestResult']
-export type TestConnectionRequest = components['schemas']['TestConnectionRequest']
+// Backend-generated types still used for query payloads and audit history.
+export type DatasourceTestResult = components['schemas']['DatasourceTestResult']
 export type QueryRequest = components['schemas']['QueryRequest']
 export type QueryResponse = components['schemas']['QueryResponse']
 export type QueryResult = components['schemas']['QueryResult']
@@ -18,10 +15,10 @@ export type FieldKind = components['schemas']['FieldKind']
 export type FrameType = components['schemas']['FrameType']
 export type BatchQueryRequest = components['schemas']['BatchQueryRequest']
 export type BatchQueryResponse = components['schemas']['BatchQueryResponse']
-export type BatchQueryResultItem = components['schemas']['BatchQueryResultItem']
+export type DatasourceHistory = components['schemas']['DatasourceHistory']
 
 // App alias for convenience
-export type DataSource = Connection
+export type DataSource = DatasourceInstance<Record<string, unknown>>
 
-// Config is a free-form object — typed per extension
-export type ConnectionConfig = Record<string, unknown>
+// Options are free-form and typed per extension.
+export type DatasourceOptions = Record<string, unknown>
