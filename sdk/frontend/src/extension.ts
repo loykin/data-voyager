@@ -30,6 +30,11 @@ export interface PanelPlugin {
   configComponent?: React.ComponentType<PanelConfigProps>;
 }
 
+// DashboardPanelPlugin — dashboardkit 기반 대시보드 패널 타입.
+// extensions/panels/* 는 이 타입을 등록하고, core dashboard feature가
+// dashboardkit engine에 일괄 등록한다.
+export type DashboardPanelPlugin = import('@loykin/dashboardkit').PanelPluginDef;
+
 export interface PanelProps {
   ctx: PluginContext;
   data: QueryResult;

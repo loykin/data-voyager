@@ -5,6 +5,9 @@
 
 @source "../**/*.{ts,tsx}";
 @source "../../../../core/frontend/src/**/*.{ts,tsx}";
+@source "../../../../extensions/**/frontend/src/**/*.{ts,tsx}";
+@source "../../../../core/frontend/node_modules/@loykin/designkit/dist/**/*.{js,cjs,mjs}";
+@source "../../../../core/frontend/node_modules/@loykin/dashboardkit/dist/**/*.{js,cjs,mjs}";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -132,3 +135,315 @@
   }
 }
 
+.dv-dashboard {
+  --dv-bg: #f0f2f5;
+  --dv-surface: #ffffff;
+  --dv-border: #e5e7eb;
+  --dv-text: #111827;
+  --dv-muted: #6b7280;
+  --dv-primary: #2563eb;
+  --dv-primary-hover: #1d4ed8;
+  --dv-danger: #dc2626;
+  --dv-radius: 6px;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--dv-bg);
+  color: var(--dv-text);
+  font-size: 13px;
+}
+
+.dv-dashboard * {
+  box-sizing: border-box;
+}
+
+.dv-dashboard__topbar {
+  display: flex;
+  height: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--dv-border);
+  background: var(--dv-surface);
+  padding: 0 16px;
+}
+
+.dv-dashboard__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dv-dashboard__spacer {
+  flex: 1;
+}
+
+.dv-dashboard__varbar {
+  display: flex;
+  height: 38px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--dv-border);
+  background: #f8fafc;
+  padding: 0 16px;
+}
+
+.dv-dashboard__main {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.dv-dashboard__grid {
+  min-width: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.dv-dashboard__panel {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--dv-border);
+  border-radius: var(--dv-radius);
+  background: var(--dv-surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dv-dashboard .react-grid-item:not(.react-grid-placeholder) {
+  --dk-resize-handle-size: 28px;
+  --dk-resize-handle-inset: 6px;
+  --dk-resize-handle-mark-size: 8px;
+  --dk-resize-handle-color: rgba(17, 24, 39, 0.42);
+  --dk-resize-handle-mark-radius: 3px;
+}
+
+.dv-dashboard .react-grid-item:not(.static):not(.react-grid-placeholder) {
+  cursor: grab;
+}
+
+.dv-dashboard .react-grid-item.react-draggable-dragging {
+  cursor: grabbing;
+}
+
+.dv-dashboard .react-grid-item .react-resizable-handle {
+  z-index: 40;
+  opacity: 0.75;
+  pointer-events: auto;
+}
+
+.dv-dashboard .react-grid-item:hover .react-resizable-handle,
+.dv-dashboard .react-grid-item.resizing .react-resizable-handle {
+  opacity: 1;
+}
+
+.dv-dashboard__panel:hover {
+  border-color: #d1d5db;
+}
+
+.dv-dashboard__panel-header {
+  display: flex;
+  min-height: 34px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--dv-border);
+  padding: 8px 12px;
+  user-select: none;
+}
+
+.dv-dashboard__panel-header:hover {
+  background: #f9fafb;
+}
+
+.dv-dashboard__panel-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dv-dashboard__panel-body {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  padding: 10px 12px;
+}
+
+.dv-dashboard__panel-action {
+  flex-shrink: 0;
+  border: 1px solid var(--dv-border);
+  border-radius: 3px;
+  background: var(--dv-surface);
+  color: var(--dv-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.dv-dashboard__panel-action:hover {
+  background: #f3f4f6;
+  color: var(--dv-text);
+}
+
+.dv-dashboard__button {
+  height: 28px;
+  border: 1px solid var(--dv-border);
+  border-radius: var(--dv-radius);
+  background: var(--dv-surface);
+  color: var(--dv-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.dv-dashboard__button:hover {
+  background: #f9fafb;
+}
+
+.dv-dashboard__button--primary {
+  border-color: var(--dv-primary);
+  background: var(--dv-primary);
+  color: #fff;
+}
+
+.dv-dashboard__button--primary:hover {
+  border-color: var(--dv-primary-hover);
+  background: var(--dv-primary-hover);
+}
+
+.dv-dashboard__select,
+.dv-dashboard__input,
+.dv-dashboard__textarea {
+  width: 100%;
+  border: 1px solid var(--dv-border);
+  border-radius: var(--dv-radius);
+  background: var(--dv-surface);
+  color: var(--dv-text);
+  font-size: 12px;
+}
+
+.dv-dashboard__select,
+.dv-dashboard__input {
+  height: 28px;
+  padding: 0 8px;
+}
+
+.dv-dashboard__textarea {
+  min-height: 88px;
+  padding: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  resize: vertical;
+}
+
+.dv-dashboard__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dv-dashboard__label {
+  color: var(--dv-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dv-dashboard__editor {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--dv-bg);
+}
+
+.dv-dashboard__editor-topbar {
+  display: flex;
+  height: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 0 16px;
+}
+
+.dv-dashboard__editor-topbar .dv-dashboard__button {
+  border-color: #374151;
+  background: transparent;
+  color: #d1d5db;
+}
+
+.dv-dashboard__editor-topbar .dv-dashboard__button:hover {
+  background: #374151;
+}
+
+.dv-dashboard__editor-topbar .dv-dashboard__button--primary {
+  border-color: var(--dv-primary);
+  background: var(--dv-primary);
+  color: #fff;
+}
+
+.dv-dashboard__editor-body {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  overflow: hidden;
+}
+
+.dv-dashboard__editor-left {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--dv-border);
+}
+
+.dv-dashboard__editor-preview {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--dv-border);
+  padding: 20px 24px;
+}
+
+.dv-dashboard__editor-query {
+  height: 280px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--dv-surface);
+}
+
+.dv-dashboard__editor-form {
+  overflow-y: auto;
+  background: var(--dv-surface);
+}
+
+.dv-dashboard__editor-section {
+  border-bottom: 1px solid var(--dv-border);
+  padding: 16px;
+}
+
+.dv-dashboard__section-title {
+  margin-bottom: 10px;
+  color: var(--dv-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

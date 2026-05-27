@@ -2,6 +2,7 @@
   "name": "default",
   "extensions": [
     "datasources/postgresql",
-    "datasources/clickhouse"
+    "datasources/clickhouse",
+    "panels/core"
   ]
 }

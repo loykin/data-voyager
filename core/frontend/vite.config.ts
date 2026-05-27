@@ -21,6 +21,7 @@ export default defineConfig({
       '@data-voyager/sdk': path.resolve(__dirname, '../../sdk/frontend/src'),
       '@data-voyager/extension-datasource-postgresql': path.resolve(__dirname, '../../extensions/datasources/postgresql/frontend/src'),
       '@data-voyager/extension-datasource-clickhouse': path.resolve(__dirname, '../../extensions/datasources/clickhouse/frontend/src'),
+      '@data-voyager/extension-panel-core': path.resolve(__dirname, '../../extensions/panels/core/frontend/src'),
     },
   },
   optimizeDeps: {
@@ -29,6 +30,7 @@ export default defineConfig({
       '@data-voyager/sdk',
       '@data-voyager/extension-datasource-postgresql',
       '@data-voyager/extension-datasource-clickhouse',
+      '@data-voyager/extension-panel-core',
     ],
   },
   server: {

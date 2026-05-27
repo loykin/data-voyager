@@ -7,12 +7,14 @@ import { registerAll } from '@/features/menu'
 import { datasourceMenuItems } from '@/features/datasource/menu'
 import { discoverMenuItems } from '@/features/discover/menu'
 import { aiconfigMenuItems } from '@/features/aiconfig/menu'
+import { dashboardMenuItems } from '@/features/dashboard/menu'
 import { demoMenuItems } from '@/pages/demo/menu'
 
 // Bootstrap: register all menu items at module load time
 registerAll([
   ...datasourceMenuItems,
   ...discoverMenuItems,
+  ...dashboardMenuItems,
   ...aiconfigMenuItems,
   ...demoMenuItems,
 ])
@@ -43,6 +45,21 @@ const DatetimeDemoPage = React.lazy(() =>
 )
 const DiscoverPage = React.lazy(() =>
   import('@/pages/discover').then((m) => ({ default: m.DiscoverPage }))
+)
+const DashboardPage = React.lazy(() =>
+  import('@/features/dashboard').then((m) => ({ default: m.DashboardPage }))
+)
+const DashboardHomePage = React.lazy(() =>
+  import('@/features/dashboard').then((m) => ({ default: m.DashboardHomePage }))
+)
+const DashboardSettingsPage = React.lazy(() =>
+  import('@/features/dashboard').then((m) => ({ default: m.DashboardSettingsPage }))
+)
+const PanelEditorPage = React.lazy(() =>
+  import('@/features/dashboard').then((m) => ({ default: m.PanelEditorPage }))
+)
+const VariablesPage = React.lazy(() =>
+  import('@/features/dashboard').then((m) => ({ default: m.VariablesPage }))
 )
 const AIConfigPage = React.lazy(() =>
   import('@/pages/settings').then((m) => ({ default: m.AIConfigPage }))
@@ -90,6 +107,11 @@ export function App() {
               <Route path="/demo/histogram" element={<HistogramDemoPage />} />
               <Route path="/demo/datetime" element={<DatetimeDemoPage />} />
               <Route path="/discover" element={<DiscoverPage />} />
+              <Route path="/dashboard" element={<DashboardHomePage />} />
+              <Route path="/dashboard/:dashboardId" element={<DashboardPage />} />
+              <Route path="/dashboard/:dashboardId/settings" element={<DashboardSettingsPage />} />
+              <Route path="/dashboard/:dashboardId/variables" element={<VariablesPage />} />
+              <Route path="/dashboard/:dashboardId/panels/:panelId/edit" element={<PanelEditorPage />} />
               <Route path="/settings" element={<Navigate to="/settings/ai" replace />} />
               <Route path="/settings/ai" element={<AIConfigPage />} />
               <Route path="/settings/ai/edit" element={<AIConfigEditPage />} />

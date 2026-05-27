@@ -3,3 +3,6 @@ packages:
   - 'shared/frontend'
   - 'core/frontend'
   - 'extensions/**/frontend'
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useLocation } from 'react-router-dom'
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from '@data-voyager/shared-ui/components/ui/sidebar'
 import { AppSidebar } from '@/widgets/app-sidebar'
 import { PageBreadcrumb } from '@/features/breadcrumb'
@@ -9,14 +10,23 @@ import { PageBreadcrumb } from '@/features/breadcrumb'
  */
 function AppLayoutInset({ children }: { children: React.ReactNode }) {
   const { open } = useSidebar()
+  const { pathname } = useLocation()
+  const hideBreadcrumbBar = pathname.startsWith('/dashboard')
 
   return (
     <SidebarInset className="overflow-hidden flex flex-col h-screen">
-      {/* breadcrumb bar — 닫힘 trigger가 여기 인라인으로 들어가 콘텐츠와 겹치지 않음 */}
-      <div className="flex h-12 shrink-0 items-center gap-1 px-3">
-        {!open && <SidebarTrigger className="-ml-0.5 shrink-0" />}
-        <PageBreadcrumb />
-      </div>
+      {hideBreadcrumbBar ? (
+        !open && (
+          <div className="absolute left-3 top-2 z-20">
+            <SidebarTrigger className="shrink-0 bg-background/90 shadow-sm" />
+          </div>
+        )
+      ) : (
+        <div className="flex h-12 shrink-0 items-center gap-1 px-3">
+          {!open && <SidebarTrigger className="-ml-0.5 shrink-0" />}
+          <PageBreadcrumb />
+        </div>
+      )}
       <div className="flex-1 min-w-0 overflow-auto">
         {children}
       </div>
