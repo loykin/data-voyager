@@ -83,6 +83,28 @@ function createPanel(type: string, datasource?: DatasourceInstance): PanelInput 
   }
 }
 
+function clonePanelInput(panel: DashboardConfig['panels'][number]): PanelInput {
+  return {
+    ...panel,
+    id: uniqueId(panel.id),
+    title: `${panel.title || 'Panel'} copy`,
+    gridPos: {
+      ...panel.gridPos,
+      x: Math.min(panel.gridPos.x + 1, 23),
+      y: panel.gridPos.y + 1,
+    },
+    dataRequests: panel.dataRequests.map((request) => ({
+      ...request,
+      query: structuredClone(request.query),
+      options: structuredClone(request.options),
+      permissions: request.permissions.map((permission) => ({ ...permission })),
+    })),
+    options: structuredClone(panel.options),
+    links: panel.links.map((link) => ({ ...link })),
+    permissions: panel.permissions.map((permission) => ({ ...permission })),
+  }
+}
+
 function VariablePicker({ name }: { name: string }) {
   const variable = useVariable(engine, name)
   if (variable.options.length === 0) return null
@@ -132,6 +154,17 @@ function DashboardListItem({ record, onDelete }: { record: DashboardRecord; onDe
 function PanelActionsMenu({ dashboardId, panelId }: { dashboardId: string; panelId: string }) {
   const navigate = useNavigate()
 
+  const duplicatePanel = async () => {
+    const config = engine.getConfig()
+    const panel = config?.panels.find((item) => item.id === panelId)
+    if (!panel) return
+    await engine.addPanel(clonePanelInput(panel), { refresh: true })
+  }
+
+  const removePanel = async () => {
+    await engine.removePanel(panelId, { refresh: false, invalidateCache: true })
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -154,8 +187,12 @@ function PanelActionsMenu({ dashboardId, panelId }: { dashboardId: string; panel
           Edit
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>
+        <DropdownMenuItem onClick={() => void duplicatePanel()}>
           Duplicate
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={() => void removePanel()}>
+          Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
